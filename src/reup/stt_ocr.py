@@ -27,21 +27,26 @@ def frame_extract_cmd(
     ]
 
 
-def group_ocr_lines(lines: list[tuple[float, str]], gap: float = 1.0) -> list[Segment]:
+def group_ocr_lines(
+    lines: list[tuple[float, str]], gap: float = 1.0, frame_dur: float = 0.5
+) -> list[Segment]:
     segs: list[Segment] = []
+    last_t: list[float] = []  # raw timestamp of the last line merged into each open segment
     for t, text in lines:
         if not text.strip():
             continue
-        if segs and _norm(text) == _norm(segs[-1].text_src) and t - segs[-1].end <= gap:
-            segs[-1].end = t + 0.5
+        if segs and _norm(text) == _norm(segs[-1].text_src) and t - last_t[-1] <= gap:
+            segs[-1].end = t + frame_dur
+            last_t[-1] = t
         else:
             if segs:
                 segs[-1].end = min(segs[-1].end, t)
-            segs.append(Segment(index=len(segs), start=t, end=t + 0.5, text_src=text.strip()))
+            segs.append(Segment(index=len(segs), start=t, end=t + frame_dur, text_src=text.strip()))
+            last_t.append(t)
     return segs
 
 
-def extract_texts(res) -> str:
+def extract_texts(res: object) -> str:
     """Join the recognised text from one PaddleOCR per-image result.
 
     Handles the current shape (a list of dicts carrying a ``rec_texts`` list),
@@ -82,4 +87,4 @@ def transcribe(
     for i, f in enumerate(sorted(frames.glob("*.jpg"))):
         res = ocr.predict(str(f))
         lines.append((i / fps, extract_texts(res)))
-    return group_ocr_lines(lines)
+    return group_ocr_lines(lines, frame_dur=1.0 / fps)

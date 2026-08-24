@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from reup.stt_ocr import extract_texts, frame_extract_cmd, group_ocr_lines
 
 
@@ -38,3 +40,15 @@ def test_extract_texts_empty_or_absent():
     assert extract_texts([]) == ""
     assert extract_texts([[]]) == ""
     assert extract_texts([{"rec_texts": []}]) == ""
+
+
+def test_extract_texts_unrecognised_shape_never_raises():
+    assert extract_texts([42]) == ""
+    assert extract_texts("x") == ""
+
+
+def test_group_scales_pad_with_frame_dur():
+    lines = [(0.0, "A"), (0.1, "A"), (0.2, "A")]
+    segs = group_ocr_lines(lines, frame_dur=0.1)
+    assert len(segs) == 1
+    assert segs[0].end == pytest.approx(0.3)
