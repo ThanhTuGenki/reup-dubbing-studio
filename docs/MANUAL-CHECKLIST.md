@@ -1,0 +1,212 @@
+# Manual Checklist — Reup Dubbing Studio MVP
+
+Every step below needs something this sandbox does not have: a rights-cleared
+video, a rented GPU, a multi-gigabyte model download, or a human ear/eye. They
+were deliberately deferred while building the pipeline. Work through them in
+order — later steps assume the config filled in by earlier ones.
+
+## Environment notes (read first)
+
+- **`REUP_TEST_URL`** gates the one integration test that performs a real
+  download (`tests/test_ingest.py`, marked `@pytest.mark.integration`). It is
+  skipped by default (`pyproject.toml`'s `addopts = "-m 'not integration'"`).
+  Set it to a URL you have rights to use before running that test:
+  ```bash
+  export REUP_TEST_URL="https://www.bilibili.com/video/<VIDEO_CÓ_QUYỀN_DÙNG>"
+  ```
+- **`UF_HIDDEN` / `chflags nohidden`**: this project lives under
+  `~/Desktop`, and a third-party desktop-hiding utility on this machine
+  repeatedly sets the macOS `UF_HIDDEN` flag on files there — including the
+  venv's `.pth` files under `.venv/lib/python3.11/site-packages/`. CPython's
+  `site.py` skips hidden `.pth` files, so `import reup` intermittently fails
+  with `ModuleNotFoundError: No module named 'reup'`, unrelated to any code
+  change. If that happens, run:
+  ```bash
+  chflags nohidden .venv/lib/python3.11/site-packages/*.pth
+  ```
+  and retry. This is a transient fix (the flag can reappear within
+  seconds to minutes) — no code, test, or config file should ever be changed
+  to work around it (no `sys.path` hacks, no `conftest.py`, no baked-in
+  `PYTHONPATH`). The durable fixes are either of:
+  - exclude this project folder from that desktop-hiding utility, or
+  - move the project out of `~/Desktop` entirely.
+
+## 1. Real download (Task 3)
+
+A human with a rights-cleared video URL must run:
+```bash
+export REUP_TEST_URL="https://www.bilibili.com/video/<VIDEO_CÓ_QUYỀN_DÙNG>"
+.venv/bin/pytest -m integration tests/test_ingest.py -v
+```
+If the video needs auth cookies: export cookies from the browser using the
+"Get cookies.txt LOCALLY" extension, save to `data/cookies/bilibili.txt`, and
+pass `cookies=Path("data/cookies/bilibili.txt")` when calling `download(...)`
+(the integration test as written does not pass cookies — extend it manually
+if the chosen test video requires them).
+
+## 2. Install and probe video-subtitle-remover (Task 4)
+
+```bash
+mkdir -p tools && git clone https://github.com/YaoFANGUK/video-subtitle-remover tools/vsr
+cd tools/vsr && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Read README + run help to confirm how input/output/subtitle-area are passed:
+.venv/bin/python backend/main.py --help || cat README.md | head -80
+```
+
+Fill in the real template into `config.toml [desub].cmd`, using exactly the
+placeholders `{input} {output} {ymin} {ymax} {xmin} {xmax}` — do not change
+`desub.py`. Example shape (adjust flags/order to match what the tool's
+`--help`/README actually prints):
+```toml
+[desub]
+cmd = "python tools/vsr/backend/main.py --input {input} --output {output} --area {ymin},{ymax},{xmin},{xmax}"
+```
+If the tool takes the subtitle area via environment variables or a different
+format instead of a single CLI flag, adjust the template string accordingly
+(still only using the same six placeholders) — `render_cmd`/`desub` code does
+not need to change either way.
+
+After filling the template, test on a 30-second clip:
+```bash
+ffmpeg -i raw.mp4 -t 30 -c copy clip.mp4
+```
+Run desub on `clip.mp4`, open the output, and visually confirm the
+subtitle-burned region is clean. Record the run time in
+`docs/superpowers/plans/mvp-notes.md`.
+
+## 3. Install the `heavy` extra and run ASR + OCR on a real clip (Task 5)
+
+```bash
+.venv/bin/pip install paddleocr paddlepaddle
+.venv/bin/python - <<'EOF'
+from pathlib import Path
+from reup.stt_asr import transcribe as asr
+from reup.stt_ocr import transcribe as ocr
+from reup.segments import save_segments
+clip = Path("data/videos/test/clip.mp4")   # clip 30s từ bước 2
+save_segments(asr(clip, model_size="small"), Path("data/videos/test/segments_asr.json"))
+save_segments(ocr(clip, (600, 700, 0, 1280), Path("data/videos/test")), Path("data/videos/test/segments_ocr.json"))
+EOF
+```
+
+Notes:
+- The mask `(600, 700, 0, 1280)` must be adjusted to match the real clip's
+  subtitle band; it is `(ymin, ymax, xmin, xmax)` in pixels.
+- PaddleOCR's `predict()` output shape varies between versions. If the real
+  output doesn't match what `extract_texts` in `src/reup/stt_ocr.py`
+  currently handles, print `res` from a real call and adjust `extract_texts`
+  accordingly — it is a small, independently unit-tested pure function (see
+  `tests/test_stt_ocr.py::test_extract_texts_current_shape`,
+  `test_extract_texts_legacy_shape`, `test_extract_texts_empty_or_absent`),
+  so this should be a safe, localized change. Re-run
+  `.venv/bin/pytest tests/test_stt_ocr.py -v` after adjusting to confirm the
+  existing shape tests still pass, and add a new test case for the newly
+  observed shape.
+- `faster-whisper` is already a hard dependency (not in `heavy`), so
+  `asr(...)` will download the `small` Whisper model weights on first run —
+  expect a network call and a multi-hundred-MB download.
+
+## 4. Real translation smoke test (Task 6)
+
+Translate a test clip's `segments_ocr.json` with the real `translate()`
+(real Anthropic client, `ANTHROPIC_API_KEY` set — not a fake client), save
+the result as `script.json`, and read through it to judge translation
+quality. `reup run` already batches 50 lines per call via `stage_translate`
+in `cli.py`, so for a video that's the command to use directly (see step 7).
+
+## 5. Set up a TTS engine (Task 7)
+
+1. Clone and set up VieNeu-TTS:
+   ```bash
+   git clone https://github.com/pnnbao97/VieNeu-TTS tools/vieneu
+   cd tools/vieneu && python3 -m venv .venv && .venv/bin/pip install -e . 2>/dev/null || .venv/bin/pip install -r requirements.txt
+   ```
+2. Read VieNeu's actual README for its Python API (class/module names below
+   are placeholders — confirm against the real README).
+3. Create a wrapper script `tools/vieneu_say.py` — **critical constraint: the
+   wrapper must accept the text as a single argv element**
+   (`sys.argv[1]`), since `TemplateTTS.synth` guarantees `{text}` is passed
+   as exactly one shell/argv token no matter what punctuation or spaces it
+   contains:
+   ```python
+   # tools/vieneu_say.py — usage: python vieneu_say.py "<text>" out.wav [ref.wav]
+   import sys
+   from vieneu import VieNeuTTS   # tên class/module theo README thật của VieNeu
+   tts = VieNeuTTS()
+   tts.synthesize(sys.argv[1], output_path=sys.argv[2])
+   ```
+4. Fill in `config.toml` — exact template shape:
+   ```toml
+   [tts.vieneu]
+   cmd = "tools/vieneu/.venv/bin/python tools/vieneu_say.py {text} {out}"
+   ```
+   `{text}` and `{out}` are the only placeholders `TemplateTTS` substitutes;
+   both must appear as separate whitespace-delimited tokens in the `cmd`
+   string (per `shlex.split` rules) so each becomes its own argv element —
+   e.g. do NOT write `{text}{out}` or embed `{text}` inside a larger token
+   expecting shell-level quoting, since substitution happens per
+   already-split token, not before splitting.
+5. Run one sentence through the real adapter, listen to the resulting wav,
+   and record naturalness notes in `docs/superpowers/plans/mvp-notes.md`.
+6. Commit the `config.toml` change separately, e.g.
+   `git commit -am "feat: TTS adapter with VieNeu template"`.
+
+## 6. Best-effort F5-TTS / OmniVoice on Mac, no CUDA (Task 8)
+
+On a Mac with no CUDA — try installing F5-TTS-VN to run on CPU/MPS (slow is
+acceptable for a one-sentence bench); try OmniVoice the same way. For each
+engine: clone/install into `tools/`, write a wrapper script like
+`tools/f5_say.py` (same single-argv-element constraint as step 5), fill in
+the template. If an engine won't run on Mac at all, leave its `cmd` empty
+and note "needs benchmarking on a rented GPU (see step 8)" in
+`mvp-notes.md` — do not block on it.
+
+Then compare:
+```bash
+.venv/bin/reup bench-tts --text "<2 câu thật trong script.json>"
+```
+Listen to the outputs and write down which engine sounds most natural.
+
+## 7. Install demucs and run a real mix/render smoke test (Task 9)
+
+```bash
+.venv/bin/pip install demucs
+```
+Run `demucs_cmd(...)` on a real test clip, use the resulting
+`htdemucs/<name>/no_vocals.wav` as the background track, run
+`audio.mix(...)` against the real dub clips from step 5/6, run
+`render.render(...)`, then open `out_16x9.mp4` and confirm:
+- background music/sound effects survive,
+- the Vietnamese dub lines land at the right timestamps,
+- the Vietnamese subtitles burn in correctly.
+
+## 8. Full pipeline acceptance pass (Task 10, brief Step 5)
+
+Once steps 1–7 above are done (real download works, desub template filled
+in, `heavy` extra installed, at least one TTS engine configured, demucs
+installed), run the whole pipeline end to end on a **full video** (not a
+clip):
+```bash
+.venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine vieneu] [--stt ocr]
+.venv/bin/reup report <vid>
+```
+`reup run` is resumable — re-running the same command after a failure skips
+every stage whose output artifact already exists. `reup report <vid>` prints
+a markdown table comparing OCR vs ASR text per segment plus every stage's
+timing from `timings.json`.
+
+Answer the four MVP acceptance questions and record the answers in
+`docs/superpowers/plans/mvp-notes.md`:
+
+- **(a) Desub quality** — look at 5 random timestamps in `desubbed.mp4`
+  (spread across the video): is the cleaned-up region acceptable (no
+  distracting smear/ghosting where the burned-in subtitles used to be)?
+- **(b) Dub naturalness** — listen to 3 minutes of `out_16x9.mp4`'s audio:
+  is the synthesised Vietnamese voice natural enough to publish?
+- **(c) OCR vs ASR accuracy** — read the table from `reup report <vid>`:
+  which of the two transcripts is more accurate line-by-line?
+- **(d) Per-stage cost** — read `timings.json` (echoed at the end of the
+  `report` output) for how long each stage took on this Mac. Extrapolate to
+  rented-GPU cost: rent one RunPod RTX 4090 instance (~US$0.40/hour), repeat
+  `reup run` there, compare its `timings.json` against the Mac run, and
+  compute US$-per-video from the GPU-hours actually used.
