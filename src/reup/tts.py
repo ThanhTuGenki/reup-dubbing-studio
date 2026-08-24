@@ -4,7 +4,7 @@ import shlex
 from pathlib import Path
 
 from .logutil import run_logged
-from .segments import Segment
+from .segments import Segment, voiced
 
 
 class TemplateTTS:
@@ -28,9 +28,7 @@ def synth_segments(
 ) -> list[Path]:
     dub_dir.mkdir(parents=True, exist_ok=True)
     outs = []
-    for s in segs:
-        if not s.text_vi.strip():
-            continue
+    for s in voiced(segs):
         outs.append(adapter.synth(s.text_vi, dub_dir / f"{s.index:04d}.wav", log_path))
     return outs
 

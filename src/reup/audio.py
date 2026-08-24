@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from .logutil import run_logged
-from .segments import Segment
+from .segments import Segment, voiced
 
 
 def demucs_cmd(input: Path, out_dir: Path) -> list[str]:
@@ -31,13 +31,13 @@ def probe_duration(path: Path) -> float:
 
 def mix_filter(segs: list[Segment], clip_durs: dict[int, float]) -> str:
     parts, labels = [], []
-    voiced = [s for s in segs if s.text_vi.strip()]
-    for k, s in enumerate(voiced):
+    vsegs = voiced(segs)
+    for k, s in enumerate(vsegs):
         tempo = fit_tempo(clip_durs[s.index], s.end - s.start)
         ms = round(s.start * 1000)
         parts.append(f"[{k + 1}]atempo={tempo:.3f},adelay={ms}|{ms}[d{k}]")
         labels.append(f"[d{k}]")
-    parts.append(f"[0]{''.join(labels)}amix=inputs={len(voiced) + 1}:normalize=0")
+    parts.append(f"[0]{''.join(labels)}amix=inputs={len(vsegs) + 1}:normalize=0")
     return ";".join(parts)
 
 
@@ -48,9 +48,9 @@ def mix(
     out: Path,
     log_path: Path | None = None,
 ) -> Path:
-    voiced = [s for s in segs if s.text_vi.strip()]
-    clips = [dub_dir / f"{s.index:04d}.wav" for s in voiced]
-    durs = {s.index: probe_duration(c) for s, c in zip(voiced, clips, strict=True)}
+    vsegs = voiced(segs)
+    clips = [dub_dir / f"{s.index:04d}.wav" for s in vsegs]
+    durs = {s.index: probe_duration(c) for s, c in zip(vsegs, clips, strict=True)}
     cmd = ["ffmpeg", "-y", "-i", str(bg)]
     for c in clips:
         cmd += ["-i", str(c)]

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from reup.segments import Segment, fmt_ts, load_segments, save_segments, to_srt
+from reup.segments import Segment, fmt_ts, load_segments, save_segments, to_srt, voiced
 
 
 def test_roundtrip(tmp_path: Path):
@@ -20,3 +20,12 @@ def test_to_srt():
     srt = to_srt(segs)
     assert "1\n00:00:00,000 --> 00:00:01,000\nA\n" in srt
     assert "2\n00:00:01,200 --> 00:00:03,000\nB\n" in srt
+
+
+def test_voiced_filters_blank_text_vi():
+    segs = [
+        Segment(0, 0, 1, text_vi="a"),
+        Segment(1, 1, 2, text_vi="   "),  # whitespace-only counts as blank
+        Segment(2, 2, 3, text_vi="c"),
+    ]
+    assert [s.index for s in voiced(segs)] == [0, 2]

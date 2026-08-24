@@ -19,7 +19,7 @@ from . import tts as tts_m
 from .assets import AssetStore
 from .config import load_config
 from .logutil import run_logged
-from .segments import load_segments, save_segments, to_srt
+from .segments import load_segments, save_segments, to_srt, voiced
 from .tts import TemplateTTS
 
 log = logging.getLogger("reup.cli")
@@ -138,7 +138,7 @@ def stage_translate(ctx: Ctx) -> None:
 def stage_tts(ctx: Ctx) -> None:
     dub = ctx.store.dir(ctx.vid) / "dub"
     segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
-    expected = {f"{s.index:04d}.wav" for s in segs if s.text_vi.strip()}
+    expected = {f"{s.index:04d}.wav" for s in voiced(segs)}
     have = {p.name for p in dub.glob("*.wav")} if dub.exists() else set()
     if expected <= have:
         return

@@ -15,6 +15,14 @@ class Segment:
     speaker: str = "narrator"
 
 
+def voiced(segs: list[Segment]) -> list[Segment]:
+    """Segments that carry a translation to be spoken -- the shared
+    predicate that must agree everywhere a filtergraph/argv is built from
+    segment order (audio.mix_filter, audio.mix, tts.synth_segments,
+    cli.stage_tts's completeness check)."""
+    return [s for s in segs if s.text_vi.strip()]
+
+
 def save_segments(segs: list[Segment], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
