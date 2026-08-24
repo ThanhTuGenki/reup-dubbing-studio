@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 from reup.assets import AssetStore
 from reup.cli import Ctx, _parse_mask, app
 from reup.ingest import video_id
-from reup.segments import Segment, save_segments
+from reup.segments import Segment, load_segments, save_segments
 
 
 @pytest.fixture(autouse=True)
@@ -183,6 +183,46 @@ def test_stage_mix_runs_demucs_through_run_logged(tmp_path, monkeypatch):
     assert store.p(vid, "mix.wav").exists()
 
 
+def test_stage_translate_saves_each_batch_before_a_later_batch_fails(tmp_path, monkeypatch):
+    import reup.cli as c
+
+    store = AssetStore(tmp_path)
+    vid = "vid-translate"
+    n = 55  # two batches of 50/5, so a failure on batch 2 can be observed
+    segs = [Segment(index=i, start=float(i), end=float(i) + 1, text_src=f"s{i}") for i in range(n)]
+    save_segments(segs, store.p(vid, "segments_ocr.json"))
+
+    monkeypatch.setattr("anthropic.Anthropic", lambda: "fake-client")
+
+    batch_calls: list[list[int]] = []
+
+    def fake_translate(batch, client=None, model=None):
+        batch_calls.append([s.index for s in batch])
+        if len(batch_calls) == 2:
+            raise RuntimeError("simulated API failure on the second batch")
+        for s in batch:
+            s.text_vi = f"vi{s.index}"
+        return batch
+
+    monkeypatch.setattr(c.tr, "translate", fake_translate)
+
+    ctx = Ctx(
+        store, vid, "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {"llm": {"model": "m"}}
+    )
+
+    with pytest.raises(RuntimeError):
+        c.stage_translate(ctx)
+
+    # The first (successful, paid-for) batch must have been persisted even
+    # though the second batch blew up -- a pre-fix implementation only
+    # calls save_segments() after ALL batches, so script.json would not
+    # exist here at all.
+    saved = load_segments(store.p(vid, "script.json"))
+    assert saved[0].text_vi == "vi0"
+    assert saved[49].text_vi == "vi49"
+    assert saved[50].text_vi == ""  # second batch never completed
+
+
 def test_report_handles_missing_transcripts_without_raising(tmp_path):
     store = AssetStore(tmp_path)
 
@@ -216,6 +256,88 @@ def test_parse_mask_rejects_bad_values():
         _parse_mask("--5,1,2,3")
     with pytest.raises(typer.BadParameter):
         _parse_mask("600,700,0")
+
+
+def test_parse_mask_rejects_inverted_or_zero_width():
+    with pytest.raises(typer.BadParameter):
+        _parse_mask("700,600,0,1280")  # ymin > ymax: inverted -> negative-size crop
+    with pytest.raises(typer.BadParameter):
+        _parse_mask("600,600,0,1280")  # ymin == ymax: zero-height crop
+    with pytest.raises(typer.BadParameter):
+        _parse_mask("600,700,1280,0")  # xmin > xmax: inverted -> negative-size crop
+    with pytest.raises(typer.BadParameter):
+        _parse_mask("-10,700,0,1280")  # negative ymin
+
+
+def test_validate_run_args_rejects_bad_stt():
+    from reup.cli import _validate_run_args
+
+    with pytest.raises(typer.BadParameter):
+        _validate_run_args("ocrr", "vieneu", {"tts": {"vieneu": {"cmd": "x"}}})
+
+
+def test_validate_run_args_rejects_unknown_engine():
+    from reup.cli import _validate_run_args
+
+    with pytest.raises(typer.BadParameter):
+        _validate_run_args("ocr", "vieneuu", {"tts": {"vieneu": {"cmd": "x"}}})
+
+
+def test_validate_run_args_rejects_missing_config_sections():
+    from reup.cli import _validate_run_args
+
+    with pytest.raises(typer.BadParameter):
+        _validate_run_args("ocr", "vieneu", {"tts": {"vieneu": {"cmd": "x"}}})  # missing desub/llm
+
+
+def test_validate_run_args_accepts_valid_config():
+    from reup.cli import _validate_run_args
+
+    _validate_run_args(
+        "ocr",
+        "vieneu",
+        {"tts": {"vieneu": {"cmd": "x"}}, "desub": {"cmd": ""}, "llm": {"model": "m"}},
+    )
+
+
+def test_run_rejects_unknown_engine_before_touching_the_network(tmp_path, monkeypatch):
+    import reup.cli as c
+
+    called = []
+    monkeypatch.setattr(c, "stage_ingest", lambda ctx: called.append("ingest"))
+    r = CliRunner().invoke(
+        app,
+        [
+            "run",
+            "https://x/v",
+            "--mask",
+            "600,700,0,1280",
+            "--data-root",
+            str(tmp_path),
+            "--engine",
+            "vieneuu",
+        ],
+    )
+    assert r.exit_code != 0
+    assert called == []  # never reached the stage loop / paid work
+
+
+def test_run_catches_runtime_error_and_reports_cleanly(monkeypatch, tmp_path):
+    import reup.cli as c
+
+    def boom(ctx):
+        raise RuntimeError(
+            "Lệnh thất bại (exit 1): ffmpeg\nLog: /tmp/x.log\n--- 20 dòng cuối ---\nboom"
+        )
+
+    monkeypatch.setattr(c, "stage_ingest", boom)
+    r = CliRunner().invoke(
+        app,
+        ["run", "https://x/v", "--mask", "600,700,0,1280", "--data-root", str(tmp_path)],
+    )
+    assert r.exit_code == 1
+    assert "boom" in r.output
+    assert "Traceback" not in r.output
 
 
 def test_bench_skips_unconfigured(tmp_path, monkeypatch):

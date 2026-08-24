@@ -125,7 +125,12 @@ def stage_translate(ctx: Ctx) -> None:
         client = anthropic.Anthropic()
         for i in range(0, len(segs), 50):
             tr.translate(segs[i : i + 50], client=client, model=ctx.cfg["llm"]["model"])
-        save_segments(segs, out)
+            # Persist after EACH batch: translation is the only stage that
+            # costs money per attempt, so a truncated/rate-limited/overloaded
+            # response mid-video must not discard every batch paid for
+            # before it. Segments past the failure point simply keep their
+            # blank text_vi, which TTS and the mixer already skip.
+            save_segments(segs, out)
 
     _timed(ctx, "translate", go)
 
@@ -189,7 +194,26 @@ def _parse_mask(mask: str) -> tuple[int, int, int, int]:
         ymin, ymax, xmin, xmax = (int(p.strip()) for p in parts)
     except ValueError:
         raise err from None
+    if not (0 <= ymin < ymax and 0 <= xmin < xmax):
+        raise typer.BadParameter(
+            "mask phải thỏa 0 <= ymin < ymax và 0 <= xmin < xmax "
+            f"(một mask âm hoặc đảo ngược sẽ tạo crop= âm kích thước), nhận: {mask!r}"
+        )
     return ymin, ymax, xmin, xmax
+
+
+def _validate_run_args(stt: str, engine: str, cfg: dict) -> None:
+    if stt not in ("ocr", "asr"):
+        raise typer.BadParameter(f"--stt phải là 'ocr' hoặc 'asr', nhận: {stt!r}")
+    available_engines = sorted(cfg.get("tts", {}).keys())
+    if engine not in available_engines:
+        raise typer.BadParameter(
+            f"--engine {engine!r} không có trong config.toml [tts.*]; "
+            f"các engine hợp lệ: {', '.join(available_engines) or '(chưa cấu hình engine nào)'}"
+        )
+    for section in ("desub", "llm"):
+        if section not in cfg:
+            raise typer.BadParameter(f"config.toml thiếu mục bắt buộc [{section}]")
 
 
 @app.command()
@@ -203,9 +227,9 @@ def run(
     config: Annotated[Path, typer.Option()] = Path("config.toml"),
 ) -> None:
     m = _parse_mask(mask)
-    ctx = Ctx(
-        AssetStore(data_root), ing.video_id(url), url, m, cookies, engine, stt, load_config(config)
-    )
+    cfg = load_config(config)
+    _validate_run_args(stt, engine, cfg)
+    ctx = Ctx(AssetStore(data_root), ing.video_id(url), url, m, cookies, engine, stt, cfg)
     try:
         ctx.timings = ctx.store.read_json(ctx.vid, "timings.json")
     except FileNotFoundError:
@@ -213,16 +237,20 @@ def run(
     from .logutil import setup_logging
 
     setup_logging(ctx.store.p(ctx.vid, "logs/pipeline.log"))
-    for stage in [
-        stage_ingest,
-        stage_desub,
-        stage_stt,
-        stage_translate,
-        stage_tts,
-        stage_mix,
-        stage_render,
-    ]:
-        stage(ctx)
+    try:
+        for stage in [
+            stage_ingest,
+            stage_desub,
+            stage_stt,
+            stage_translate,
+            stage_tts,
+            stage_mix,
+            stage_render,
+        ]:
+            stage(ctx)
+    except RuntimeError as e:
+        typer.echo(str(e))
+        raise typer.Exit(1) from e
     typer.echo(f"Done: {ctx.store.p(ctx.vid, 'out_16x9.mp4')}")
 
 

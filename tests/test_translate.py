@@ -1,5 +1,7 @@
 import json
 
+import pytest
+
 from reup.segments import Segment
 from reup.translate import build_prompt, parse_response, translate
 
@@ -13,6 +15,11 @@ def test_parse_plain_and_fenced():
     body = json.dumps([{"index": 0, "vi": "Xin chào"}], ensure_ascii=False)
     assert parse_response(body) == {0: "Xin chào"}
     assert parse_response(f"```json\n{body}\n```") == {0: "Xin chào"}
+
+
+def test_parse_response_raises_without_json_array():
+    with pytest.raises(ValueError):
+        parse_response("Xin lỗi, tôi không thể giúp việc này.")
 
 
 class FakeClient:
