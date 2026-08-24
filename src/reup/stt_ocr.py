@@ -79,6 +79,11 @@ def transcribe(
 ) -> list[Segment]:
     frames = workdir / "frames"
     frames.mkdir(parents=True, exist_ok=True)
+    # On a resume, leftover *.jpg files from a previous (e.g. longer) run
+    # would otherwise be picked up by sorted(frames.glob(...)) below and
+    # become phantom trailing segments.
+    for stale in frames.glob("*.jpg"):
+        stale.unlink()
     run_logged(frame_extract_cmd(video, frames, mask, fps), log_path)
     from paddleocr import PaddleOCR
 

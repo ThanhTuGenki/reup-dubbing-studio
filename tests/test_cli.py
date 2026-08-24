@@ -183,6 +183,32 @@ def test_stage_mix_runs_demucs_through_run_logged(tmp_path, monkeypatch):
     assert store.p(vid, "mix.wav").exists()
 
 
+def test_stage_mix_skips_demucs_when_no_vocals_already_exists(tmp_path, monkeypatch):
+    import reup.cli as c
+
+    store = AssetStore(tmp_path)
+    vid = "vid-mix-resume"
+    segs = [Segment(index=0, start=0.0, end=1.0, text_src="a", text_vi="chào")]
+    save_segments(segs, store.p(vid, "script.json"))
+
+    # no_vocals.wav already there from a previous (successful) demucs run
+    sep_out = store.dir(vid) / "sep" / "htdemucs" / "desubbed"
+    sep_out.mkdir(parents=True, exist_ok=True)
+    (sep_out / "no_vocals.wav").write_bytes(b"bg")
+
+    calls = []
+    monkeypatch.setattr(c, "run_logged", lambda cmd, log_path=None: calls.append(cmd))
+    monkeypatch.setattr(
+        c.au, "mix", lambda bg, segs, dub_dir, out, log_path=None: out.write_bytes(b"mix")
+    )
+
+    ctx = Ctx(store, vid, "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {})
+    c.stage_mix(ctx)
+
+    assert calls == []  # demucs (the longest stage) must not have been re-run
+    assert store.p(vid, "mix.wav").exists()
+
+
 def test_stage_translate_saves_each_batch_before_a_later_batch_fails(tmp_path, monkeypatch):
     import reup.cli as c
 
@@ -349,3 +375,30 @@ def test_bench_skips_unconfigured(tmp_path, monkeypatch):
     )
     assert r.exit_code == 0
     assert r.output.count("skipped") == 3
+
+
+def test_bench_tts_strips_engine_names(tmp_path):
+    cfgfile = tmp_path / "config.toml"
+    cfgfile.write_text('[tts.vieneu]\ncmd = ""\n[tts.f5]\ncmd = ""\n[tts.omnivoice]\ncmd = ""\n')
+    r = CliRunner().invoke(
+        app,
+        [
+            "bench-tts",
+            "--text",
+            "xin chào",
+            "--engines",
+            "vieneu, f5 , omnivoice",
+            "--out-dir",
+            str(tmp_path),
+            "--config",
+            str(cfgfile),
+        ],
+    )
+    assert r.exit_code == 0
+    # Without stripping, " f5 " and " omnivoice" never match the config's
+    # "f5"/"omnivoice" keys, so they'd print with a leading space and the
+    # lookup would silently report the wrong reason.
+    assert "\n f5:" not in r.output
+    assert "\n omnivoice:" not in r.output
+    assert "f5: skipped (chưa cấu hình)" in r.output
+    assert "omnivoice: skipped (chưa cấu hình)" in r.output

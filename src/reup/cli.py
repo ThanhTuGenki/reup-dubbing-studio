@@ -41,7 +41,8 @@ def bench_tts(
 ) -> None:
     cfg = load_config(config)
     out_dir.mkdir(parents=True, exist_ok=True)
-    for name in engines.split(","):
+    for raw_name in engines.split(","):
+        name = raw_name.strip()
         tpl = cfg.get("tts", {}).get(name, {}).get("cmd", "")
         if not tpl:
             typer.echo(f"{name}: skipped (chưa cấu hình)")
@@ -155,11 +156,15 @@ def stage_mix(ctx: Ctx) -> None:
     mix_log = ctx.store.p(ctx.vid, "logs/mix.log")
 
     def go() -> None:
-        run_logged(
-            au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep),
-            ctx.store.p(ctx.vid, "logs/demucs.log"),
-        )
-        bg = next(sep.rglob("no_vocals.wav"))
+        bg = next(sep.rglob("no_vocals.wav"), None)
+        if bg is None:
+            # Demucs is the longest-running stage -- don't pay for it twice
+            # while debugging the mix filter if its output already exists.
+            run_logged(
+                au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep),
+                ctx.store.p(ctx.vid, "logs/demucs.log"),
+            )
+            bg = next(sep.rglob("no_vocals.wav"))
         segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
         au.mix(bg, segs, ctx.store.dir(ctx.vid) / "dub", out, mix_log)
 

@@ -6,3 +6,4 @@ data/
 tools/
 .superpowers/
 *.egg-info/
+.pytest_cache/

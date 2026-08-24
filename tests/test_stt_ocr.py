@@ -1,3 +1,5 @@
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -52,3 +54,34 @@ def test_group_scales_pad_with_frame_dur():
     segs = group_ocr_lines(lines, frame_dur=0.1)
     assert len(segs) == 1
     assert segs[0].end == pytest.approx(0.3)
+
+
+def test_transcribe_clears_stale_frames_before_extracting(tmp_path, monkeypatch):
+    # On a resume, leftover %06d.jpg files from a previous, longer run must
+    # not survive into this run's sorted(frames.glob(...)) -- otherwise they
+    # become phantom trailing segments.
+    workdir = tmp_path
+    frames = workdir / "frames"
+    frames.mkdir(parents=True)
+    stale = frames / "000099.jpg"
+    stale.write_bytes(b"stale")
+
+    monkeypatch.setattr("reup.stt_ocr.run_logged", lambda cmd, log_path=None: None)
+
+    fake_paddleocr = types.ModuleType("paddleocr")
+
+    class FakePaddleOCR:
+        def __init__(self, **kwargs):
+            pass
+
+        def predict(self, path):
+            return []
+
+    fake_paddleocr.PaddleOCR = FakePaddleOCR
+    monkeypatch.setitem(sys.modules, "paddleocr", fake_paddleocr)
+
+    from reup.stt_ocr import transcribe
+
+    transcribe(Path("v.mp4"), (0, 100, 0, 200), workdir)
+
+    assert not stale.exists()

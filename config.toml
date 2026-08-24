@@ -1,7 +1,3 @@
-[paths]
-data_root = "data"
-tools_dir = "tools"           # nơi clone repo ngoài (VSR...)
-
 [llm]
 model = "claude-sonnet-5"
 
