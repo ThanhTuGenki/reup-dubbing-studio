@@ -125,9 +125,11 @@ def stage_translate(ctx: Ctx) -> None:
 
 def stage_tts(ctx: Ctx) -> None:
     dub = ctx.store.dir(ctx.vid) / "dub"
-    if dub.exists() and any(dub.glob("*.wav")):
-        return
     segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
+    expected = {f"{s.index:04d}.wav" for s in segs if s.text_vi.strip()}
+    have = {p.name for p in dub.glob("*.wav")} if dub.exists() else set()
+    if expected <= have:
+        return
     adapter = tts_m.get_adapter(ctx.engine, ctx.cfg)
     _timed(ctx, "tts", lambda: tts_m.synth_segments(segs, adapter, dub))
 
@@ -169,11 +171,15 @@ def stage_render(ctx: Ctx) -> None:
 
 def _parse_mask(mask: str) -> tuple[int, int, int, int]:
     parts = mask.split(",")
-    if len(parts) != 4 or not all(p.strip().lstrip("-").isdigit() for p in parts):
-        raise typer.BadParameter(
-            f"mask phải có đúng 4 số nguyên dạng ymin,ymax,xmin,xmax, nhận: {mask!r}"
-        )
-    ymin, ymax, xmin, xmax = (int(p) for p in parts)
+    err = typer.BadParameter(
+        f"mask phải có đúng 4 số nguyên dạng ymin,ymax,xmin,xmax, nhận: {mask!r}"
+    )
+    if len(parts) != 4:
+        raise err
+    try:
+        ymin, ymax, xmin, xmax = (int(p.strip()) for p in parts)
+    except ValueError:
+        raise err from None
     return ymin, ymax, xmin, xmax
 
 
@@ -191,6 +197,10 @@ def run(
     ctx = Ctx(
         AssetStore(data_root), ing.video_id(url), url, m, cookies, engine, stt, load_config(config)
     )
+    try:
+        ctx.timings = ctx.store.read_json(ctx.vid, "timings.json")
+    except FileNotFoundError:
+        pass
     from .logutil import setup_logging
 
     setup_logging(ctx.store.p(ctx.vid, "logs/pipeline.log"))
@@ -207,16 +217,42 @@ def run(
     typer.echo(f"Done: {ctx.store.p(ctx.vid, 'out_16x9.mp4')}")
 
 
+def _load_segments_or_none(st: AssetStore, vid: str, name: str) -> list | None:
+    try:
+        return load_segments(st.p(vid, name))
+    except FileNotFoundError:
+        return None
+
+
 @app.command()
 def report(vid: str, data_root: Annotated[Path, typer.Option()] = Path("data")) -> None:
     st = AssetStore(data_root)
-    ocr = load_segments(st.p(vid, "segments_ocr.json"))
-    asr = load_segments(st.p(vid, "segments_asr.json"))
-    typer.echo("| t | OCR | ASR |\n|---|-----|-----|")
-    for o in ocr[:200]:
-        near = min(asr, key=lambda a: abs(a.start - o.start), default=None)
-        typer.echo(f"| {o.start:.1f} | {o.text_src} | {near.text_src if near else ''} |")
-    typer.echo(f"\nTimings: {st.read_json(vid, 'timings.json')}")
+    ocr = _load_segments_or_none(st, vid, "segments_ocr.json")
+    asr = _load_segments_or_none(st, vid, "segments_asr.json")
+
+    if ocr is None and asr is None:
+        typer.echo("Chưa có segments_ocr.json hoặc segments_asr.json — chạy `reup run` trước.")
+        return
+    if ocr is None:
+        typer.echo("Thiếu segments_ocr.json.")
+    if asr is None:
+        typer.echo("Thiếu segments_asr.json.")
+
+    if ocr is not None:
+        typer.echo("| t | OCR | ASR |\n|---|-----|-----|")
+        for o in ocr[:200]:
+            near = min(asr, key=lambda a: abs(a.start - o.start), default=None) if asr else None
+            typer.echo(f"| {o.start:.1f} | {o.text_src} | {near.text_src if near else ''} |")
+    else:
+        typer.echo("| t | ASR |\n|---|-----|")
+        for a in asr[:200]:
+            typer.echo(f"| {a.start:.1f} | {a.text_src} |")
+
+    try:
+        timings = st.read_json(vid, "timings.json")
+    except FileNotFoundError:
+        timings = {}
+    typer.echo(f"\nTimings: {timings}")
 
 
 if __name__ == "__main__":
