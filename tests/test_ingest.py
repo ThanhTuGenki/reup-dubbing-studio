@@ -25,6 +25,23 @@ def test_video_id_stable():
     assert len(video_id("https://ex.com/v")) == 8
 
 
+def test_cmd_has_end_of_options_separator_before_url():
+    url = "https://ex.com/v"
+    cmd = build_ytdlp_cmd(url, Path("o.mp4"))
+    assert cmd[-2] == "--"
+    assert cmd[-1] == url
+
+
+def test_cmd_rejects_flag_smuggling_url():
+    with pytest.raises(ValueError):
+        build_ytdlp_cmd("--exec=touch /tmp/pwned", Path("o.mp4"))
+
+
+def test_cmd_rejects_non_http_scheme():
+    with pytest.raises(ValueError):
+        build_ytdlp_cmd("file:///etc/passwd", Path("o.mp4"))
+
+
 @pytest.mark.integration
 def test_download_real(tmp_path):
     from reup.ingest import download
