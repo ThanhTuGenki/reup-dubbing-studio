@@ -10,10 +10,20 @@ def render_cmd(
     template: str, input: Path, output: Path, mask: tuple[int, int, int, int]
 ) -> list[str]:
     ymin, ymax, xmin, xmax = mask
-    filled = template.format(
-        input=str(input), output=str(output), ymin=ymin, ymax=ymax, xmin=xmin, xmax=xmax
-    )
-    return shlex.split(filled)
+    subs = {
+        "{input}": str(input),
+        "{output}": str(output),
+        "{ymin}": str(ymin),
+        "{ymax}": str(ymax),
+        "{xmin}": str(xmin),
+        "{xmax}": str(xmax),
+    }
+    filled = []
+    for token in shlex.split(template):
+        for placeholder, value in subs.items():
+            token = token.replace(placeholder, value)
+        filled.append(token)
+    return filled
 
 
 def desub(
