@@ -19,7 +19,7 @@ from . import tts as tts_m
 from .assets import AssetStore
 from .config import load_config
 from .logutil import run_logged
-from .segments import load_segments, save_segments, to_srt, voiced
+from .segments import Segment, load_segments, save_segments, to_srt, voiced
 from .tts import TemplateTTS
 
 log = logging.getLogger("reup.cli")
@@ -78,19 +78,19 @@ def _timed(ctx: Ctx, name: str, fn: Callable[[], None]) -> None:
 def stage_ingest(ctx: Ctx) -> None:
     out = ctx.store.p(ctx.vid, "raw.mp4")
     if not out.exists():
-        log = ctx.store.p(ctx.vid, "logs/ingest.log")
-        _timed(ctx, "ingest", lambda: ing.download(ctx.url, out, ctx.cookies, log))
+        ingest_log = ctx.store.p(ctx.vid, "logs/ingest.log")
+        _timed(ctx, "ingest", lambda: ing.download(ctx.url, out, ctx.cookies, ingest_log))
 
 
 def stage_desub(ctx: Ctx) -> None:
     out = ctx.store.p(ctx.vid, "desubbed.mp4")
     if not out.exists():
-        log = ctx.store.p(ctx.vid, "logs/desub.log")
+        desub_log = ctx.store.p(ctx.vid, "logs/desub.log")
         _timed(
             ctx,
             "desub",
             lambda: ds.desub(
-                ctx.store.p(ctx.vid, "raw.mp4"), out, ctx.mask, ctx.cfg["desub"]["cmd"], log
+                ctx.store.p(ctx.vid, "raw.mp4"), out, ctx.mask, ctx.cfg["desub"]["cmd"], desub_log
             ),
         )
 
@@ -102,21 +102,31 @@ def stage_stt(ctx: Ctx) -> None:
         ctx.store.p(ctx.vid, "segments_asr.json"),
     )
     if not p_ocr.exists():
-        log = ctx.store.p(ctx.vid, "logs/stt_ocr.log")
+        stt_ocr_log = ctx.store.p(ctx.vid, "logs/stt_ocr.log")
         _timed(
             ctx,
             "stt_ocr",
             lambda: save_segments(
-                stt_ocr.transcribe(raw, ctx.mask, ctx.store.dir(ctx.vid), log_path=log), p_ocr
+                stt_ocr.transcribe(raw, ctx.mask, ctx.store.dir(ctx.vid), log_path=stt_ocr_log),
+                p_ocr,
             ),
         )
     if not p_asr.exists():
         _timed(ctx, "stt_asr", lambda: save_segments(stt_asr.transcribe(raw), p_asr))
 
 
+def _translate_complete(segs: list[Segment]) -> bool:
+    """Resume-completeness gate mirroring stage_tts's own completeness check:
+    every segment that actually carries source text must carry a non-blank
+    text_vi. A segment with blank text_src never blocks completeness --
+    there was nothing to translate for it in the first place, mirroring how
+    voiced() treats blanks downstream."""
+    return all(s.text_vi.strip() for s in segs if s.text_src.strip())
+
+
 def stage_translate(ctx: Ctx) -> None:
     out = ctx.store.p(ctx.vid, "script.json")
-    if out.exists():
+    if out.exists() and _translate_complete(load_segments(out)):
         return
     segs = load_segments(ctx.store.p(ctx.vid, f"segments_{ctx.stt_main}.json"))
 
@@ -178,12 +188,16 @@ def stage_render(ctx: Ctx) -> None:
     segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
     srt = ctx.store.p(ctx.vid, "sub.srt")
     srt.write_text(to_srt(segs), encoding="utf-8")
-    log = ctx.store.p(ctx.vid, "logs/render.log")
+    render_log = ctx.store.p(ctx.vid, "logs/render.log")
     _timed(
         ctx,
         "render",
         lambda: rd.render(
-            ctx.store.p(ctx.vid, "desubbed.mp4"), ctx.store.p(ctx.vid, "mix.wav"), srt, out, log
+            ctx.store.p(ctx.vid, "desubbed.mp4"),
+            ctx.store.p(ctx.vid, "mix.wav"),
+            srt,
+            out,
+            render_log,
         ),
     )
 
@@ -215,6 +229,10 @@ def _validate_run_args(stt: str, engine: str, cfg: dict) -> None:
         raise typer.BadParameter(
             f"--engine {engine!r} không có trong config.toml [tts.*]; "
             f"các engine hợp lệ: {', '.join(available_engines) or '(chưa cấu hình engine nào)'}"
+        )
+    if not cfg["tts"][engine].get("cmd", "").strip():
+        raise typer.BadParameter(
+            f"--engine {engine!r} chưa có lệnh: điền config.toml [tts.{engine}] cmd trước khi chạy"
         )
     for section in ("desub", "llm"):
         if section not in cfg:

@@ -31,6 +31,19 @@ def _reset_root_logging_handlers():
     root.handlers[:] = before
 
 
+def _valid_run_config(tmp_path):
+    """A config.toml satisfying _validate_run_args for the default
+    engine="vieneu"/stt="ocr": the real repo-root config.toml intentionally
+    ships every [tts.*] cmd empty as an unfilled template, so tests that
+    exercise a successful `reup run` validation path need their own config
+    with a non-empty cmd for the engine actually used."""
+    cfgfile = tmp_path / "config.toml"
+    cfgfile.write_text(
+        '[llm]\nmodel = "m"\n[desub]\ncmd = "true"\n[tts.vieneu]\ncmd = "true {text} {out}"\n'
+    )
+    return cfgfile
+
+
 def test_run_calls_stages_in_order(monkeypatch, tmp_path):
     order = []
     import reup.cli as c
@@ -45,9 +58,19 @@ def test_run_calls_stages_in_order(monkeypatch, tmp_path):
         "stage_render",
     ]:
         monkeypatch.setattr(c, name, lambda ctx, _n=name: order.append(_n))
+    cfgfile = _valid_run_config(tmp_path)
     r = CliRunner().invoke(
         app,
-        ["run", "https://x/v", "--mask", "600,700,0,1280", "--data-root", str(tmp_path)],
+        [
+            "run",
+            "https://x/v",
+            "--mask",
+            "600,700,0,1280",
+            "--data-root",
+            str(tmp_path),
+            "--config",
+            str(cfgfile),
+        ],
     )
     assert r.exit_code == 0
     assert order == [
@@ -81,7 +104,17 @@ def test_run_preserves_timings_across_resume(monkeypatch, tmp_path):
         monkeypatch.setattr(c, name, fake_noop)
     monkeypatch.setattr(c, "stage_ingest", fake_ingest)
 
-    args = ["run", "https://x/v", "--mask", "600,700,0,1280", "--data-root", str(tmp_path)]
+    cfgfile = _valid_run_config(tmp_path)
+    args = [
+        "run",
+        "https://x/v",
+        "--mask",
+        "600,700,0,1280",
+        "--data-root",
+        str(tmp_path),
+        "--config",
+        str(cfgfile),
+    ]
     r1 = CliRunner().invoke(app, args)
     assert r1.exit_code == 0
 
@@ -249,6 +282,64 @@ def test_stage_translate_saves_each_batch_before_a_later_batch_fails(tmp_path, m
     assert saved[50].text_vi == ""  # second batch never completed
 
 
+def test_stage_translate_resumes_after_a_previous_batch_failure(tmp_path, monkeypatch):
+    """A failed batch must not silently ship an untranslated gap: once
+    script.json exists but is incomplete (some segment with source text has
+    blank text_vi), stage_translate must re-enter translation on the next
+    invocation rather than skipping because the file merely exists."""
+    import reup.cli as c
+
+    store = AssetStore(tmp_path)
+    vid = "vid-translate-resume"
+    n = 55  # two batches of 50/5
+    segs_src = [
+        Segment(index=i, start=float(i), end=float(i) + 1, text_src=f"s{i}") for i in range(n)
+    ]
+    save_segments(segs_src, store.p(vid, "segments_ocr.json"))
+
+    monkeypatch.setattr("anthropic.Anthropic", lambda: "fake-client")
+
+    call_count = {"n": 0}
+
+    def fake_translate_fails_on_batch_2(batch, client=None, model=None):
+        call_count["n"] += 1
+        if call_count["n"] == 2:
+            raise RuntimeError("simulated API failure on the second batch")
+        for s in batch:
+            s.text_vi = f"vi{s.index}"
+        return batch
+
+    monkeypatch.setattr(c.tr, "translate", fake_translate_fails_on_batch_2)
+
+    ctx = Ctx(
+        store, vid, "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {"llm": {"model": "m"}}
+    )
+
+    with pytest.raises(RuntimeError):
+        c.stage_translate(ctx)
+
+    saved_after_failure = load_segments(store.p(vid, "script.json"))
+    assert saved_after_failure[50].text_vi == ""  # confirm still incomplete
+
+    # Second invocation: script.json exists but is incomplete, so
+    # stage_translate must actually re-enter translation, not skip.
+    translate_calls: list[list[int]] = []
+
+    def fake_translate_succeeds(batch, client=None, model=None):
+        translate_calls.append([s.index for s in batch])
+        for s in batch:
+            s.text_vi = f"vi{s.index}"
+        return batch
+
+    monkeypatch.setattr(c.tr, "translate", fake_translate_succeeds)
+
+    c.stage_translate(ctx)
+
+    assert translate_calls  # translate() was actually invoked again
+    saved_after_resume = load_segments(store.p(vid, "script.json"))
+    assert all(s.text_vi.strip() for s in saved_after_resume)
+
+
 def test_report_handles_missing_transcripts_without_raising(tmp_path):
     store = AssetStore(tmp_path)
 
@@ -316,6 +407,22 @@ def test_validate_run_args_rejects_missing_config_sections():
         _validate_run_args("ocr", "vieneu", {"tts": {"vieneu": {"cmd": "x"}}})  # missing desub/llm
 
 
+def test_validate_run_args_rejects_engine_with_empty_cmd():
+    # The engine section can exist (every [tts.*] template ships with
+    # cmd = "" by default) without being usable. Validation must catch that
+    # up front too, or A8's whole point -- failing before paid work runs --
+    # is defeated by the common real case of a present-but-unconfigured
+    # engine.
+    from reup.cli import _validate_run_args
+
+    with pytest.raises(typer.BadParameter):
+        _validate_run_args(
+            "ocr",
+            "vieneu",
+            {"tts": {"vieneu": {"cmd": ""}}, "desub": {"cmd": ""}, "llm": {"model": "m"}},
+        )
+
+
 def test_validate_run_args_accepts_valid_config():
     from reup.cli import _validate_run_args
 
@@ -357,9 +464,19 @@ def test_run_catches_runtime_error_and_reports_cleanly(monkeypatch, tmp_path):
         )
 
     monkeypatch.setattr(c, "stage_ingest", boom)
+    cfgfile = _valid_run_config(tmp_path)
     r = CliRunner().invoke(
         app,
-        ["run", "https://x/v", "--mask", "600,700,0,1280", "--data-root", str(tmp_path)],
+        [
+            "run",
+            "https://x/v",
+            "--mask",
+            "600,700,0,1280",
+            "--data-root",
+            str(tmp_path),
+            "--config",
+            str(cfgfile),
+        ],
     )
     assert r.exit_code == 1
     assert "boom" in r.output
