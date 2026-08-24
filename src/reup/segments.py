@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 import json
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
+
 
 @dataclass
 class Segment:
@@ -12,12 +14,17 @@ class Segment:
     text_vi: str = ""
     speaker: str = "narrator"
 
+
 def save_segments(segs: list[Segment], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps([asdict(s) for s in segs], ensure_ascii=False, indent=1), encoding="utf-8")
+    path.write_text(
+        json.dumps([asdict(s) for s in segs], ensure_ascii=False, indent=1), encoding="utf-8"
+    )
+
 
 def load_segments(path: Path) -> list[Segment]:
     return [Segment(**d) for d in json.loads(path.read_text(encoding="utf-8"))]
+
 
 def fmt_ts(seconds: float) -> str:
     ms = round(seconds * 1000)
@@ -25,6 +32,7 @@ def fmt_ts(seconds: float) -> str:
     m, rem = divmod(rem, 60_000)
     s, ms = divmod(rem, 1000)
     return f"{h:02d}:{m:02d}:{s:02d},{ms:03d}"
+
 
 def to_srt(segs: list[Segment], use_vi: bool = True) -> str:
     out = []

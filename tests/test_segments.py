@@ -1,5 +1,7 @@
 from pathlib import Path
-from reup.segments import Segment, save_segments, load_segments, to_srt, fmt_ts
+
+from reup.segments import Segment, fmt_ts, load_segments, save_segments, to_srt
+
 
 def test_roundtrip(tmp_path: Path):
     segs = [Segment(0, 0.0, 2.5, text_src="你好", text_vi="Xin chào")]
@@ -7,9 +9,11 @@ def test_roundtrip(tmp_path: Path):
     save_segments(segs, p)
     assert load_segments(p) == segs
 
+
 def test_fmt_ts():
     assert fmt_ts(3661.5) == "01:01:01,500"
     assert fmt_ts(0.0) == "00:00:00,000"
+
 
 def test_to_srt():
     segs = [Segment(0, 0.0, 1.0, text_vi="A"), Segment(1, 1.2, 3.0, text_vi="B")]
