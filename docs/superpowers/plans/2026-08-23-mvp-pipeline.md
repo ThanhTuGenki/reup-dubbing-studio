@@ -1115,6 +1115,7 @@ def test_run_calls_stages_in_order(monkeypatch, tmp_path):
 import time
 from dataclasses import dataclass, field
 from .assets import AssetStore
+from .logutil import run_logged
 from .segments import load_segments, save_segments, to_srt
 from . import ingest as ing, desub as ds, stt_asr, stt_ocr, translate as tr, tts as tts_m, audio as au, render as rd
 
@@ -1181,8 +1182,8 @@ def stage_mix(ctx: Ctx):
         return
     sep = ctx.store.dir(ctx.vid) / "sep"
     def go():
-        import subprocess
-        subprocess.run(au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep), check=True)
+        run_logged(au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep),
+                   ctx.store.p(ctx.vid, "logs/demucs.log"))
         bg = next(sep.rglob("no_vocals.wav"))
         segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
         au.mix(bg, segs, ctx.store.dir(ctx.vid) / "dub", out)

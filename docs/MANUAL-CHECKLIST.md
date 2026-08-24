@@ -44,7 +44,35 @@ pass `cookies=Path("data/cookies/bilibili.txt")` when calling `download(...)`
 (the integration test as written does not pass cookies — extend it manually
 if the chosen test video requires them).
 
-## 2. Install and probe video-subtitle-remover (Task 4)
+## 2. Measure the subtitle mask, then install and probe video-subtitle-remover (Task 4)
+
+The mask is the first artifact you must produce, and the only fully manual
+input in the whole pipeline — every later step (desub, OCR framing,
+`reup run --mask`) depends on getting it right. Measure it from a real frame
+of `raw.mp4`:
+
+```bash
+ffmpeg -ss 60 -i raw.mp4 -vframes 1 frame.png
+```
+
+Open `frame.png` in any image viewer/editor that shows pixel coordinates
+(e.g. Preview's pointer position, GIMP, or `qlmanage -p frame.png` plus a
+screenshot tool with a ruler). Find the rectangle that fully covers the
+burned-in subtitle band across the frames you spot-check (subtitles can
+shift a few pixels between lines, so pick bounds a little generous), and
+read off:
+- `ymin` — the top edge's y pixel coordinate
+- `ymax` — the bottom edge's y pixel coordinate
+- `xmin` — the left edge's x pixel coordinate
+- `xmax` — the right edge's x pixel coordinate
+
+The mask is always written and passed in that exact order,
+**`ymin,ymax,xmin,xmax`** — this is the order `_parse_mask` in `cli.py`
+expects, and the order every pipeline function (`desub.render_cmd`,
+`stt_ocr.frame_extract_cmd`) takes as its `mask: tuple[int, int, int, int]`
+argument. Check a few frames spread across the video (subtitle position is
+usually fixed, but confirm it doesn't move for on-screen graphics/credits).
+Record the mask you land on in `docs/superpowers/plans/mvp-notes.md`.
 
 ```bash
 mkdir -p tools && git clone https://github.com/YaoFANGUK/video-subtitle-remover tools/vsr
@@ -74,7 +102,7 @@ Run desub on `clip.mp4`, open the output, and visually confirm the
 subtitle-burned region is clean. Record the run time in
 `docs/superpowers/plans/mvp-notes.md`.
 
-## 3. Install the `heavy` extra and run ASR + OCR on a real clip (Task 5)
+## 3. Install `paddleocr`/`paddlepaddle` and run ASR + OCR on a real clip (Task 5)
 
 ```bash
 .venv/bin/pip install paddleocr paddlepaddle
@@ -102,9 +130,14 @@ Notes:
   `.venv/bin/pytest tests/test_stt_ocr.py -v` after adjusting to confirm the
   existing shape tests still pass, and add a new test case for the newly
   observed shape.
-- `faster-whisper` is already a hard dependency (not in `heavy`), so
-  `asr(...)` will download the `small` Whisper model weights on first run —
-  expect a network call and a multi-hundred-MB download.
+- `faster-whisper` is already a hard dependency (not installed in this
+  step), so `asr(...)` will download the `small` Whisper model weights on
+  first run — expect a network call and a multi-hundred-MB download.
+- `faster-whisper` runs on CTranslate2, which has no Apple Silicon MPS
+  backend — ASR runs on CPU on this Mac (`device="auto"` resolves to CPU
+  here, not GPU). Keep that in mind when reading `stt_asr` timings in
+  `timings.json`: don't misread Mac CPU time as "Mac GPU time" when
+  extrapolating rented-GPU cost in step 8.
 
 ## 4. Real translation smoke test (Task 6)
 
@@ -183,9 +216,27 @@ Run `demucs_cmd(...)` on a real test clip, use the resulting
 ## 8. Full pipeline acceptance pass (Task 10, brief Step 5)
 
 Once steps 1–7 above are done (real download works, desub template filled
-in, `heavy` extra installed, at least one TTS engine configured, demucs
-installed), run the whole pipeline end to end on a **full video** (not a
-clip):
+in, `paddleocr`/`paddlepaddle` installed, at least one TTS engine
+configured, demucs installed), export the Anthropic key `stage_translate`
+needs (the same one used in step 4 — `reup run` calls it just as much):
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+Sanity-check that `[llm] model` in `config.toml` names a model this account
+can actually call before committing to a full run — a typo or an
+unavailable model name will only surface once translation starts, after
+ingest/desub/OCR/ASR have already run:
+```bash
+.venv/bin/python -c "
+import anthropic, tomllib
+cfg = tomllib.load(open('config.toml', 'rb'))
+anthropic.Anthropic().messages.create(
+    model=cfg['llm']['model'], max_tokens=8,
+    messages=[{'role': 'user', 'content': 'ping'}])
+print('model OK')
+"
+```
+Then run the whole pipeline end to end on a **full video** (not a clip):
 ```bash
 .venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine vieneu] [--stt ocr]
 .venv/bin/reup report <vid>
