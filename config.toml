@@ -1,0 +1,19 @@
+[paths]
+data_root = "data"
+tools_dir = "tools"           # nơi clone repo ngoài (VSR...)
+
+[llm]
+model = "claude-sonnet-5"
+
+[desub]
+# template điền ở Task 4 sau khi probe CLI thật của video-subtitle-remover
+cmd = ""
+
+[tts.vieneu]
+cmd = ""                      # điền ở Task 7
+
+[tts.f5]
+cmd = ""                      # điền ở Task 8 (cần CUDA)
+
+[tts.omnivoice]
+cmd = ""                      # điền ở Task 8 (cần CUDA)

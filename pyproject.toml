@@ -1,0 +1,27 @@
+[project]
+name = "reup"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+  "typer>=0.12",
+  "yt-dlp>=2026.1.1",
+  "anthropic>=0.40",
+  "faster-whisper>=1.0",
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.optional-dependencies]
+heavy = ["paddleocr", "paddlepaddle", "demucs"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-m 'not integration'"
+markers = ["integration: needs models/network/ffmpeg, run manually"]
+testpaths = ["tests"]
