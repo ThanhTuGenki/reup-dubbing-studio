@@ -14,6 +14,9 @@ dependencies = [
 [project.optional-dependencies]
 heavy = ["paddleocr", "paddlepaddle", "demucs"]
 
+[project.scripts]
+reup = "reup.cli:app"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
