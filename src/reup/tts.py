@@ -20,13 +20,18 @@ class TemplateTTS:
         return out_wav
 
 
-def synth_segments(segs: list[Segment], adapter: TemplateTTS, dub_dir: Path) -> list[Path]:
+def synth_segments(
+    segs: list[Segment],
+    adapter: TemplateTTS,
+    dub_dir: Path,
+    log_path: Path | None = None,
+) -> list[Path]:
     dub_dir.mkdir(parents=True, exist_ok=True)
     outs = []
     for s in segs:
         if not s.text_vi.strip():
             continue
-        outs.append(adapter.synth(s.text_vi, dub_dir / f"{s.index:04d}.wav"))
+        outs.append(adapter.synth(s.text_vi, dub_dir / f"{s.index:04d}.wav", log_path))
     return outs
 
 

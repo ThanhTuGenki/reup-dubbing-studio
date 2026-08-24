@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -17,8 +18,11 @@ from . import translate as tr
 from . import tts as tts_m
 from .assets import AssetStore
 from .config import load_config
+from .logutil import run_logged
 from .segments import load_segments, save_segments, to_srt
 from .tts import TemplateTTS
+
+log = logging.getLogger("reup.cli")
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -61,10 +65,13 @@ class Ctx:
 
 
 def _timed(ctx: Ctx, name: str, fn: Callable[[], None]) -> None:
+    log.info("stage %s: start", name)
     t0 = time.time()
     fn()
-    ctx.timings[name] = round(time.time() - t0, 1)
+    elapsed = round(time.time() - t0, 1)
+    ctx.timings[name] = elapsed
     ctx.store.write_json(ctx.vid, "timings.json", ctx.timings)
+    log.info("stage %s: done (%.1fs)", name, elapsed)
 
 
 def stage_ingest(ctx: Ctx) -> None:
@@ -131,7 +138,8 @@ def stage_tts(ctx: Ctx) -> None:
     if expected <= have:
         return
     adapter = tts_m.get_adapter(ctx.engine, ctx.cfg)
-    _timed(ctx, "tts", lambda: tts_m.synth_segments(segs, adapter, dub))
+    log_path = ctx.store.p(ctx.vid, "logs/tts.log")
+    _timed(ctx, "tts", lambda: tts_m.synth_segments(segs, adapter, dub, log_path))
 
 
 def stage_mix(ctx: Ctx) -> None:
@@ -139,15 +147,16 @@ def stage_mix(ctx: Ctx) -> None:
     if out.exists():
         return
     sep = ctx.store.dir(ctx.vid) / "sep"
-    log = ctx.store.p(ctx.vid, "logs/mix.log")
+    mix_log = ctx.store.p(ctx.vid, "logs/mix.log")
 
     def go() -> None:
-        import subprocess
-
-        subprocess.run(au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep), check=True)
+        run_logged(
+            au.demucs_cmd(ctx.store.p(ctx.vid, "desubbed.mp4"), sep),
+            ctx.store.p(ctx.vid, "logs/demucs.log"),
+        )
         bg = next(sep.rglob("no_vocals.wav"))
         segs = load_segments(ctx.store.p(ctx.vid, "script.json"))
-        au.mix(bg, segs, ctx.store.dir(ctx.vid) / "dub", out, log)
+        au.mix(bg, segs, ctx.store.dir(ctx.vid) / "dub", out, mix_log)
 
     _timed(ctx, "mix", go)
 

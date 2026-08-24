@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -6,6 +8,27 @@ from reup.assets import AssetStore
 from reup.cli import Ctx, _parse_mask, app
 from reup.ingest import video_id
 from reup.segments import Segment, save_segments
+
+
+@pytest.fixture(autouse=True)
+def _reset_root_logging_handlers():
+    """`reup.cli.run` calls `setup_logging`, which reconfigures the root
+    logger's handlers on every invocation. A `logging.StreamHandler()` bound
+    while Typer's `CliRunner` has swapped `sys.stdout` for capture can outlive
+    that swap and blow up ("I/O operation on closed file") the next time any
+    logger writes to it in a later test. Snapshot/restore around each test so
+    handlers added here never leak into the rest of the suite.
+    """
+    root = logging.getLogger()
+    before = root.handlers[:]
+    yield
+    for h in root.handlers:
+        if h not in before:
+            try:
+                h.close()
+            except Exception:
+                pass
+    root.handlers[:] = before
 
 
 def test_run_calls_stages_in_order(monkeypatch, tmp_path):
@@ -99,7 +122,9 @@ def test_stage_tts_reruns_on_partial_dub_and_skips_when_complete(tmp_path, monke
     called = []
     monkeypatch.setattr(c.tts_m, "get_adapter", lambda name, cfg: object())
     monkeypatch.setattr(
-        c.tts_m, "synth_segments", lambda segs, adapter, dub_dir: called.append(True)
+        c.tts_m,
+        "synth_segments",
+        lambda segs, adapter, dub_dir, log_path=None: called.append(True),
     )
 
     ctx = Ctx(store, vid, "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {})
@@ -110,6 +135,52 @@ def test_stage_tts_reruns_on_partial_dub_and_skips_when_complete(tmp_path, monke
     called.clear()
     c.stage_tts(ctx)
     assert called == []  # complete dub dir -> stage skips
+
+
+def test_timed_logs_stage_start_and_completion(tmp_path, caplog):
+    import reup.cli as c
+
+    store = AssetStore(tmp_path)
+    ctx = Ctx(store, "vid-log", "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {})
+    with caplog.at_level(logging.INFO, logger="reup.cli"):
+        c._timed(ctx, "demo", lambda: None)
+    records = [r for r in caplog.records if r.name == "reup.cli"]
+    assert len(records) == 2
+    assert "demo" in records[0].message and "start" in records[0].message.lower()
+    assert "demo" in records[1].message and "done" in records[1].message.lower()
+
+
+def test_stage_mix_runs_demucs_through_run_logged(tmp_path, monkeypatch):
+    import reup.cli as c
+
+    store = AssetStore(tmp_path)
+    vid = "vid-mix"
+    segs = [Segment(index=0, start=0.0, end=1.0, text_src="a", text_vi="chào")]
+    save_segments(segs, store.p(vid, "script.json"))
+    sep = store.dir(vid) / "sep" / "htdemucs" / "desubbed"
+
+    calls = []
+
+    def fake_run_logged(cmd, log_path=None):
+        calls.append((cmd, log_path))
+        # simulate demucs having produced the background stem
+        sep.mkdir(parents=True, exist_ok=True)
+        (sep / "no_vocals.wav").write_bytes(b"bg")
+
+    monkeypatch.setattr(c, "run_logged", fake_run_logged)
+    monkeypatch.setattr(c.au, "demucs_cmd", lambda inp, out_dir: ["demucs", "fake"])
+    monkeypatch.setattr(
+        c.au, "mix", lambda bg, segs, dub_dir, out, log_path=None: out.write_bytes(b"mix")
+    )
+
+    ctx = Ctx(store, vid, "https://x/v", (0, 1, 0, 1), None, "vieneu", "ocr", {})
+    c.stage_mix(ctx)
+
+    assert len(calls) == 1
+    cmd, log_path = calls[0]
+    assert cmd == ["demucs", "fake"]
+    assert str(log_path).endswith("logs/demucs.log")
+    assert store.p(vid, "mix.wav").exists()
 
 
 def test_report_handles_missing_transcripts_without_raising(tmp_path):
