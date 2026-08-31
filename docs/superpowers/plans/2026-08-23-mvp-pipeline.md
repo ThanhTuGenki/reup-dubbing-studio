@@ -1,5 +1,21 @@
 # Reup Dubbing Studio — Giai đoạn 1 (MVP) Implementation Plan
 
+> **Design change, 2026-08-31 (documentation only; code not updated yet):**
+> output must be a Vietnamese-dubbed video with no Vietnamese subtitles burned
+> into the picture, plus a separate same-basename SRT file beside it (for
+> example `out_16x9.mp4` + `out_16x9.srt`). Historical implementation snippets
+> below that burn `sub.srt` into the video are superseded by this decision. See
+> section 5.8 of the system design. A future implementation change must update
+> `render.py`, `cli.py`, and their tests; this document update does not change code.
+
+> **Publishing design change, 2026-08-31 (documentation only):** Postiz is no
+> longer part of the target architecture. A later phase will add an app-native
+> Content Agent and Manual Publishing Workspace: generate structured platform
+> copy from app-owned meta/full SRT/thumbnail, let the user copy/upload MP4 +
+> SRT manually, and retain URL/post ID plus per-platform task state. Historical
+> mentions of Postiz below mean only that publishing was outside this MVP; they
+> do not authorize adding Postiz.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Pipeline CLI Python chạy trọn 1 video: tải → xóa hard-sub (mask cố định) → bóc lời (OCR + ASR để so sánh) → dịch LLM → lồng 1 giọng → Demucs giữ nhạc nền → render 16:9, kèm log thời gian từng bước.
@@ -13,7 +29,8 @@
 ## Global Constraints
 
 - Python ≥ 3.11; virtualenv tại `.venv/`; chạy local trên macOS (Apple Silicon, không CUDA) — mọi bước phải chạy được CPU/MPS.
-- MVP **không có**: web UI, Postiz, đa giọng, 9:16, metadata, intro/outro, R2 (chỉ thư mục local `data/`).
+- MVP **không có**: web UI, Content Agent/Publishing Workspace, đa giọng, 9:16,
+  metadata, intro/outro, R2 (chỉ thư mục local `data/`).
 - Đơn vị dữ liệu xuyên suốt: **Segment** (câu) — mọi bước đọc/ghi JSON list Segment.
 - LLM dịch: Anthropic API, model mặc định `claude-sonnet-5`, API key từ env `ANTHROPIC_API_KEY`.
 - ffmpeg gọi qua `subprocess`, không dùng thư viện bọc.
@@ -1240,6 +1257,6 @@ def report(vid: str, data_root: Path = typer.Option(Path("data"))):
 
 ## Self-review (đã chạy)
 
-- **Spec coverage (phạm vi MVP):** tải+cookie (T3), desub+mask (T4), OCR vs ASR (T5, T10 report), dịch LLM độ dài tương đương (T6), 1 giọng + bench 3 engine (T7, T8), Demucs giữ nhạc (T9), render 16:9 + sub Việt (T9), timing fit atempo ≤1.15 (T9 `fit_tempo`), đo chi phí (T10 timings + hướng dẫn GPU). Ngoài phạm vi MVP đúng như spec: không UI/Postiz/9:16/metadata/đa giọng.
+- **Spec coverage (phạm vi MVP):** tải+cookie (T3), desub+mask (T4), OCR vs ASR (T5, T10 report), dịch LLM độ dài tương đương (T6), 1 giọng + bench 3 engine (T7, T8), Demucs giữ nhạc (T9), render 16:9 + sub Việt rời (T9), timing fit atempo ≤1.15 (T9 `fit_tempo`), đo chi phí (T10 timings + hướng dẫn GPU). Ngoài phạm vi MVP đúng như spec: không UI/Content Agent/Publishing Workspace/9:16/metadata/đa giọng.
 - **Placeholder scan:** các điểm "điền sau khi probe" (VSR CLI, VieNeu API, PaddleOCR output) là bước probe có hành động và kết quả cụ thể, cô lập trong config template/script bọc — code chính không đổi. Không còn TBD nào khác.
 - **Type consistency:** `Segment` dùng thống nhất; `AssetStore.p/dir/write_json/read_json` khớp giữa T2 và T10; `TemplateTTS.synth(text, out_wav)` khớp T7/T8/T10; tên file asset thống nhất (`raw.mp4`, `desubbed.mp4`, `segments_ocr/asr.json`, `script.json`, `dub/`, `mix.wav`, `sub.srt`, `out_16x9.mp4`, `timings.json`).

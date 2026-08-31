@@ -211,7 +211,9 @@ Run `demucs_cmd(...)` on a real test clip, use the resulting
 `render.render(...)`, then open `out_16x9.mp4` and confirm:
 - background music/sound effects survive,
 - the Vietnamese dub lines land at the right timestamps,
-- the Vietnamese subtitles burn in correctly.
+- no Vietnamese subtitles are burned into the video,
+- `out_16x9.srt` exists beside `out_16x9.mp4`, contains the Vietnamese
+  subtitles, and its cues match the dubbed lines' timestamps.
 
 ## 8. Full pipeline acceptance pass (Task 10, brief Step 5)
 
