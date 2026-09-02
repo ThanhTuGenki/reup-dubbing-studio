@@ -1,0 +1,2146 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Reup Dubbing Studio — Hàng đợi xử lý</title>
+  <style>
+:root {
+  --bg:           #F5F8F4;
+  --surface:      #FFFFFF;
+  --surface-warm: #F2F7F2;
+  --panel-subtle: #EDF4EE;
+  --fg:    #1F2D22;
+  --fg-2:  var(--fg);
+  --muted: #647168;
+  --meta:  var(--muted);
+  --border:      #D9E4DA;
+  --border-soft: color-mix(in oklch, var(--border) 72%, transparent);
+  --accent:        #4F8A59;
+  --accent-strong: #397246;
+  --accent-soft:   #DDEDE0;
+  --accent-on:     #FFFFFF;
+  --accent-hover:  var(--accent-strong);
+  --accent-active: color-mix(in oklch, var(--accent-strong) 88%, var(--fg));
+  --success: var(--accent-strong);
+  --warn:    #8A5D00;
+  --danger:  #B42318;
+  --disabled-bg: #E8EDE9;
+  --disabled-fg: #7B877E;
+  --font-display: "Inter Variable", "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-body:    "Inter Variable", "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono:    "Berkeley Mono", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --text-xs:   12px;
+  --text-sm:   14px;
+  --text-base: 16px;
+  --text-lg:   18px;
+  --text-xl:   24px;
+  --text-2xl:  32px;
+  --leading-body: 1.5;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   12px;
+  --radius-pill: 9999px;
+  --card-shadow: 0 1px 2px rgba(31, 45, 34, 0.04), 0 6px 18px rgba(31, 45, 34, 0.025);
+  --elev-raised: rgba(31, 45, 34, 0.10) 0px 12px 32px, 0 0 0 1px rgba(31, 45, 34, 0.06);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent-strong);
+  --motion-fast:   150ms;
+  --motion-base:   200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-width: 320px; color: var(--fg); background: var(--bg); font-family: var(--font-body); font-size: var(--text-sm); line-height: var(--leading-body); font-feature-settings: "cv01", "ss03"; }
+button, input, select { font: inherit; font-feature-settings: inherit; }
+button, select { min-height: 44px; }
+button { color: inherit; }
+button:disabled, select:disabled, input:disabled { color: var(--disabled-fg); background: var(--disabled-bg); border-color: var(--border); cursor: not-allowed; opacity: 1; }
+svg { display: block; stroke-linecap: round; stroke-linejoin: round; }
+a { color: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.app { min-height: 100vh; }
+.sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 248px; display: flex; flex-direction: column; background: var(--surface-warm); border-right: 1px solid var(--border); transition: width var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard); }
+.sidebar-top { height: 64px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); border-bottom: 1px solid var(--border-soft); }
+.brand-mark { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-strong); color: var(--accent-on); font: 590 var(--text-xs)/1 var(--font-display); letter-spacing: -0.03em; }
+.brand-copy { min-width: 0; }
+.brand-name { font-weight: 590; white-space: nowrap; letter-spacing: -0.18px; }
+.brand-env { color: var(--meta); font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.collapse-btn, .icon-btn { margin-left: auto; width: 44px; min-width: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--muted); background: transparent; cursor: pointer; transition: color var(--motion-fast), background var(--motion-fast); }
+.collapse-btn:hover, .icon-btn:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.collapse-btn svg, .icon-btn svg, .nav-icon { width: 18px; height: 18px; }
+.nav { flex: 1; overflow-y: auto; padding: var(--space-3) var(--space-2); }
+.nav-group-label { padding: var(--space-3) var(--space-3) var(--space-2); color: var(--meta); font: 510 10px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.07em; }
+.nav-item { position: relative; width: 100%; min-height: 44px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); color: var(--muted); background: transparent; text-align: left; cursor: pointer; transition: color var(--motion-fast), background var(--motion-fast); }
+.nav-item:hover { color: var(--fg); background: var(--panel-subtle); }
+.nav-item[aria-current="page"] { color: var(--accent-strong); background: var(--accent-soft); }
+.nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; width: 3px; height: 22px; border-radius: var(--radius-pill); background: var(--accent-strong); }
+.nav-text { white-space: nowrap; font-weight: 510; }
+.nav-count { margin-left: auto; min-width: 22px; padding: 1px 6px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--meta); font: 510 10px/1.5 var(--font-mono); text-align: center; }
+.sidebar-footer { padding: var(--space-3); border-top: 1px solid var(--border-soft); }
+.worker-mini { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); margin-bottom: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-md); background: color-mix(in oklch, var(--surface) 76%, var(--surface-warm)); }
+.status-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 16%, transparent); }
+.worker-copy { min-width: 0; }
+.worker-copy strong { display: block; font-size: var(--text-xs); font-weight: 510; }
+.worker-copy span { display: block; color: var(--meta); font: 400 10px/1.4 var(--font-mono); white-space: nowrap; }
+.profile { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: 0 var(--space-2); }
+.avatar { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--text-xs); font-weight: 590; }
+.profile-copy { min-width: 0; }
+.profile-copy strong { display: block; font-size: var(--text-xs); font-weight: 510; white-space: nowrap; }
+.profile-copy span { color: var(--meta); font-size: 10px; white-space: nowrap; }
+
+.main-shell { min-height: 100vh; margin-left: 248px; transition: margin-left var(--motion-base) var(--ease-standard); }
+.topbar { position: sticky; top: 0; z-index: 20; height: 64px; display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-6); border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 94%, transparent); backdrop-filter: blur(18px); }
+.mobile-menu { display: none; margin-left: 0; }
+.breadcrumb { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.breadcrumb span:first-child { color: var(--meta); }
+.breadcrumb-sep { color: var(--meta); }
+.breadcrumb strong { font-weight: 510; }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+.notification-wrap { position: relative; }
+.notification-dot { position: absolute; top: 9px; right: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); border: 1px solid var(--bg); pointer-events: none; }
+.notification-center { position: absolute; z-index: 55; top: calc(100% + 10px); right: 0; width: min(400px, calc(100vw - 24px)); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-6px); transition: opacity var(--motion-fast), visibility var(--motion-fast), transform var(--motion-fast); }
+.notification-center.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.notification-head { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.notification-head h2 { color: var(--fg); font: 590 var(--text-base)/1.4 var(--font-display); }
+.notification-mark-all { padding: 0; border: 0; background: none; color: var(--accent-strong); font-size: var(--text-xs); font-weight: 590; cursor: pointer; }
+.notification-mark-all:hover { text-decoration: underline; }
+.notification-list { max-height: 360px; overflow-y: auto; }
+.notification-item { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-4); border: 0; border-bottom: 1px solid var(--border-soft); background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; transition: background var(--motion-fast); }
+.notification-item:hover { background: var(--panel-subtle); }
+.notification-item.is-unread { background: color-mix(in oklch, var(--accent-soft) 40%, var(--surface)); }
+.notification-signal { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--accent-strong); }
+.notification-signal.is-danger { background: var(--danger); }
+.notification-signal.is-success { background: var(--success); }
+.notification-copy { min-width: 0; }
+.notification-copy strong { display: block; margin-bottom: 2px; font-weight: 590; }
+.notification-copy span { display: block; color: var(--muted); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notification-time { color: var(--meta); font: 400 10px/1.4 var(--font-mono); text-align: right; white-space: nowrap; }
+.notification-empty { padding: var(--space-6); text-align: center; color: var(--muted); font-size: var(--text-sm); }
+.notification-foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); color: var(--muted); font-size: var(--text-xs); text-align: center; }
+
+.content { width: min(100%, 1600px); margin: 0 auto; padding: var(--space-8); padding-bottom: 120px; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: var(--space-2); color: var(--fg); font: 590 clamp(28px, 2.5vw, var(--text-2xl))/1.13 var(--font-display); letter-spacing: -0.704px; }
+.page-subtitle { max-width: 680px; margin-bottom: 0; color: var(--muted); }
+
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-6); margin-bottom: var(--space-6); }
+.header-actions { display: flex; align-items: center; gap: var(--space-2); }
+.btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-4); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 590; transition: color var(--motion-fast), background var(--motion-fast), border-color var(--motion-fast); }
+.btn-primary { color: var(--accent-on); background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-primary:hover { background: var(--accent-active); border-color: var(--accent-active); }
+.btn-secondary { color: var(--accent-strong); background: var(--surface); border-color: var(--border); }
+.btn-secondary:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.btn svg { width: 16px; height: 16px; }
+.dropdown-wrap { position: relative; }
+.dropdown-menu { position: absolute; z-index: 50; top: calc(100% + 6px); right: 0; min-width: 180px; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity var(--motion-fast), visibility var(--motion-fast), transform var(--motion-fast); }
+.dropdown-menu.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+.dropdown-item { width: 100%; min-height: 40px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); color: var(--fg); background: transparent; text-align: left; cursor: pointer; }
+.dropdown-item:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.dropdown-item.is-danger { color: var(--danger); }
+.dropdown-item.is-danger:hover { background: color-mix(in oklch, var(--danger) 8%, var(--surface)); }
+.dropdown-item svg { width: 16px; height: 16px; }
+
+.card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--card-shadow); }
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+.kpi-card { padding: var(--space-4); cursor: pointer; transition: border-color var(--motion-fast), background var(--motion-fast); }
+.kpi-card:hover, .kpi-card.is-active { border-color: var(--accent); background: color-mix(in oklch, var(--accent-soft) 42%, var(--surface)); }
+.kpi-card.is-active { border-width: 2px; }
+.kpi-label { display: flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-xs); font-weight: 510; }
+.kpi-dot { width: 8px; height: 8px; border-radius: 50%; }
+.kpi-dot.running { background: var(--accent-strong); }
+.kpi-dot.waiting { background: #6B7280; }
+.kpi-dot.gpu { background: #8B5CF6; }
+.kpi-dot.review { background: var(--warn); }
+.kpi-dot.failed { background: var(--danger); }
+.kpi-dot.done { background: var(--success); }
+.kpi-value { margin-top: var(--space-2); font: 590 24px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+
+/* Filters */
+.filter-section { margin-bottom: var(--space-4); padding: var(--space-4); }
+.filter-grid { display: grid; grid-template-columns: 140px 160px 180px 140px 160px minmax(200px, 1fr) auto; gap: var(--space-3); align-items: end; }
+.control { display: grid; gap: var(--space-1); min-width: 0; }
+.control label { color: var(--muted); font-size: var(--text-xs); font-weight: 510; }
+.control input, .control select { width: 100%; min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); background: var(--surface); }
+.control input::placeholder { color: var(--meta); }
+.control input:hover, .control select:hover { border-color: var(--accent); }
+.control input:focus, .control select:focus { outline: none; border-color: var(--accent-strong); box-shadow: var(--focus-ring); }
+.search-field { position: relative; }
+.search-field svg { position: absolute; left: var(--space-3); bottom: 11px; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.search-field input { padding-left: 38px; }
+.btn-reset { min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface); cursor: pointer; font-weight: 510; white-space: nowrap; }
+.btn-reset:hover { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+
+/* GPU Waiting Notice */
+.gpu-notice { margin-bottom: var(--space-4); padding: var(--space-4); border: 1px solid color-mix(in oklch, #8B5CF6 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, #8B5CF6 6%, var(--surface)); }
+.gpu-notice-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-2); }
+.gpu-notice-head strong { color: var(--fg); font-weight: 590; }
+.gpu-notice p { margin: 0 0 var(--space-3); color: var(--muted); font-size: var(--text-xs); }
+.gpu-notice-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-3); color: var(--fg); font-size: var(--text-xs); }
+.gpu-notice-meta span { display: flex; align-items: center; gap: var(--space-1); }
+.gpu-notice-meta strong { font-weight: 590; font-variant-numeric: tabular-nums; }
+.gpu-notice-footer { padding-top: var(--space-3); border-top: 1px solid color-mix(in oklch, #8B5CF6 20%, var(--border)); color: var(--muted); font-size: var(--text-xs); }
+.gpu-notice-footer a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Job Table */
+.table-card { overflow: hidden; }
+.table-toolbar { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.table-title strong { color: var(--fg); font-weight: 590; }
+.table-title span { color: var(--muted); font-size: var(--text-xs); }
+.table-wrap { overflow-x: auto; }
+.job-table { width: 100%; min-width: 1100px; border-collapse: collapse; }
+.job-table th { height: 40px; padding: 0 var(--space-3); color: var(--muted); background: var(--panel-subtle); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 590; text-align: left; white-space: nowrap; }
+.job-table th:first-child { width: 44px; text-align: center; }
+.job-table td { padding: var(--space-3); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+.job-table tbody tr { cursor: pointer; transition: background var(--motion-fast); }
+.job-table tbody tr:hover { background: color-mix(in oklch, var(--panel-subtle) 72%, var(--surface)); }
+.job-table tbody tr.is-selected { background: color-mix(in oklch, var(--accent-soft) 58%, var(--surface)); }
+.job-check { width: 18px; height: 18px; accent-color: var(--accent-strong); cursor: pointer; }
+
+.video-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.video-thumb { width: 64px; height: 36px; flex: 0 0 64px; border: 1px solid var(--border); border-radius: 4px; background: linear-gradient(135deg, var(--accent-soft), var(--panel-subtle)); display: grid; place-items: center; }
+.video-thumb svg { width: 14px; height: 14px; color: var(--accent-strong); }
+.video-info { min-width: 0; }
+.video-info strong { display: block; color: var(--fg); font-weight: 590; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.video-info span { display: block; color: var(--meta); font: 400 10px/1.4 var(--font-mono); }
+
+.cell-mono { font: 400 var(--text-xs)/1.4 var(--font-mono); color: var(--muted); }
+.cell-main { display: block; color: var(--fg); font-weight: 510; }
+.cell-sub { display: block; color: var(--muted); font-size: 11px; }
+
+.step-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: 11px; font-weight: 510; white-space: nowrap; }
+.step-badge svg { width: 12px; height: 12px; }
+
+.status-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: 10px; font-weight: 590; white-space: nowrap; }
+.status-running { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+.status-waiting { color: #6B7280; background: #F3F4F6; border-color: #D1D5DB; }
+.status-gpu { color: #7C3AED; background: #EDE9FE; border-color: #C4B5FD; }
+.status-review { color: var(--warn); background: color-mix(in oklch, var(--warn) 10%, var(--surface)); border-color: color-mix(in oklch, var(--warn) 30%, var(--border)); }
+.status-failed { color: var(--danger); background: color-mix(in oklch, var(--danger) 8%, var(--surface)); border-color: color-mix(in oklch, var(--danger) 28%, var(--border)); }
+.status-done { color: var(--success); background: color-mix(in oklch, var(--success) 10%, var(--surface)); border-color: color-mix(in oklch, var(--success) 30%, var(--border)); }
+.status-cancelled { color: var(--muted); background: var(--panel-subtle); }
+
+.progress-cell { min-width: 100px; }
+.progress-bar { height: 6px; border-radius: var(--radius-pill); background: var(--accent-soft); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: inherit; background: var(--accent-strong); transition: width var(--motion-base); }
+.progress-fill.is-failed { background: var(--danger); }
+.progress-text { margin-top: 2px; color: var(--meta); font: 400 10px/1.4 var(--font-mono); }
+
+.detail-btn { min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); color: var(--accent-strong); background: transparent; cursor: pointer; font-size: var(--text-xs); font-weight: 590; white-space: nowrap; }
+.detail-btn:hover { color: var(--fg); background: var(--accent-soft); }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+.pagination-info { color: var(--muted); font-size: var(--text-xs); }
+.pagination-controls { display: flex; align-items: center; gap: var(--space-2); }
+.pagination select { min-height: 36px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); background: var(--surface); }
+.page-btn { min-width: 36px; min-height: 36px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+.page-btn:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.page-btn:disabled { color: var(--disabled-fg); background: var(--disabled-bg); cursor: not-allowed; }
+.page-btn svg { width: 16px; height: 16px; }
+.page-current { min-width: 80px; color: var(--fg); font-weight: 590; text-align: center; }
+
+/* Bulk Bar */
+.bulk-bar { position: fixed; z-index: 40; bottom: var(--space-4); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); border-radius: var(--radius-md); background: color-mix(in oklch, var(--surface) 96%, transparent); box-shadow: var(--elev-raised); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: opacity var(--motion-fast), visibility var(--motion-fast); }
+.bulk-bar.is-visible { opacity: 1; visibility: visible; }
+.bulk-count { color: var(--fg); font-weight: 590; }
+.bulk-bar .btn { min-height: 36px; padding: 0 var(--space-3); font-size: var(--text-xs); }
+
+/* States */
+.loading-state, .empty-state, .error-state { padding: 80px var(--space-6); text-align: center; }
+.loading-ring { width: 32px; height: 32px; margin: 0 auto var(--space-3); border: 3px solid var(--accent-soft); border-top-color: var(--accent-strong); border-radius: 50%; animation: spin 800ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state strong, .error-state strong { display: block; margin-bottom: var(--space-1); color: var(--fg); font-size: var(--text-base); }
+.empty-state span, .error-state span { color: var(--muted); }
+.error-state { color: var(--danger); }
+.error-state .btn { margin-top: var(--space-4); }
+.worker-offline { padding: var(--space-4); margin-bottom: var(--space-4); border: 1px solid color-mix(in oklch, var(--danger) 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); color: var(--danger); font-size: var(--text-xs); }
+
+/* Progress indeterminate */
+.progress-bar.is-indeterminate { background: linear-gradient(90deg, var(--accent-soft) 0%, var(--accent) 50%, var(--accent-soft) 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
+.progress-bar.is-indeterminate .progress-fill { display: none; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Status downloading/processing/rendering */
+.status-downloading { color: #0369A1; background: #E0F2FE; border-color: #7DD3FC; }
+.status-processing { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+.status-rendering { color: #7C3AED; background: #EDE9FE; border-color: #C4B5FD; }
+
+/* Toast */
+.toast { position: fixed; z-index: 120; bottom: var(--space-6); right: var(--space-6); max-width: 380px; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(8px); transition: all var(--motion-base); }
+.toast.is-visible { opacity: 1; visibility: visible; transform: translateY(0); }
+.toast.is-success { border-color: color-mix(in oklch, var(--success) 30%, var(--border)); background: color-mix(in oklch, var(--success) 6%, var(--surface)); }
+.toast.is-error { border-color: color-mix(in oklch, var(--danger) 30%, var(--border)); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); color: var(--danger); }
+
+/* Priority & Assign Popover */
+.popover { position: fixed; z-index: 100; min-width: 220px; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: all var(--motion-fast); }
+.popover.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+.popover-title { margin: 0 0 var(--space-3); font-weight: 590; font-size: var(--text-sm); }
+.popover-info { margin-bottom: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: var(--text-xs); color: var(--muted); }
+.popover-info strong { color: var(--fg); }
+.popover-list { list-style: none; margin: 0; padding: 0; }
+.popover-list li { margin-bottom: var(--space-1); }
+.popover-list button { width: 100%; min-height: 40px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; font-size: var(--text-sm); }
+.popover-list button:hover { background: var(--accent-soft); border-color: var(--accent); }
+.popover-list button.is-selected { background: var(--accent-soft); border-color: var(--accent-strong); color: var(--accent-strong); }
+.popover-footer { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: var(--space-2); }
+.priority-high { color: var(--danger); }
+.priority-normal { color: var(--fg); }
+.priority-low { color: var(--muted); }
+
+/* Demo toolbar */
+.demo-toolbar { position: fixed; z-index: 200; top: var(--space-3); right: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); font-size: var(--text-xs); }
+.demo-toolbar strong { margin-bottom: var(--space-1); }
+.demo-toolbar button { min-height: 32px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font-size: 11px; white-space: nowrap; }
+.demo-toolbar button:hover { background: var(--accent-soft); }
+.demo-toolbar button.is-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+
+/* Bulk bar enhancements */
+.bulk-bar .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bulk-bar .btn[title] { position: relative; }
+
+/* Review notice in table */
+.review-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--warn) 8%, var(--surface)); font-size: 10px; color: var(--warn); }
+.review-notice a { color: var(--accent-strong); text-decoration: underline; }
+
+/* Error notice in table */
+.error-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--danger) 8%, var(--surface)); font-size: 10px; color: var(--danger); }
+
+/* Cancel notice in table */
+.cancel-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: 10px; color: var(--muted); }
+
+/* Log section enhancements */
+.log-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.log-header h3 { margin-bottom: 0; }
+.copy-btn { min-height: 32px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; font-size: 11px; font-weight: 590; display: inline-flex; align-items: center; gap: var(--space-1); }
+.copy-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.copy-btn svg { width: 14px; height: 14px; }
+
+/* Output validation status */
+.output-status { display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-2); padding: 2px 6px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 590; }
+.output-status.is-pass { color: var(--success); background: color-mix(in oklch, var(--success) 12%, var(--surface)); }
+.output-status.is-fail { color: var(--danger); background: color-mix(in oklch, var(--danger) 12%, var(--surface)); }
+.output-actions { display: flex; gap: var(--space-2); }
+
+/* Error section in drawer */
+.error-section { padding: var(--space-4); border: 1px solid color-mix(in oklch, var(--danger) 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); margin-bottom: var(--space-4); }
+.error-section h4 { margin: 0 0 var(--space-2); color: var(--danger); font-size: var(--text-sm); font-weight: 590; }
+.error-section p { margin: 0 0 var(--space-2); color: var(--fg); font-size: var(--text-xs); }
+.error-section code { display: block; padding: var(--space-2); margin-top: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font: 400 10px/1.5 var(--font-mono); color: var(--muted); }
+.error-section .retry-info { margin-top: var(--space-2); color: var(--muted); font-size: 11px; }
+
+/* Drawer */
+.drawer-scrim { position: fixed; inset: 0; z-index: 60; border: 0; background: color-mix(in oklch, var(--fg) 18%, transparent); opacity: 0; visibility: hidden; transition: opacity var(--motion-base), visibility var(--motion-base); }
+.drawer-scrim.is-open { opacity: 1; visibility: visible; }
+.drawer { position: fixed; z-index: 70; top: 0; right: 0; width: min(520px, 100vw); height: 100vh; overflow-y: auto; padding: var(--space-6); border-left: 1px solid var(--border); background: var(--surface); box-shadow: var(--elev-raised); transform: translateX(100%); transition: transform var(--motion-base) var(--ease-standard); }
+.drawer.is-open { transform: translateX(0); }
+.drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
+.drawer-header h2 { margin-bottom: var(--space-1); font: 590 var(--text-xl)/1.2 var(--font-display); }
+.drawer-header p { margin-bottom: 0; color: var(--muted); font-size: var(--text-xs); }
+.drawer-close { margin-left: 0; }
+
+.drawer-section { padding: var(--space-4) 0; border-top: 1px solid var(--border-soft); }
+.drawer-section:first-of-type { border-top: 0; padding-top: 0; }
+.drawer-section h3 { margin-bottom: var(--space-3); color: var(--fg); font: 590 var(--text-sm)/1.4 var(--font-display); }
+.detail-grid { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--space-2) var(--space-3); }
+.detail-grid dt { color: var(--muted); font-size: var(--text-xs); }
+.detail-grid dd { margin: 0; color: var(--fg); font-size: var(--text-sm); }
+.detail-grid dd code { font: 400 var(--text-xs)/1.5 var(--font-mono); color: var(--muted); }
+
+.timeline { display: grid; gap: var(--space-3); }
+.timeline-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; }
+.timeline-dot { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); }
+.timeline-dot svg { width: 12px; height: 12px; }
+.timeline-dot.is-active { background: var(--accent-strong); color: var(--accent-on); }
+.timeline-dot.is-done { background: var(--accent-soft); color: var(--success); }
+.timeline-dot.is-failed { background: color-mix(in oklch, var(--danger) 12%, var(--surface)); color: var(--danger); }
+.timeline-dot.is-pending { background: var(--panel-subtle); color: var(--muted); }
+.timeline-dot.is-waiting { background: color-mix(in oklch, var(--warn) 12%, var(--surface)); color: var(--warn); }
+.timeline-dot.is-cancelled { background: var(--panel-subtle); color: var(--muted); }
+.timeline-copy strong { display: block; color: var(--fg); font-weight: 510; }
+.timeline-copy span { color: var(--muted); font-size: var(--text-xs); }
+.timeline-time { color: var(--meta); font: 400 10px/1.4 var(--font-mono); text-align: right; }
+
+.log-box { max-height: 160px; overflow-y: auto; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); font: 400 11px/1.6 var(--font-mono); color: var(--muted); white-space: pre-wrap; word-break: break-all; }
+.log-box .error { color: var(--danger); }
+
+.cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.cost-item span { display: block; color: var(--muted); font-size: var(--text-xs); }
+.cost-item strong { display: block; margin-top: var(--space-1); color: var(--fg); font: 590 var(--text-base)/1.2 var(--font-body); font-variant-numeric: tabular-nums; }
+
+.output-list { display: grid; gap: var(--space-3); }
+.output-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel-subtle); }
+.output-icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-strong); }
+.output-icon svg { width: 18px; height: 18px; }
+.output-info { min-width: 0; flex: 1; }
+.output-info strong { display: block; color: var(--fg); font-weight: 590; }
+.output-info span { display: block; color: var(--muted); font-size: var(--text-xs); }
+.output-download { min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; font-size: var(--text-xs); font-weight: 590; }
+.output-download:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+
+.drawer-footer { position: sticky; bottom: calc(var(--space-6) * -1); display: flex; justify-content: space-between; gap: var(--space-2); margin: var(--space-6) calc(var(--space-6) * -1) calc(var(--space-6) * -1); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border); background: var(--surface); }
+.drawer-footer .btn { min-height: 40px; }
+.btn-danger { color: var(--danger); background: transparent; border-color: var(--border); }
+.btn-danger:hover { color: var(--accent-on); background: var(--danger); border-color: var(--danger); }
+
+/* Confirm Modal */
+.modal-layer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--space-6); background: color-mix(in oklch, var(--fg) 22%, transparent); opacity: 0; visibility: hidden; transition: opacity var(--motion-base), visibility var(--motion-base); }
+.modal-layer.is-open { opacity: 1; visibility: visible; }
+.modal { width: min(440px, 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--elev-raised); }
+.modal-header { padding: var(--space-5); border-bottom: 1px solid var(--border); }
+.modal-header h2 { margin-bottom: var(--space-1); color: var(--fg); font: 590 var(--text-lg)/1.3 var(--font-display); }
+.modal-header p { margin-bottom: 0; color: var(--muted); font-size: var(--text-xs); }
+.modal-body { padding: var(--space-5); }
+.modal-body p { margin: 0; color: var(--fg); }
+.modal-footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border); }
+.modal-footer .btn { min-height: 40px; }
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-grid .search-field { grid-column: span 2; }
+}
+@media (max-width: 1179px) {
+  .sidebar { width: 80px; }
+  .main-shell { margin-left: 80px; }
+  .brand-copy, .nav-group-label, .nav-text, .nav-count, .worker-copy, .profile-copy, .collapse-btn { display: none; }
+  .sidebar-top { padding: 0 var(--space-3); }
+  .nav-item { justify-content: center; padding: 0; }
+  .worker-mini, .profile { justify-content: center; }
+  .content { padding: var(--space-6); padding-bottom: 120px; }
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter-grid { grid-template-columns: 1fr 1fr; }
+  .filter-grid .search-field { grid-column: 1 / -1; }
+  .filter-grid .btn-reset { grid-column: 1 / -1; }
+  .gpu-notice-meta { flex-direction: column; gap: var(--space-2); }
+}
+.scrim { display: none; }
+@media (max-width: 767px) {
+  .sidebar { width: 248px; transform: translateX(-100%); box-shadow: var(--elev-raised); }
+  .app.is-menu-open .sidebar { transform: translateX(0); }
+  .app.is-menu-open .scrim { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: color-mix(in oklch, var(--fg) 18%, transparent); }
+  .main-shell { margin-left: 0; }
+  .brand-copy, .nav-group-label, .nav-text, .nav-count, .worker-copy, .profile-copy { display: block; }
+  .sidebar-top { padding: 0 var(--space-4); }
+  .nav-item { justify-content: flex-start; padding: 0 var(--space-3); }
+  .worker-mini, .profile { justify-content: flex-start; }
+  .mobile-menu { display: grid; }
+  .topbar { padding: 0 var(--space-3); }
+  .breadcrumb span:first-child, .breadcrumb-sep { display: none; }
+  .content { padding: var(--space-4); padding-bottom: 120px; }
+  .page-header { flex-direction: column; gap: var(--space-4); }
+  .header-actions { width: 100%; }
+  .header-actions .btn { flex: 1; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .filter-grid { grid-template-columns: 1fr; }
+  .filter-section { padding: var(--space-3); }
+  .drawer { width: 100%; padding: var(--space-4); }
+  .drawer-footer { margin: var(--space-5) calc(var(--space-4) * -1) calc(var(--space-4) * -1); padding: var(--space-4); }
+  .bulk-bar { left: var(--space-4); right: var(--space-4); transform: none; flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+.app.is-collapsed .sidebar { width: 80px; }
+.app.is-collapsed .main-shell { margin-left: 80px; }
+.app.is-collapsed .brand-copy, .app.is-collapsed .nav-group-label, .app.is-collapsed .nav-text, .app.is-collapsed .nav-count, .app.is-collapsed .worker-copy, .app.is-collapsed .profile-copy { display: none; }
+.app.is-collapsed .sidebar-top { padding: 0 var(--space-3); }
+.app.is-collapsed .collapse-btn { display: none; }
+.app.is-collapsed .nav-item { justify-content: center; padding: 0; }
+.app.is-collapsed .worker-mini, .app.is-collapsed .profile { justify-content: center; }
+  </style>
+</head>
+<body>
+  <svg class="sr-only" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z"/></symbol>
+    <symbol id="i-queue" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="15" r="3"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3V9Z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+    <symbol id="i-profile" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.5 17.2A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-file-video" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M10 11l5 3-5 3v-6Z"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  </svg>
+
+  <div class="app" id="app" data-od-id="application-shell">
+    <button class="scrim" id="scrim" aria-label="Đóng thanh điều hướng"></button>
+    <aside class="sidebar" id="sidebar" data-od-id="primary-sidebar" aria-label="Điều hướng chính">
+      <div class="sidebar-top">
+        <div class="brand-mark" aria-hidden="true">RD</div>
+        <div class="brand-copy">
+          <div class="brand-name">Reup Dubbing</div>
+          <div class="brand-env">Studio vận hành</div>
+        </div>
+        <button class="collapse-btn" id="collapseSidebar" type="button" aria-label="Thu gọn thanh điều hướng">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-panel"/></svg>
+        </button>
+      </div>
+      <nav class="nav" data-od-id="main-navigation">
+        <div class="nav-group-label">Không gian làm việc</div>
+        <a class="nav-item" href="index.html" data-od-id="nav-overview"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-grid"/></svg><span class="nav-text">Tổng quan</span></a>
+        <a class="nav-item" href="discovery.html" data-od-id="nav-discovery"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-compass"/></svg><span class="nav-text">Khám phá video</span><span class="nav-count">12</span></a>
+        <a class="nav-item" href="queue.html" data-od-id="nav-queue" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-queue"/></svg><span class="nav-text">Hàng đợi xử lý</span><span class="nav-count">7</span></a>
+        <a class="nav-item" href="library.html" data-od-id="nav-library"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-library"/></svg><span class="nav-text">Thư viện video</span><span class="nav-count">14</span></a>
+        <a class="nav-item" href="publishing.html" data-od-id="nav-publishing"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-send"/></svg><span class="nav-text">Bàn đăng bài</span><span class="nav-count">9</span></a>
+        <div class="nav-group-label">Cấu hình nội dung</div>
+        <a class="nav-item" href="profiles.html" data-od-id="nav-profiles"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-profile"/></svg><span class="nav-text">Hồ sơ</span><span class="nav-count">8</span></a>
+        <a class="nav-item" href="voice-library.html" data-od-id="nav-voices"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-mic"/></svg><span class="nav-text">Thư viện giọng</span><span class="nav-count">10</span></a>
+        <div class="nav-group-label">Hệ thống</div>
+        <a class="nav-item" href="workers.html" data-od-id="nav-workers"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-cpu"/></svg><span class="nav-text">GPU Workers</span><span class="nav-count">6</span></a>
+        <a class="nav-item" href="settings.html" data-od-id="nav-settings"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-settings"/></svg><span class="nav-text">Cài đặt</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="worker-mini" data-od-id="sidebar-worker-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="worker-copy"><strong>GPU Worker online</strong><span>worker-gpu-01 · EzyCloudX · A10</span></div>
+        </div>
+        <div class="profile" data-od-id="sidebar-profile">
+          <div class="avatar" aria-hidden="true">GH</div>
+          <div class="profile-copy"><strong>Gia Huy</strong><span>Quản trị vận hành</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar" data-od-id="topbar">
+        <button class="icon-btn mobile-menu" id="mobileMenu" type="button" aria-label="Mở thanh điều hướng" aria-expanded="false">
+          <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-menu"/></svg>
+        </button>
+        <div class="breadcrumb"><span>Reup Dubbing Studio</span><span class="breadcrumb-sep">/</span><strong>Hàng đợi xử lý</strong></div>
+        <div class="topbar-actions">
+          <div class="notification-wrap">
+            <button class="icon-btn" id="notificationButton" data-od-id="open-alerts" type="button" aria-label="Mở trung tâm thông báo, 3 thông báo chưa đọc" aria-expanded="false" aria-controls="notificationCenter">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-bell"/></svg>
+            </button>
+            <span class="notification-dot" aria-hidden="true"></span>
+            <div class="notification-center" id="notificationCenter" data-od-id="notification-center" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" aria-hidden="true">
+              <div class="notification-head"><h2 id="notificationTitle">Thông báo</h2><button class="notification-mark-all" id="markNotificationsRead" type="button">Đánh dấu tất cả đã đọc</button></div>
+              <div class="notification-list">
+                <button class="notification-item is-unread" data-notification="gpu" type="button"><span class="notification-signal is-danger" aria-hidden="true"></span><span class="notification-copy"><strong>4 job đang chờ GPU</strong><span>Không có worker ở trạng thái READY với đủ VRAM.</span></span><span class="notification-time">14 phút</span></button>
+                <button class="notification-item is-unread" data-notification="review" type="button"><span class="notification-signal" aria-hidden="true"></span><span class="notification-copy"><strong>2 job chờ duyệt cast sheet</strong><span>JOB-4516 và JOB-4515 cần duyệt.</span></span><span class="notification-time">1 giờ</span></button>
+                <button class="notification-item is-unread" data-notification="failed" type="button"><span class="notification-signal is-danger" aria-hidden="true"></span><span class="notification-copy"><strong>JOB-4514 thất bại</strong><span>FFmpeg out of memory khi render.</span></span><span class="notification-time">2 giờ</span></button>
+                <button class="notification-item" data-notification="worker" type="button"><span class="notification-signal is-success" aria-hidden="true"></span><span class="notification-copy"><strong>GPU Worker hoạt động bình thường</strong><span>worker-gpu-01 · EzyCloudX · A10 đang online.</span></span><span class="notification-time">1 phút</span></button>
+              </div>
+              <div class="notification-foot"><span id="notificationUnreadCount">3 thông báo chưa đọc</span> · Dữ liệu mẫu</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content" data-od-id="queue-screen">
+        <!-- Page Header -->
+        <section class="page-header" data-od-id="queue-header">
+          <div>
+            <h1>Hàng đợi xử lý</h1>
+            <p class="page-subtitle">Theo dõi job tải và xử lý video từ lúc vào hàng đợi đến khi xuất video đã lồng tiếng và file SRT.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="refreshBtn" type="button">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-refresh"/></svg>
+              Làm mới
+            </button>
+            <div class="dropdown-wrap">
+              <button class="btn btn-secondary" id="actionsBtn" type="button" aria-expanded="false">
+                <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-more"/></svg>
+                Thao tác
+              </button>
+              <div class="dropdown-menu" id="actionsMenu">
+                <button class="dropdown-item" type="button"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-retry"/></svg>Retry tất cả job lỗi</button>
+                <button class="dropdown-item" type="button"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-arrow-up"/></svg>Tăng ưu tiên hàng loạt</button>
+                <button class="dropdown-item" type="button"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-user"/></svg>Gán người phụ trách</button>
+                <button class="dropdown-item is-danger" type="button"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-trash"/></svg>Hủy các job đã chọn</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- KPI Cards -->
+        <section class="kpi-grid" data-od-id="queue-kpis" aria-label="Chỉ số hàng đợi">
+          <article class="card kpi-card" data-filter="running" data-od-id="kpi-running">
+            <div class="kpi-label"><span class="kpi-dot running"></span>Đang chạy</div>
+            <div class="kpi-value">3</div>
+          </article>
+          <article class="card kpi-card" data-filter="waiting" data-od-id="kpi-waiting">
+            <div class="kpi-label"><span class="kpi-dot waiting"></span>Đang chờ</div>
+            <div class="kpi-value">2</div>
+          </article>
+          <article class="card kpi-card" data-filter="gpu" data-od-id="kpi-gpu">
+            <div class="kpi-label"><span class="kpi-dot gpu"></span>Chờ GPU</div>
+            <div class="kpi-value">4</div>
+          </article>
+          <article class="card kpi-card" data-filter="review" data-od-id="kpi-review">
+            <div class="kpi-label"><span class="kpi-dot review"></span>Chờ người duyệt</div>
+            <div class="kpi-value">2</div>
+          </article>
+          <article class="card kpi-card" data-filter="failed" data-od-id="kpi-failed">
+            <div class="kpi-label"><span class="kpi-dot failed"></span>Thất bại</div>
+            <div class="kpi-value">1</div>
+          </article>
+          <article class="card kpi-card" data-filter="done" data-od-id="kpi-done">
+            <div class="kpi-label"><span class="kpi-dot done"></span>Hoàn thành hôm nay</div>
+            <div class="kpi-value">8</div>
+          </article>
+        </section>
+
+        <!-- Filters -->
+        <section class="card filter-section" data-od-id="queue-filters">
+          <div class="filter-grid">
+            <div class="control">
+              <label for="filterStatus">Trạng thái</label>
+              <select id="filterStatus">
+                <option value="">Tất cả</option>
+                <option value="running">Đang chạy</option>
+                <option value="waiting">Đang chờ</option>
+                <option value="gpu">Chờ GPU</option>
+                <option value="review">Chờ duyệt</option>
+                <option value="failed">Thất bại</option>
+                <option value="done">Hoàn thành</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="filterStep">Bước pipeline</label>
+              <select id="filterStep">
+                <option value="">Tất cả</option>
+                <option value="download">Tải video</option>
+                <option value="hardsub">Xóa hard-sub</option>
+                <option value="ocr">OCR/ASR</option>
+                <option value="translate">Dịch</option>
+                <option value="cast">Duyệt cast sheet</option>
+                <option value="audio">Tách audio</option>
+                <option value="tts">TTS</option>
+                <option value="render">Render</option>
+                <option value="check">Kiểm tra đầu ra</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="filterProfile">Channel/Series Profile</label>
+              <select id="filterProfile">
+                <option value="">Tất cả</option>
+                <option value="kiemhiep">Kiếm Hiệp Việt</option>
+                <option value="comu">Cổ Mộ Truyền Kỳ</option>
+                <option value="tamquoc">Tam Quốc Diễn Nghĩa</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="filterWorker">GPU Worker</label>
+              <select id="filterWorker">
+                <option value="">Tất cả</option>
+                <option value="gpu01">worker-gpu-01</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="filterRange">Khoảng thời gian</label>
+              <select id="filterRange">
+                <option value="24h">24 giờ</option>
+                <option value="7d" selected>7 ngày</option>
+                <option value="30d">30 ngày</option>
+                <option value="all">Mọi thời điểm</option>
+              </select>
+            </div>
+            <div class="control search-field">
+              <label for="filterSearch">Tìm kiếm</label>
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-search"/></svg>
+              <input type="search" id="filterSearch" placeholder="Title, video ID, job ID...">
+            </div>
+            <button class="btn-reset" id="resetFilters" type="button">Đặt lại</button>
+          </div>
+        </section>
+
+        <!-- GPU Waiting Notice -->
+        <section class="gpu-notice" data-od-id="gpu-waiting-notice">
+          <div class="gpu-notice-head">
+            <strong>4 job đang chờ GPU</strong>
+            <a class="btn btn-secondary" style="min-height:36px;padding:0 var(--space-3);font-size:var(--text-xs);text-decoration:none" href="workers.html">Mở GPU Workers <svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px;display:inline;vertical-align:-2px"><use href="#i-external"/></svg></a>
+          </div>
+          <div class="gpu-notice-meta">
+            <span>Thời gian chờ trung bình: <strong>18 phút</strong></span>
+            <span>VRAM tối thiểu: <strong>24 GB</strong></span>
+            <span>Cấu hình đề xuất: <strong>A10 (24 GB) / L40 (48 GB)</strong></span>
+          </div>
+          <p style="margin-bottom:var(--space-2)"><strong>Lý do chưa được giao:</strong> Không có worker nào ở trạng thái READY với đủ VRAM.</p>
+          <p>Bạn cần thuê máy trên EzyCloudX và đăng ký GPU Worker thủ công. Khi worker READY, app sẽ tự giao job.</p>
+          <div class="gpu-notice-footer">
+            Hệ thống <strong>không</strong> tự thuê hoặc tự xóa máy EzyCloudX.
+          </div>
+        </section>
+
+        <!-- Worker Offline Notice (hidden by default) -->
+        <div class="worker-offline" id="workerOfflineNotice" hidden>
+          <strong>GPU Worker offline</strong> — Không có worker nào đang hoạt động. Job mới sẽ được xếp hàng đợi cho đến khi có worker READY.
+          <a class="btn btn-secondary" style="margin-left:var(--space-3);min-height:32px;padding:0 var(--space-3);font-size:var(--text-xs);text-decoration:none" href="workers.html">Mở GPU Workers</a>
+        </div>
+
+        <!-- Job Table -->
+        <section class="card table-card" data-od-id="job-table-section">
+          <div class="table-toolbar">
+            <div class="table-title">
+              <strong>Danh sách job</strong>
+              <span id="tableCount">· 14 job trong 7 ngày gần nhất</span>
+            </div>
+          </div>
+
+          <!-- Loading State (hidden by default) -->
+          <div class="loading-state" id="loadingState" hidden>
+            <div class="loading-ring"></div>
+            <span>Đang tải danh sách job...</span>
+          </div>
+
+          <!-- Empty State (hidden by default) -->
+          <div class="empty-state" id="emptyState" hidden>
+            <strong>Chưa có job nào</strong>
+            <span>Hãy thêm video mới từ màn hình Khám phá video để bắt đầu xử lý.</span>
+          </div>
+
+          <!-- Error State (hidden by default) -->
+          <div class="error-state" id="errorState" hidden>
+            <strong>Không thể tải danh sách job</strong>
+            <span>Đã xảy ra lỗi khi kết nối với server. Vui lòng thử lại.</span>
+            <button class="btn btn-secondary" type="button" onclick="location.reload()">Thử lại</button>
+          </div>
+
+          <div class="table-wrap">
+            <table class="job-table" data-od-id="job-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" class="job-check" id="selectAll" aria-label="Chọn tất cả"></th>
+                  <th>Video</th>
+                  <th>Profile</th>
+                  <th>Bước & Trạng thái</th>
+                  <th>Tiến độ</th>
+                  <th>Worker</th>
+                  <th>Thời gian</th>
+                  <th>Chi phí GPU ước tính</th>
+                  <th>Cập nhật</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="jobTableBody">
+                <!-- Job 1: Đang tải -->
+                <tr data-job="JOB-4521" data-status="running" data-tech-status="DOWNLOADING">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4521"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Kiếm khách cuối cùng tập 22</strong>
+                        <span>BV1x4y1Q7Hs · JOB-4521</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Kiếm Hiệp Việt</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-download"/></svg>Tải video</span><span class="cell-sub" style="margin-top:2px">Bước 1/9</span><span class="status-badge status-downloading" style="margin-top:4px">Đang tải</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill" style="width:34%"></div></div>
+                    <span class="progress-text">34%</span>
+                  </td>
+                  <td><span class="cell-sub">CPU</span></td>
+                  <td><span class="cell-main">12:04</span><span class="cell-sub">ETA ~8 phút</span></td>
+                  <td><span class="cell-mono">—</span></td>
+                  <td><span class="cell-mono">vừa xong</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4521">Chi tiết</button></td>
+                </tr>
+                <!-- Job 2: Đang xóa hard-sub -->
+                <tr data-job="JOB-4520" data-status="running" data-tech-status="REMOVING_SUBTITLE">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4520"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Tam Quốc tập 06 - Phần 2</strong>
+                        <span>BV1Ks4y1d7vB · JOB-4520</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Tam Quốc Diễn Nghĩa</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-edit"/></svg>Xóa hard-sub</span><span class="cell-sub" style="margin-top:2px">Bước 2/9</span><span class="status-badge status-processing" style="margin-top:4px">Đang xử lý</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill" style="width:67%"></div></div>
+                    <span class="progress-text">67%</span>
+                  </td>
+                  <td><span class="cell-main">worker-gpu-01</span><span class="cell-sub">A10 · 24GB</span></td>
+                  <td><span class="cell-main">01:42:18</span><span class="cell-sub">ETA ~52 phút</span></td>
+                  <td><span class="cell-main">28.400 ₫</span></td>
+                  <td><span class="cell-mono">18 giây</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4520">Chi tiết</button></td>
+                </tr>
+                <!-- Job 3: Đang render -->
+                <tr data-job="JOB-4519" data-status="running" data-tech-status="RENDERING">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4519"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Bí ẩn cổ mộ tập 14</strong>
+                        <span>BV1Qs4y1a9Xz · JOB-4519</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Cổ Mộ Truyền Kỳ</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg>Render</span><span class="cell-sub" style="margin-top:2px">Bước 8/9</span><span class="status-badge status-rendering" style="margin-top:4px">Đang render</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill" style="width:89%"></div></div>
+                    <span class="progress-text">89%</span>
+                  </td>
+                  <td><span class="cell-main">worker-gpu-01</span><span class="cell-sub">A10 · 24GB</span></td>
+                  <td><span class="cell-main">00:34:12</span><span class="cell-sub">ETA ~4 phút</span></td>
+                  <td><span class="cell-main">9.200 ₫</span></td>
+                  <td><span class="cell-mono">12 giây</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4519">Chi tiết</button></td>
+                </tr>
+                <!-- Job 4: Chờ GPU -->
+                <tr data-job="JOB-4518" data-status="gpu" data-tech-status="WAITING_FOR_GPU">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4518"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Kiếm khách cuối cùng tập 23</strong>
+                        <span>BV1Ps4y1H7Kf · JOB-4518</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Kiếm Hiệp Việt</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-edit"/></svg>Xóa hard-sub</span><span class="cell-sub" style="margin-top:2px">Bước 2/9</span><span class="status-badge status-gpu" style="margin-top:4px">Chờ GPU</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">14 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-mono">~18.000 ₫</span></td>
+                  <td><span class="cell-mono">14 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4518">Chi tiết</button></td>
+                </tr>
+                <!-- Job 5: Chờ GPU -->
+                <tr data-job="JOB-4517" data-status="gpu" data-tech-status="WAITING_FOR_GPU">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4517"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Tam Quốc tập 07</strong>
+                        <span>BV1Xs4y1d8Cc · JOB-4517</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Tam Quốc Diễn Nghĩa</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-edit"/></svg>Xóa hard-sub</span><span class="cell-sub" style="margin-top:2px">Bước 2/9</span><span class="status-badge status-gpu" style="margin-top:4px">Chờ GPU</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">22 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-mono">~20.000 ₫</span></td>
+                  <td><span class="cell-mono">22 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4517">Chi tiết</button></td>
+                </tr>
+                <!-- Job 6: Chờ duyệt cast sheet -->
+                <tr data-job="JOB-4516" data-status="review" data-tech-status="WAITING_FOR_CAST_REVIEW">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4516"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Kiếm khách cuối cùng tập 18</strong>
+                        <span>BV1Ds4y1P3Qw · JOB-4516</span>
+                        <div class="review-notice"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;flex-shrink:0"><use href="#i-profile"/></svg>Chờ Gia Huy duyệt · <a href="library.html?video=VID-2112">Mở trong Thư viện</a></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Kiếm Hiệp Việt</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-profile"/></svg>Duyệt cast sheet</span><span class="cell-sub" style="margin-top:2px">Bước 5/9</span><span class="status-badge status-review" style="margin-top:4px">Chờ duyệt</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-main">Gia Huy</span><span class="cell-sub">phụ trách</span></td>
+                  <td><span class="cell-main">4 giờ 12 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-main">12.600 ₫</span></td>
+                  <td><span class="cell-mono">4 giờ</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4516">Chi tiết</button></td>
+                </tr>
+                <!-- Job 7: Chờ duyệt cast sheet -->
+                <tr data-job="JOB-4515" data-status="review" data-tech-status="WAITING_FOR_CAST_REVIEW">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4515"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Bí ẩn cổ mộ tập 15</strong>
+                        <span>BV1Ts4y1b2Mn · JOB-4515</span>
+                        <div class="review-notice"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;flex-shrink:0"><use href="#i-profile"/></svg>Chờ Minh Ngọc duyệt · <a href="library.html?video=VID-2111">Mở trong Thư viện</a></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Cổ Mộ Truyền Kỳ</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-profile"/></svg>Duyệt cast sheet</span><span class="cell-sub" style="margin-top:2px">Bước 5/9</span><span class="status-badge status-review" style="margin-top:4px">Chờ duyệt</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-main">Minh Ngọc</span><span class="cell-sub">phụ trách</span></td>
+                  <td><span class="cell-main">1 giờ 38 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-main">11.200 ₫</span></td>
+                  <td><span class="cell-mono">1 giờ</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4515">Chi tiết</button></td>
+                </tr>
+                <!-- Job 8: Thất bại -->
+                <tr data-job="JOB-4514" data-status="failed" data-tech-status="FAILED_RETRYABLE">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4514"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Tam Quốc tập 05</strong>
+                        <span>BV1Ws4y1c1Zp · JOB-4514</span>
+                        <div class="error-notice"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;flex-shrink:0"><use href="#i-alert"/></svg>FFmpeg out of memory</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Tam Quốc Diễn Nghĩa</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg>Render</span><span class="cell-sub" style="margin-top:2px">Bước 8/9</span><span class="status-badge status-failed" style="margin-top:4px">Thất bại</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill is-failed" style="width:72%"></div></div>
+                    <span class="progress-text">72% - lỗi</span>
+                  </td>
+                  <td><span class="cell-main">worker-gpu-01</span><span class="cell-sub">A10 · 24GB</span></td>
+                  <td><span class="cell-main">00:28:45</span><span class="cell-sub">đã chạy</span></td>
+                  <td><span class="cell-main">7.800 ₫</span></td>
+                  <td><span class="cell-mono">2 giờ</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4514">Chi tiết</button></td>
+                </tr>
+                <!-- Job 9: Hoàn thành -->
+                <tr data-job="JOB-4513" data-status="done" data-tech-status="COMPLETED">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4513"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Kiếm khách cuối cùng tập 17</strong>
+                        <span>BV1Rs4y1d4Jk · JOB-4513</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Kiếm Hiệp Việt</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-check"/></svg>Kiểm tra đầu ra</span><span class="cell-sub" style="margin-top:2px">Bước 9/9</span><span class="status-badge status-done" style="margin-top:4px">Hoàn thành</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+                    <span class="progress-text">100%</span>
+                  </td>
+                  <td><span class="cell-main">worker-gpu-01</span><span class="cell-sub">A10 · 24GB</span></td>
+                  <td><span class="cell-main">02:14:32</span><span class="cell-sub">tổng cộng</span></td>
+                  <td><span class="cell-main">32.400 ₫</span></td>
+                  <td><span class="cell-mono">42 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4513">Chi tiết</button></td>
+                </tr>
+                <!-- Job 10: Đã hủy -->
+                <tr data-job="JOB-4512" data-status="cancelled" data-tech-status="CANCELED">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4512"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Bí ẩn cổ mộ tập 13 (duplicate)</strong>
+                        <span>BV1Us4y1e5Lm · JOB-4512</span>
+                        <div class="cancel-notice"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:12px;height:12px;flex-shrink:0"><use href="#i-x-circle"/></svg>Hủy bởi Gia Huy · Video trùng</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Cổ Mộ Truyền Kỳ</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-download"/></svg>Tải video</span><span class="cell-sub" style="margin-top:2px">Bước 1/9</span><span class="status-badge status-cancelled" style="margin-top:4px">Đã hủy</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar"><div class="progress-fill" style="width:12%"></div></div>
+                    <span class="progress-text">12%</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">00:02:18</span><span class="cell-sub">đã chạy</span></td>
+                  <td><span class="cell-mono">—</span></td>
+                  <td><span class="cell-mono">3 giờ</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4512">Chi tiết</button></td>
+                </tr>
+                <!-- More GPU waiting jobs -->
+                <tr data-job="JOB-4511" data-status="gpu" data-tech-status="WAITING_FOR_GPU">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4511"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Bí ẩn cổ mộ tập 16</strong>
+                        <span>BV1Vs4y1f6No · JOB-4511</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Cổ Mộ Truyền Kỳ</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg>Render</span><span class="cell-sub" style="margin-top:2px">Bước 8/9</span><span class="status-badge status-gpu" style="margin-top:4px">Chờ GPU</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">8 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-mono">~9.000 ₫</span></td>
+                  <td><span class="cell-mono">8 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4511">Chi tiết</button></td>
+                </tr>
+                <tr data-job="JOB-4510" data-status="gpu" data-tech-status="WAITING_FOR_GPU">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4510"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Kiếm khách cuối cùng tập 24</strong>
+                        <span>BV1Ys4y1g7Pq · JOB-4510</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Kiếm Hiệp Việt</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-edit"/></svg>Xóa hard-sub</span><span class="cell-sub" style="margin-top:2px">Bước 2/9</span><span class="status-badge status-gpu" style="margin-top:4px">Chờ GPU</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">5 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-mono">~18.000 ₫</span></td>
+                  <td><span class="cell-mono">5 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4510">Chi tiết</button></td>
+                </tr>
+                <!-- Waiting jobs -->
+                <tr data-job="JOB-4509" data-status="waiting" data-tech-status="QUEUED">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4509"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Tam Quốc tập 08</strong>
+                        <span>BV1Zs4y1h8Rs · JOB-4509</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Tam Quốc Diễn Nghĩa</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-clock"/></svg>OCR/ASR</span><span class="cell-sub" style="margin-top:2px">Bước 3/9</span><span class="status-badge status-waiting" style="margin-top:4px">Đang chờ</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">3 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-main">6.200 ₫</span></td>
+                  <td><span class="cell-mono">3 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4509">Chi tiết</button></td>
+                </tr>
+                <tr data-job="JOB-4508" data-status="waiting" data-tech-status="QUEUED">
+                  <td><input type="checkbox" class="job-check" aria-label="Chọn job JOB-4508"></td>
+                  <td>
+                    <div class="video-cell">
+                      <div class="video-thumb"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-play"/></svg></div>
+                      <div class="video-info">
+                        <strong>Bí ẩn cổ mộ tập 17</strong>
+                        <span>BV1As4y1i9St · JOB-4508</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="cell-main">Cổ Mộ Truyền Kỳ</span></td>
+                  <td><span class="step-badge"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-clock"/></svg>Dịch</span><span class="cell-sub" style="margin-top:2px">Bước 4/9</span><span class="status-badge status-waiting" style="margin-top:4px">Đang chờ</span></td>
+                  <td class="progress-cell">
+                    <div class="progress-bar is-indeterminate"></div>
+                    <span class="progress-text">—</span>
+                  </td>
+                  <td><span class="cell-sub">—</span></td>
+                  <td><span class="cell-main">1 phút</span><span class="cell-sub">đang chờ</span></td>
+                  <td><span class="cell-main">8.400 ₫</span></td>
+                  <td><span class="cell-mono">1 phút</span></td>
+                  <td><button class="detail-btn" type="button" data-job="JOB-4508">Chi tiết</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span class="pagination-info">Hiển thị 1–14 trong 14 job</span>
+            <div class="pagination-controls">
+              <select id="pageSize" aria-label="Số dòng mỗi trang">
+                <option value="20" selected>20 / trang</option>
+                <option value="50">50 / trang</option>
+                <option value="100">100 / trang</option>
+              </select>
+              <button class="page-btn" type="button" disabled aria-label="Trang trước">
+                <svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-chevron-left"/></svg>
+              </button>
+              <span class="page-current">Trang 1 / 1</span>
+              <button class="page-btn" type="button" disabled aria-label="Trang sau">
+                <svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-chevron-right"/></svg>
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Bulk Action Bar -->
+  <div class="bulk-bar" id="bulkBar" data-od-id="bulk-action-bar">
+    <span class="bulk-count"><span id="selectedCount">0</span> job đã chọn</span>
+    <button class="btn btn-secondary" id="bulkRetryBtn" type="button" title="Retry các job thất bại đã chọn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-retry"/></svg>Retry</button>
+    <button class="btn btn-secondary" id="bulkPriorityBtn" type="button" title="Thay đổi ưu tiên job"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-arrow-up"/></svg>Ưu tiên</button>
+    <button class="btn btn-secondary" id="bulkAssignBtn" type="button" title="Gán người phụ trách"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-user"/></svg>Gán</button>
+    <button class="btn btn-danger" type="button" id="bulkCancelBtn" title="Hủy các job đã chọn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-x"/></svg>Hủy</button>
+    <button class="btn btn-secondary" type="button" id="bulkDeselectBtn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-x-circle"/></svg>Bỏ chọn</button>
+  </div>
+
+  <!-- Job Detail Drawer -->
+  <button class="drawer-scrim" id="drawerScrim" aria-label="Đóng drawer"></button>
+  <aside class="drawer" id="jobDrawer" data-od-id="job-detail-drawer" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="drawerTitle">
+    <div class="drawer-header">
+      <div>
+        <h2 id="drawerTitle">JOB-4513</h2>
+        <p>Kiếm khách cuối cùng tập 17 · Hoàn thành</p>
+      </div>
+      <button class="icon-btn drawer-close" id="closeDrawer" type="button" aria-label="Đóng">
+        <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-x"/></svg>
+      </button>
+    </div>
+
+    <div class="drawer-section">
+      <h3>Thông tin video</h3>
+      <dl class="detail-grid">
+        <dt>Source platform</dt>
+        <dd>Bilibili</dd>
+        <dt>Source video ID</dt>
+        <dd><code>BV1Rs4y1d4Jk</code></dd>
+        <dt>Title gốc</dt>
+        <dd>剑客最后一战 第17集</dd>
+        <dt>Độ dài</dt>
+        <dd>42:18</dd>
+        <dt>Channel/Series Profile</dt>
+        <dd>Kiếm Hiệp Việt</dd>
+        <dt>Người phụ trách</dt>
+        <dd>Gia Huy</dd>
+        <dt>Trạng thái kỹ thuật</dt>
+        <dd><code>COMPLETED</code></dd>
+      </dl>
+    </div>
+
+    <div class="drawer-section">
+      <h3>Timeline các bước</h3>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Tải video</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">08:42<br>6 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Xóa hard-sub</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">08:48<br>1:24:12</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>OCR/ASR</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">10:12<br>8 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Dịch</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">10:20<br>4 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Duyệt cast sheet</strong><span>Duyệt bởi Gia Huy</span></div>
+          <span class="timeline-time">10:24<br>12 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Tách audio</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">10:36<br>2 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>TTS</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">10:38<br>6 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Render</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">10:44<br>28 phút</span>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-dot is-done"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="#i-check"/></svg></span>
+          <div class="timeline-copy"><strong>Kiểm tra đầu ra</strong><span>Hoàn thành</span></div>
+          <span class="timeline-time">11:12<br>2 phút</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>Worker & Heartbeat</h3>
+      <dl class="detail-grid">
+        <dt>Worker name</dt>
+        <dd>worker-gpu-01</dd>
+        <dt>Provider</dt>
+        <dd>EzyCloudX</dd>
+        <dt>GPU model</dt>
+        <dd>NVIDIA A10 · 24 GB VRAM</dd>
+        <dt>Image version</dt>
+        <dd><code>reup-dubbing:v2.4.1</code></dd>
+        <dt>Job lease ID</dt>
+        <dd><code>lease-8f3a2c1d</code></dd>
+        <dt>Heartbeat gần nhất</dt>
+        <dd>Online · 18 giây trước</dd>
+      </dl>
+    </div>
+
+    <div class="drawer-section">
+      <h3>Chi phí GPU</h3>
+      <div class="cost-grid">
+        <div class="cost-item">
+          <span>Thời gian GPU</span>
+          <strong>1:52:12</strong>
+        </div>
+        <div class="cost-item">
+          <span>Đơn giá snapshot</span>
+          <strong>17.200 ₫/giờ</strong>
+        </div>
+        <div class="cost-item">
+          <span>Chi phí ước tính</span>
+          <strong>32.400 ₫</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-section">
+      <div class="log-header">
+        <h3>Log gần nhất</h3>
+        <button class="copy-btn" type="button" id="copyLogBtn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-copy"/></svg>Copy log</button>
+      </div>
+      <div class="log-box" id="logContent">[11:12:45] Kiểm tra đầu ra hoàn tất
+[11:12:44] Output validation: PASS
+[11:12:42] SRT 16:9: 847 segments
+[11:12:40] Video 16:9: 42:18, 1080p, 24fps
+[11:12:38] Bắt đầu kiểm tra đầu ra...</div>
+    </div>
+
+    <div class="drawer-section">
+      <h3>Đầu ra</h3>
+      <div class="output-list">
+        <div class="output-item">
+          <div class="output-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-file-video"/></svg></div>
+          <div class="output-info">
+            <strong>Video đã lồng tiếng 16:9<span class="output-status is-pass">✓ PASS</span></strong>
+            <span>kiem-khach-tap-17_16x9.mp4 · 1.2 GB</span>
+          </div>
+          <div class="output-actions">
+            <button class="output-download" type="button">Tải về</button>          </div>
+        </div>
+        <div class="output-item">
+          <div class="output-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-file-text"/></svg></div>
+          <div class="output-info">
+            <strong>File SRT 16:9<span class="output-status is-pass">✓ PASS</span></strong>
+            <span>kiem-khach-tap-17_16x9.srt · 48 KB · 847 segments</span>
+          </div>
+          <div class="output-actions">
+            <button class="output-download" type="button">Tải về</button>          </div>
+        </div>
+        <div class="output-item">
+          <div class="output-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-file-video"/></svg></div>
+          <div class="output-info">
+            <strong>Video đã lồng tiếng 9:16<span class="output-status is-pass">✓ PASS</span></strong>
+            <span>kiem-khach-tap-17_9x16.mp4 · 680 MB</span>
+          </div>
+          <div class="output-actions">
+            <button class="output-download" type="button">Tải về</button>          </div>
+        </div>
+        <div class="output-item">
+          <div class="output-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-file-text"/></svg></div>
+          <div class="output-info">
+            <strong>File SRT 9:16<span class="output-status is-pass">✓ PASS</span></strong>
+            <span>kiem-khach-tap-17_9x16.srt · 42 KB · 847 segments</span>
+          </div>
+          <div class="output-actions">
+            <button class="output-download" type="button">Tải về</button>          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-footer">
+      <button class="btn btn-danger" type="button" id="cancelJobBtn">Hủy job</button>
+      <button class="btn btn-secondary" type="button"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-retry"/></svg>Retry bước lỗi</button>
+    </div>
+  </aside>
+
+  <!-- Priority Popover -->
+  <div class="popover" id="priorityPopover" role="dialog" aria-modal="true" aria-labelledby="priorityPopoverTitle" aria-hidden="true">
+    <h3 class="popover-title" id="priorityPopoverTitle">Đặt mức ưu tiên</h3>
+    <div class="popover-info"><strong id="priorityJobCount">0</strong> job sẽ được thay đổi<span id="prioritySkipInfo"></span></div>
+    <ul class="popover-list">
+      <li><button type="button" data-priority="high" class="priority-high"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><use href="#i-arrow-up"/></svg>Cao</button></li>
+      <li><button type="button" data-priority="normal" class="priority-normal"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><use href="#i-minus"/></svg>Bình thường</button></li>
+      <li><button type="button" data-priority="low" class="priority-low"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:16px;height:16px"><use href="#i-arrow-down"/></svg>Thấp</button></li>
+    </ul>
+    <div class="popover-footer">
+      <button class="btn btn-secondary" type="button" id="priorityCancel" style="min-height:36px;padding:0 var(--space-3);font-size:var(--text-xs)">Hủy</button>
+    </div>
+  </div>
+
+  <!-- Assign Popover -->
+  <div class="popover" id="assignPopover" role="dialog" aria-modal="true" aria-labelledby="assignPopoverTitle" aria-hidden="true">
+    <h3 class="popover-title" id="assignPopoverTitle">Gán người phụ trách</h3>
+    <div class="popover-info"><strong id="assignJobCount">0</strong> job sẽ được gán<span id="assignSkipInfo"></span></div>
+    <ul class="popover-list">
+      <li><button type="button" data-assignee="Gia Huy">Gia Huy</button></li>
+      <li><button type="button" data-assignee="Minh Ngọc">Minh Ngọc</button></li>
+      <li><button type="button" data-assignee="Thanh Tùng">Thanh Tùng</button></li>
+      <li><button type="button" data-assignee="">Bỏ gán</button></li>
+    </ul>
+    <div class="popover-footer">
+      <button class="btn btn-secondary" type="button" id="assignCancel" style="min-height:36px;padding:0 var(--space-3);font-size:var(--text-xs)">Hủy</button>
+    </div>
+  </div>
+
+  <!-- Demo Toolbar for UI States -->
+  <aside class="demo-toolbar" id="demoToolbar">
+    <strong>Demo UI States</strong>
+    <button type="button" id="demoLoading">Loading</button>
+    <button type="button" id="demoEmpty">Empty</button>
+    <button type="button" id="demoFilteredEmpty">Filtered Empty</button>
+    <button type="button" id="demoError">API Error</button>
+    <button type="button" id="demoWorkerOffline">Worker Offline</button>
+    <button type="button" id="demoNormal" class="is-active">Normal</button>
+  </aside>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="modal-layer" id="cancelModal" data-od-id="cancel-confirm-modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cancelModalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="cancelModalTitle">Xác nhận hủy job</h2>
+        <p>Vui lòng đọc kỹ trước khi xác nhận.</p>
+      </div>
+      <div class="modal-body">
+        <p style="margin-bottom:var(--space-4)">Bạn có chắc chắn muốn hủy <strong id="cancelJobId">JOB-4513</strong>?</p>
+        <ul style="margin:0;padding-left:var(--space-5);color:var(--muted);font-size:var(--text-xs);line-height:1.7">
+          <li>Worker sẽ dừng ở điểm an toàn gần nhất</li>
+          <li>Output đã upload lên storage <strong>không tự động bị xóa</strong></li>
+          <li>Hủy job <strong>không xóa</strong> rental EzyCloudX — máy vẫn tiếp tục tính phí</li>
+          <li>Bạn vẫn phải quản lý máy thuê tại màn hình <strong>GPU Workers</strong></li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="cancelModalClose">Quay lại</button>
+        <button class="btn btn-danger" type="button" id="confirmCancel">Hủy job</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const app = document.getElementById('app');
+      const jobDrawer = document.getElementById('jobDrawer');
+      const drawerScrim = document.getElementById('drawerScrim');
+      const bulkBar = document.getElementById('bulkBar');
+      const cancelModal = document.getElementById('cancelModal');
+      const priorityPopover = document.getElementById('priorityPopover');
+      const assignPopover = document.getElementById('assignPopover');
+      const actionsMenu = document.getElementById('actionsMenu');
+      const actionsBtn = document.getElementById('actionsBtn');
+      let lastFocusedElement = null;
+      let currentPage = 1;
+      let pageSize = 20;
+      let filteredRows = [];
+      let focusTrapHandler = null;
+
+      // Time constants
+      const HOUR = 3600000;
+      const DAY = 86400000;
+
+      // Job data with created_at for time filtering
+      const jobsCreatedTime = Date.now();
+      const JOBS_DATA = {
+        'JOB-4521': { title: 'Kiếm khách cuối cùng tập 22', sourceId: 'BV1x4y1Q7Hs', profile: 'Kiếm Hiệp Việt', status: 'running', techStatus: 'DOWNLOADING', step: 1, progress: 34, worker: null, workerInfo: null, time: '12:04', eta: '~8 phút', costIncurred: 0, costEstimate: 0, assignee: null, createdAt: jobsCreatedTime - 0.5 * HOUR, logs: '[12:04:32] Downloading from Bilibili...\n[12:04:30] Fetching video metadata\n[12:04:28] Starting download task' },
+        'JOB-4520': { title: 'Tam Quốc tập 06 - Phần 2', sourceId: 'BV1Ks4y1d7vB', profile: 'Tam Quốc Diễn Nghĩa', status: 'running', techStatus: 'REMOVING_SUBTITLE', step: 2, progress: 67, worker: 'worker-gpu-01', workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-8f3a2c1d', heartbeat: 18, status: 'current' }, time: '01:42:18', eta: '~52 phút', costIncurred: 28400, costEstimate: 42000, assignee: null, createdAt: jobsCreatedTime - 2 * HOUR, logs: '[10:42:18] Processing frame 4821/7200\n[10:42:15] GPU utilization: 94%\n[10:42:10] Removing hard-sub region detected' },
+        'JOB-4519': { title: 'Bí ẩn cổ mộ tập 14', sourceId: 'BV1Qs4y1a9Xz', profile: 'Cổ Mộ Truyền Kỳ', status: 'running', techStatus: 'RENDERING', step: 8, progress: 89, worker: 'worker-gpu-01', workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-9a4b3c2e', heartbeat: 12, status: 'current' }, time: '00:34:12', eta: '~4 phút', costIncurred: 9200, costEstimate: 10500, assignee: null, createdAt: jobsCreatedTime - 1 * HOUR, logs: '[11:34:12] Rendering final output...\n[11:34:10] Audio mixing complete\n[11:34:05] Encoding H.264 @ 1080p' },
+        'JOB-4518': { title: 'Kiếm khách cuối cùng tập 23', sourceId: 'BV1Ps4y1H7Kf', profile: 'Kiếm Hiệp Việt', status: 'gpu', techStatus: 'WAITING_FOR_GPU', step: 2, progress: 0, worker: null, workerInfo: null, time: '14 phút', eta: null, costIncurred: 0, costEstimate: 18000, assignee: null, createdAt: jobsCreatedTime - 0.5 * HOUR, logs: '[10:14:00] Queued for GPU\n[10:13:58] Download complete\n[10:13:55] Waiting for available GPU worker...' },
+        'JOB-4517': { title: 'Tam Quốc tập 07', sourceId: 'BV1Xs4y1d8Cc', profile: 'Tam Quốc Diễn Nghĩa', status: 'gpu', techStatus: 'WAITING_FOR_GPU', step: 2, progress: 0, worker: null, workerInfo: null, time: '22 phút', eta: null, costIncurred: 0, costEstimate: 20000, assignee: null, createdAt: jobsCreatedTime - 0.6 * HOUR, logs: '[09:58:00] Queued for GPU\n[09:57:55] Download complete' },
+        'JOB-4516': { title: 'Kiếm khách cuối cùng tập 18', sourceId: 'BV1Ds4y1P3Qw', profile: 'Kiếm Hiệp Việt', status: 'review', techStatus: 'WAITING_FOR_CAST_REVIEW', step: 5, progress: 55, worker: null, workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-7c5d4e3f', heartbeat: null, status: 'historical' }, time: '4 giờ 12 phút', eta: null, costIncurred: 12600, costEstimate: 18000, assignee: 'Gia Huy', createdAt: jobsCreatedTime - 5 * HOUR, logs: '[06:12:00] Waiting for cast sheet review\n[06:11:55] Cast sheet generated with 8 characters' },
+        'JOB-4515': { title: 'Bí ẩn cổ mộ tập 15', sourceId: 'BV1Ts4y1b2Mn', profile: 'Cổ Mộ Truyền Kỳ', status: 'review', techStatus: 'WAITING_FOR_CAST_REVIEW', step: 5, progress: 55, worker: null, workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-6b4c3d2e', heartbeat: null, status: 'historical' }, time: '1 giờ 38 phút', eta: null, costIncurred: 11200, costEstimate: 16000, assignee: 'Minh Ngọc', createdAt: jobsCreatedTime - 2 * HOUR, logs: '[08:42:00] Waiting for cast sheet review\n[08:41:55] Cast sheet generated with 6 characters' },
+        'JOB-4514': { title: 'Tam Quốc tập 05', sourceId: 'BV1Ws4y1c1Zp', profile: 'Tam Quốc Diễn Nghĩa', status: 'failed', techStatus: 'FAILED_RETRYABLE', step: 8, progress: 72, worker: null, workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-5a3b2c1d', heartbeat: null, status: 'historical' }, time: '00:28:45', eta: null, costIncurred: 7800, costEstimate: 0, assignee: null, error: 'FFmpeg out of memory', errorCode: 'RENDER_OOM', retryCount: 0, createdAt: jobsCreatedTime - 3 * HOUR, logs: '[08:28:45] ERROR: FFmpeg out of memory\n[08:28:44] Render failed at frame 5184\n[08:28:40] Memory usage exceeded 22GB' },
+        'JOB-4513': { title: 'Kiếm khách cuối cùng tập 17', sourceId: 'BV1Rs4y1d4Jk', profile: 'Kiếm Hiệp Việt', status: 'done', techStatus: 'COMPLETED', step: 9, progress: 100, worker: null, workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-4a2b1c0d', heartbeat: null, status: 'historical' }, time: '02:14:32', eta: null, costIncurred: 32400, costEstimate: 0, assignee: 'Gia Huy', createdAt: jobsCreatedTime - 1 * DAY, outputs: [{name: 'Video đã lồng tiếng 16:9', file: 'kiem-khach-tap-17_16x9.mp4', size: '1.2 GB', valid: true, type: 'video'}, {name: 'File SRT 16:9', file: 'kiem-khach-tap-17_16x9.srt', size: '48 KB', valid: true, type: 'srt'}, {name: 'Video đã lồng tiếng 9:16', file: 'kiem-khach-tap-17_9x16.mp4', size: '680 MB', valid: true, type: 'video'}, {name: 'File SRT 9:16', file: 'kiem-khach-tap-17_9x16.srt', size: '42 KB', valid: true, type: 'srt'}], logs: '[11:12:45] Output validation: PASS\n[11:12:42] All outputs verified' },
+        'JOB-4512': { title: 'Bí ẩn cổ mộ tập 13 (duplicate)', sourceId: 'BV1Us4y1e5Lm', profile: 'Cổ Mộ Truyền Kỳ', status: 'cancelled', techStatus: 'CANCELED', step: 1, progress: 12, worker: null, workerInfo: null, time: '00:02:18', eta: null, costIncurred: 0, costEstimate: 0, assignee: null, cancelReason: 'Video trùng', cancelledBy: 'Gia Huy', createdAt: jobsCreatedTime - 4 * HOUR, logs: '[07:02:18] Job cancelled by user\n[07:02:15] Reason: Duplicate video' },
+        'JOB-4511': { title: 'Bí ẩn cổ mộ tập 16', sourceId: 'BV1Vs4y1f6No', profile: 'Cổ Mộ Truyền Kỳ', status: 'gpu', techStatus: 'WAITING_FOR_GPU', step: 8, progress: 0, worker: null, workerInfo: { name: 'worker-gpu-01', provider: 'EzyCloudX', gpu: 'NVIDIA A10', vram: '24 GB', image: 'reup-dubbing:v2.4.1', leaseId: 'lease-3a1b0c9d', heartbeat: null, status: 'historical' }, time: '8 phút', eta: null, costIncurred: 8500, costEstimate: 9000, assignee: null, createdAt: jobsCreatedTime - 0.3 * HOUR, logs: '[10:22:00] Queued for GPU render' },
+        'JOB-4510': { title: 'Kiếm khách cuối cùng tập 24', sourceId: 'BV1Ys4y1g7Pq', profile: 'Kiếm Hiệp Việt', status: 'gpu', techStatus: 'WAITING_FOR_GPU', step: 2, progress: 0, worker: null, workerInfo: null, time: '5 phút', eta: null, costIncurred: 0, costEstimate: 18000, assignee: null, createdAt: jobsCreatedTime - 0.2 * HOUR, logs: '[10:25:00] Queued for GPU' },
+        'JOB-4509': { title: 'Tam Quốc tập 08', sourceId: 'BV1Zs4y1h8Rs', profile: 'Tam Quốc Diễn Nghĩa', status: 'waiting', techStatus: 'QUEUED', step: 3, progress: 0, worker: null, workerInfo: null, time: '3 phút', eta: null, costIncurred: 6200, costEstimate: 18000, assignee: null, createdAt: jobsCreatedTime - 0.1 * HOUR, logs: '[10:27:00] Queued for OCR/ASR' },
+        'JOB-4508': { title: 'Bí ẩn cổ mộ tập 17', sourceId: 'BV1As4y1i9St', profile: 'Cổ Mộ Truyền Kỳ', status: 'waiting', techStatus: 'QUEUED', step: 4, progress: 0, worker: null, workerInfo: null, time: '1 phút', eta: null, costIncurred: 8400, costEstimate: 16000, assignee: null, createdAt: jobsCreatedTime - 0.05 * HOUR, logs: '[10:29:00] Queued for translation' }
+      };
+
+      // videoKey: chỉ gán cho job đã có record video trong Thư viện (khớp lastJob của library.html)
+      const JOB_VIDEO_KEYS = {
+        'JOB-4521': 'VID-2114', 'JOB-4516': 'VID-2112',
+        'JOB-4515': 'VID-2111', 'JOB-4514': 'VID-2103'
+      };
+      Object.keys(JOBS).forEach(id => { JOBS[id].videoKey = JOB_VIDEO_KEYS[id] || null; });
+
+      const STEPS = ['Tải video', 'Xóa hard-sub', 'OCR/ASR', 'Dịch', 'Duyệt cast sheet', 'Tách audio', 'TTS', 'Render', 'Kiểm tra đầu ra'];
+
+      // Get current step status label based on techStatus
+      function getCurrentStepLabel(techStatus) {
+        const labels = {
+          'DOWNLOADING': 'Đang tải',
+          'WAITING_FOR_GPU': 'Chờ GPU',
+          'WAITING_FOR_CAST_REVIEW': 'Chờ người duyệt',
+          'QUEUED': 'Đang chờ',
+          'FAILED_RETRYABLE': 'Thất bại, có thể retry',
+          'CANCELED': 'Đã hủy',
+          'COMPLETED': 'Hoàn thành'
+        };
+        return labels[techStatus] || 'Đang xử lý';
+      }
+
+      // Toast notification helper
+      function showToast(message, type = 'success') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = 'toast is-visible' + (type === 'error' ? ' is-error' : ' is-success');
+        setTimeout(() => { toast.classList.remove('is-visible'); }, 3000);
+      }
+
+      // Render drawer content based on job data
+      function renderDrawer(jobId) {
+        const job = JOBS_DATA[jobId];
+        if (!job) return;
+
+        const drawer = document.getElementById('jobDrawer');
+        const statusLabels = { running: 'Đang xử lý', gpu: 'Chờ GPU', review: 'Chờ duyệt', failed: 'Thất bại', done: 'Hoàn thành', cancelled: 'Đã hủy', waiting: 'Đang chờ' };
+        const canCancel = !['done', 'cancelled'].includes(job.status);
+        const canRetry = job.techStatus === 'FAILED_RETRYABLE';
+        const isReview = job.techStatus === 'WAITING_FOR_CAST_REVIEW';
+        const isGpuWait = job.techStatus === 'WAITING_FOR_GPU';
+        const isCancelled = job.techStatus === 'CANCELED';
+        const hasWorkerInfo = !!job.workerInfo;
+        const hasOutputs = job.outputs && job.outputs.length > 0;
+        const currentStepLabel = getCurrentStepLabel(job.techStatus);
+
+        // Build timeline HTML with correct status per step
+        let timelineHtml = '';
+        for (let i = 0; i < STEPS.length; i++) {
+          const stepNum = i + 1;
+          let dotClass = 'is-pending';
+          let statusText = 'Chờ xử lý';
+          let icon = '#i-clock';
+
+          if (isCancelled) {
+            // Cancelled job: steps before current are done, current step shows cancelled, rest pending
+            if (stepNum < job.step) { dotClass = 'is-done'; statusText = 'Hoàn thành'; icon = '#i-check'; }
+            else if (stepNum === job.step) { dotClass = 'is-cancelled'; statusText = 'Đã hủy'; icon = '#i-x-circle'; }
+            else { dotClass = 'is-pending'; statusText = 'Không thực hiện'; }
+          } else if (stepNum < job.step) {
+            dotClass = 'is-done'; statusText = 'Hoàn thành'; icon = '#i-check';
+          } else if (stepNum === job.step) {
+            if (job.status === 'failed') { dotClass = 'is-failed'; statusText = currentStepLabel; icon = '#i-alert'; }
+            else if (job.status === 'done') { dotClass = 'is-done'; statusText = 'Hoàn thành'; icon = '#i-check'; }
+            else if (job.status === 'gpu' || job.status === 'review' || job.status === 'waiting') {
+              dotClass = 'is-waiting'; statusText = currentStepLabel; icon = '#i-clock';
+            }
+            else { dotClass = 'is-active'; statusText = currentStepLabel; icon = '#i-clock'; }
+          }
+          timelineHtml += `<div class="timeline-item"><span class="timeline-dot ${dotClass}"><svg fill="none" stroke="currentColor" stroke-width="2"><use href="${icon}"/></svg></span><div class="timeline-copy"><strong>${STEPS[i]}</strong><span>${statusText}</span></div><span class="timeline-time">—</span></div>`;
+        }
+
+        // Build error section if failed
+        let errorHtml = '';
+        if (job.error) {
+          errorHtml = `<div class="error-section"><h4>Lỗi: ${job.errorCode || 'UNKNOWN'}</h4><p>${job.error}</p><code>${job.logs.split('\n')[0]}</code><p class="retry-info">Retry: ${job.retryCount || 0}/3</p></div>`;
+        }
+
+        // Build outputs section with correct icons
+        let outputsHtml = '';
+        if (hasOutputs) {
+          outputsHtml = '<div class="drawer-section"><h3>Đầu ra</h3><div class="output-list">';
+          const libLink = job.videoKey ? `<a class="output-download" href="library.html?video=${encodeURIComponent(job.videoKey)}" title="Mở trong Thư viện video" style="text-decoration:none"><svg fill="none" stroke="currentColor" stroke-width="1.8" style="width:14px;height:14px"><use href="#i-folder"/></svg></a>` : '';
+          job.outputs.forEach(o => {
+            const icon = o.type === 'srt' ? '#i-file-text' : '#i-file-video';
+            const validStatus = o.valid ? '<span class="output-status is-pass">✓ PASS</span>' : '<span class="output-status is-fail">✗ FAIL</span>';
+            outputsHtml += `<div class="output-item"><div class="output-icon"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="${icon}"/></svg></div><div class="output-info"><strong>${o.name}${validStatus}</strong><span>${o.file} · ${o.size}</span></div><div class="output-actions"><button class="output-download" type="button">Tải về</button>${libLink}</div></div>`;
+          });
+          outputsHtml += '</div></div>';
+        }
+
+        // Build worker section (only if job has or had worker)
+        let workerHtml = '';
+        if (hasWorkerInfo) {
+          const w = job.workerInfo;
+          const heartbeatText = w.status === 'current' ? `Online · ${w.heartbeat} giây trước` : 'Không còn giữ worker';
+          const statusBadge = w.status === 'current' ? '<span class="status-badge status-done" style="font-size:10px;min-height:20px;padding:0 6px">Đang giữ</span>' : '<span class="status-badge status-waiting" style="font-size:10px;min-height:20px;padding:0 6px">Lịch sử</span>';
+          workerHtml = `<div class="drawer-section"><h3>Worker & Heartbeat</h3><dl class="detail-grid"><dt>Worker name</dt><dd>${w.name} ${statusBadge}</dd><dt>Provider</dt><dd>${w.provider}</dd><dt>GPU model</dt><dd>${w.gpu} · ${w.vram} VRAM</dd><dt>Image version</dt><dd><code>${w.image}</code></dd><dt>Job lease ID</dt><dd><code>${w.leaseId}</code></dd><dt>Heartbeat gần nhất</dt><dd>${heartbeatText}</dd></dl></div>`;
+        }
+
+        // Build cost section with clear labels
+        let costHtml = '';
+        const hasCost = job.costIncurred > 0 || job.costEstimate > 0 || hasWorkerInfo;
+        if (hasCost) {
+          let incurredLabel = job.status === 'done' ? 'Chi phí cuối cùng' : 'Đã phát sinh';
+          let estimateHtml = '';
+          if (job.status !== 'done' && job.status !== 'cancelled' && job.costEstimate > 0) {
+            estimateHtml = `<div class="cost-item"><span>Ước tính khi hoàn tất</span><strong>~${job.costEstimate.toLocaleString('vi-VN')} ₫</strong></div>`;
+          }
+          costHtml = `<div class="drawer-section"><h3>Chi phí GPU</h3><div class="cost-grid"><div class="cost-item"><span>${incurredLabel}</span><strong>${job.costIncurred.toLocaleString('vi-VN')} ₫</strong></div>${estimateHtml}<div class="cost-item"><span>Đơn giá snapshot</span><strong>17.200 ₫/giờ</strong></div></div><p style="margin-top:var(--space-3);color:var(--muted);font-size:var(--text-xs)">Chi phí ước tính, không phải hóa đơn EzyCloudX.</p></div>`;
+        }
+
+        // Build footer actions
+        let footerHtml = '<div class="drawer-footer">';
+        if (canCancel) footerHtml += '<button class="btn btn-danger" type="button" id="cancelJobBtn">Hủy job</button>';
+        else footerHtml += '<span></span>';
+        footerHtml += '<div style="display:flex;gap:var(--space-2)">';
+        if (canRetry) footerHtml += '<button class="btn btn-secondary" type="button" id="retryBtn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-retry"/></svg>Retry bước lỗi</button>';
+        if (isReview && job.videoKey) footerHtml += '<a class="btn btn-primary" href="library.html?video=' + encodeURIComponent(job.videoKey) + '" style="text-decoration:none"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-edit"/></svg>Mở trong Thư viện</a>';
+        if (isGpuWait) footerHtml += '<a class="btn btn-secondary" href="workers.html" style="text-decoration:none"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-cpu"/></svg>Mở GPU Workers</a>';
+        footerHtml += '</div></div>';
+
+        // Assemble drawer content
+        drawer.innerHTML = `
+          <div class="drawer-header">
+            <div><h2 id="drawerTitle">${jobId}</h2><p>${job.title} · ${statusLabels[job.status]}</p></div>
+            <button class="icon-btn drawer-close" id="closeDrawer" type="button" aria-label="Đóng"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-x"/></svg></button>
+          </div>
+          ${errorHtml}
+          <div class="drawer-section"><h3>Thông tin video</h3><dl class="detail-grid"><dt>Source ID</dt><dd><code>${job.sourceId}</code></dd><dt>Profile</dt><dd>${job.profile}</dd><dt>Trạng thái</dt><dd><code>${job.techStatus}</code></dd>${job.assignee ? `<dt>Phụ trách</dt><dd>${job.assignee}</dd>` : ''}</dl></div>
+          <div class="drawer-section"><h3>Timeline</h3><div class="timeline">${timelineHtml}</div></div>
+          ${workerHtml}
+          ${costHtml}
+          <div class="drawer-section"><div class="log-header"><h3>Log</h3><button class="copy-btn" type="button" id="copyLogBtn"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-copy"/></svg>Copy</button></div><div class="log-box" id="logContent">${job.logs}</div></div>
+          ${outputsHtml}
+          ${footerHtml}
+        `;
+
+        // Rebind drawer event listeners
+        document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+        const copyBtn = document.getElementById('copyLogBtn');
+        if (copyBtn) copyBtn.addEventListener('click', copyLog);
+        const cancelBtn = document.getElementById('cancelJobBtn');
+        if (cancelBtn) cancelBtn.addEventListener('click', () => { cancelModal.classList.add('is-open'); document.getElementById('cancelJobId').textContent = jobId; trapFocus(cancelModal); });
+        const retryBtn = document.getElementById('retryBtn');
+        if (retryBtn) retryBtn.addEventListener('click', () => showToast('Retry đang chạy...'));
+      }
+
+      function copyLog() {
+        const logContent = document.getElementById('logContent').textContent;
+        navigator.clipboard.writeText(logContent).then(() => {
+          const btn = document.getElementById('copyLogBtn');
+          btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-check"/></svg>Đã copy';
+          setTimeout(() => { btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-copy"/></svg>Copy'; }, 2000);
+        });
+      }
+
+      // Mobile menu
+      document.getElementById('mobileMenu').addEventListener('click', e => {
+        const open = app.classList.toggle('is-menu-open');
+        e.currentTarget.setAttribute('aria-expanded', String(open));
+      });
+      document.getElementById('scrim').addEventListener('click', () => {
+        app.classList.remove('is-menu-open');
+        document.getElementById('mobileMenu').setAttribute('aria-expanded', 'false');
+      });
+
+      // Collapse sidebar
+      document.getElementById('collapseSidebar').addEventListener('click', () => {
+        app.classList.toggle('is-collapsed');
+      });
+
+      // Actions dropdown
+      actionsBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        const open = actionsMenu.classList.toggle('is-open');
+        actionsBtn.setAttribute('aria-expanded', String(open));
+      });
+      document.addEventListener('click', () => {
+        actionsMenu.classList.remove('is-open');
+        actionsBtn.setAttribute('aria-expanded', 'false');
+      });
+
+      // Notification center
+      const notificationButton = document.getElementById('notificationButton');
+      const notificationCenter = document.getElementById('notificationCenter');
+      notificationButton.addEventListener('click', e => {
+        e.stopPropagation();
+        const open = notificationCenter.classList.toggle('is-open');
+        notificationButton.setAttribute('aria-expanded', String(open));
+        notificationCenter.setAttribute('aria-hidden', String(!open));
+      });
+      document.addEventListener('click', e => {
+        if (!notificationCenter.contains(e.target)) {
+          notificationCenter.classList.remove('is-open');
+          notificationButton.setAttribute('aria-expanded', 'false');
+          notificationCenter.setAttribute('aria-hidden', 'true');
+        }
+      });
+      document.getElementById('markNotificationsRead').addEventListener('click', () => {
+        document.querySelectorAll('.notification-item.is-unread').forEach(item => item.classList.remove('is-unread'));
+        document.querySelector('.notification-dot').style.display = 'none';
+      });
+
+      // Combined filter function with real pagination
+      function applyFilters() {
+        const status = document.getElementById('filterStatus').value;
+        const step = document.getElementById('filterStep').value;
+        const profile = document.getElementById('filterProfile').value;
+        const worker = document.getElementById('filterWorker').value;
+        const range = document.getElementById('filterRange').value;
+        const search = document.getElementById('filterSearch').value.toLowerCase();
+        const kpiActive = document.querySelector('.kpi-card.is-active');
+        const kpiFilter = kpiActive ? kpiActive.dataset.filter : null;
+
+        // Time range calculation
+        const now = Date.now();
+        const ranges = { '24h': 24 * HOUR, '7d': 7 * DAY, '30d': 30 * DAY, 'all': Infinity };
+        const rangeMs = ranges[range] || 7 * DAY;
+
+        // First pass: collect all matching rows
+        filteredRows = [];
+        document.querySelectorAll('.job-table tbody tr').forEach(row => {
+          const rowStatus = row.dataset.status;
+          const rowTechStatus = row.dataset.techStatus;
+          const rowText = row.textContent.toLowerCase();
+          const jobId = row.dataset.job;
+          const jobData = JOBS_DATA[jobId];
+          let show = true;
+
+          // Time filter
+          if (jobData && rangeMs !== Infinity) {
+            const age = now - jobData.createdAt;
+            if (age > rangeMs) show = false;
+          }
+
+          // KPI filter
+          if (show && kpiFilter && kpiFilter !== rowStatus) show = false;
+
+          // Status filter
+          if (show && status && status !== rowStatus) show = false;
+
+          // Step filter
+          if (show && step) {
+            const stepMap = { download: 'DOWNLOADING', hardsub: 'REMOVING_SUBTITLE', ocr: 'OCR', translate: 'TRANSLATING', cast: 'WAITING_FOR_CAST_REVIEW', audio: 'SEPARATING_AUDIO', tts: 'TTS', render: 'RENDERING', check: 'VALIDATING' };
+            if (!rowTechStatus.includes(stepMap[step] || step.toUpperCase())) show = false;
+          }
+
+          // Profile filter
+          if (show && profile) {
+            const profileMap = { kiemhiep: 'kiếm hiệp', comu: 'cổ mộ', tamquoc: 'tam quốc' };
+            if (!rowText.includes(profileMap[profile] || profile.toLowerCase())) show = false;
+          }
+
+          // Worker filter
+          if (show && worker && !rowText.includes(worker.toLowerCase())) show = false;
+
+          // Search filter
+          if (show && search && !rowText.includes(search)) show = false;
+
+          if (show) filteredRows.push(row);
+        });
+
+        // Second pass: apply pagination - hide all rows first
+        document.querySelectorAll('.job-table tbody tr').forEach(row => row.hidden = true);
+
+        // Show only rows for current page
+        const totalPages = Math.ceil(filteredRows.length / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * pageSize;
+        const end = Math.min(start + pageSize, filteredRows.length);
+
+        for (let i = start; i < end; i++) {
+          filteredRows[i].hidden = false;
+        }
+
+        // Show empty state if no results
+        const emptyState = document.getElementById('emptyState');
+        const tableWrap = document.querySelector('.table-wrap');
+        const hasFilters = status || step || profile || worker || search || kpiFilter || (range && range !== 'all');
+
+        if (filteredRows.length === 0 && hasFilters) {
+          emptyState.hidden = false;
+          emptyState.querySelector('strong').textContent = 'Không tìm thấy job phù hợp';
+          emptyState.querySelector('span').textContent = 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.';
+          tableWrap.hidden = true;
+        } else if (filteredRows.length === 0) {
+          emptyState.hidden = false;
+          emptyState.querySelector('strong').textContent = 'Chưa có job nào';
+          emptyState.querySelector('span').textContent = 'Hãy thêm video mới từ màn hình Khám phá video để bắt đầu xử lý.';
+          tableWrap.hidden = true;
+        } else {
+          emptyState.hidden = true;
+          tableWrap.hidden = false;
+        }
+
+        updatePagination(filteredRows.length);
+        updateURLParams();
+        updateSelectAllState();
+      }
+
+      // KPI filter
+      document.querySelectorAll('.kpi-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const wasActive = card.classList.contains('is-active');
+          document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('is-active'));
+          if (!wasActive) card.classList.add('is-active');
+          currentPage = 1;
+          applyFilters();
+        });
+      });
+
+      // Filter change listeners
+      document.querySelectorAll('.filter-section select').forEach(el => {
+        el.addEventListener('change', () => { currentPage = 1; applyFilters(); });
+      });
+      document.getElementById('filterSearch').addEventListener('input', () => { currentPage = 1; applyFilters(); });
+
+      // Pagination
+      function updatePagination(total) {
+        const info = document.querySelector('.pagination-info');
+        const current = document.querySelector('.page-current');
+        const totalPages = Math.ceil(total / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, total);
+        info.textContent = total > 0 ? `Hiển thị ${start}–${end} trong ${total} job` : 'Không có kết quả';
+        current.textContent = `Trang ${currentPage} / ${totalPages}`;
+        document.querySelector('.page-btn[aria-label="Trang trước"]').disabled = currentPage <= 1;
+        document.querySelector('.page-btn[aria-label="Trang sau"]').disabled = currentPage >= totalPages;
+      }
+
+      document.getElementById('pageSize').addEventListener('change', e => {
+        pageSize = parseInt(e.target.value);
+        currentPage = 1;
+        applyFilters();
+      });
+      document.querySelector('.page-btn[aria-label="Trang trước"]').addEventListener('click', () => { if (currentPage > 1) { currentPage--; applyFilters(); } });
+      document.querySelector('.page-btn[aria-label="Trang sau"]').addEventListener('click', () => { currentPage++; applyFilters(); });
+
+      // Job selection with validation
+      const selectAll = document.getElementById('selectAll');
+      function getVisibleCheckboxes() {
+        return [...document.querySelectorAll('.job-table tbody tr:not([hidden]) .job-check')];
+      }
+
+      function updateBulkBar() {
+        const visibleChecks = getVisibleCheckboxes();
+        const checked = visibleChecks.filter(cb => cb.checked);
+        document.getElementById('selectedCount').textContent = checked.length;
+        bulkBar.classList.toggle('is-visible', checked.length > 0);
+        document.querySelectorAll('.job-table tbody tr').forEach(row => {
+          const cb = row.querySelector('.job-check');
+          row.classList.toggle('is-selected', cb && cb.checked);
+        });
+        // Validate bulk actions
+        let retryable = 0, prioritizable = 0, assignable = 0, cancellable = 0;
+        checked.forEach(cb => {
+          const row = cb.closest('tr');
+          const st = row.dataset.status;
+          const tech = row.dataset.techStatus;
+          if (tech === 'FAILED_RETRYABLE') retryable++;
+          if (!['done', 'cancelled'].includes(st)) prioritizable++;
+          if (['waiting', 'gpu', 'review'].includes(st)) assignable++;
+          if (!['done', 'cancelled'].includes(st)) cancellable++;
+        });
+        document.getElementById('bulkRetryBtn').disabled = retryable === 0;
+        document.getElementById('bulkPriorityBtn').disabled = prioritizable === 0;
+        document.getElementById('bulkAssignBtn').disabled = assignable === 0;
+        document.getElementById('bulkCancelBtn').disabled = cancellable === 0;
+      }
+
+      selectAll.addEventListener('change', () => {
+        const validStatuses = ['running', 'waiting', 'gpu', 'review', 'failed'];
+        getVisibleCheckboxes().forEach(cb => {
+          const row = cb.closest('tr');
+          if (validStatuses.includes(row.dataset.status)) cb.checked = selectAll.checked;
+        });
+        updateBulkBar();
+      });
+      document.querySelectorAll('.job-table tbody .job-check').forEach(cb => {
+        cb.addEventListener('change', () => {
+          updateBulkBar();
+          updateSelectAllState();
+        });
+      });
+      document.getElementById('bulkDeselectBtn').addEventListener('click', () => {
+        document.querySelectorAll('.job-table tbody .job-check:checked').forEach(cb => cb.checked = false);
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        updateBulkBar();
+      });
+
+      // Retry bulk action
+      document.getElementById('bulkRetryBtn').addEventListener('click', () => {
+        const checked = getVisibleCheckboxes().filter(cb => cb.checked);
+        const retryable = checked.filter(cb => cb.closest('tr').dataset.techStatus === 'FAILED_RETRYABLE');
+        const skipped = checked.length - retryable.length;
+        if (retryable.length === 0) {
+          showToast('Không có job nào có thể retry (chỉ FAILED_RETRYABLE)', 'error');
+          return;
+        }
+        let msg = `Retry ${retryable.length} job thành công`;
+        if (skipped > 0) msg += ` (${skipped} job bỏ qua: không ở trạng thái FAILED_RETRYABLE)`;
+        showToast(msg);
+        checked.forEach(cb => cb.checked = false);
+        updateBulkBar();
+        updateSelectAllState();
+      });
+
+      // Priority popover
+      document.getElementById('bulkPriorityBtn').addEventListener('click', e => {
+        const checked = getVisibleCheckboxes().filter(cb => cb.checked);
+        const prioritizable = checked.filter(cb => !['done', 'cancelled'].includes(cb.closest('tr').dataset.status));
+        const skipped = checked.length - prioritizable.length;
+        document.getElementById('priorityJobCount').textContent = prioritizable.length;
+        document.getElementById('prioritySkipInfo').textContent = skipped > 0 ? ` (${skipped} job bỏ qua: đã hoàn thành/hủy)` : '';
+        lastFocusedElement = e.currentTarget;
+        showPopover(priorityPopover, e.currentTarget);
+      });
+      document.getElementById('priorityCancel').addEventListener('click', () => closePopover(priorityPopover));
+      priorityPopover.querySelectorAll('[data-priority]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const priority = btn.dataset.priority;
+          const labels = { high: 'Cao', normal: 'Bình thường', low: 'Thấp' };
+          const count = document.getElementById('priorityJobCount').textContent;
+          showToast(`Đã đặt ưu tiên ${labels[priority]} cho ${count} job`);
+          closePopover(priorityPopover);
+          document.querySelectorAll('.job-table tbody .job-check:checked').forEach(cb => cb.checked = false);
+          updateBulkBar();
+          updateSelectAllState();
+        });
+      });
+
+      // Assign popover
+      document.getElementById('bulkAssignBtn').addEventListener('click', e => {
+        const checked = getVisibleCheckboxes().filter(cb => cb.checked);
+        const assignable = checked.filter(cb => ['waiting', 'gpu', 'review'].includes(cb.closest('tr').dataset.status));
+        const skipped = checked.length - assignable.length;
+        document.getElementById('assignJobCount').textContent = assignable.length;
+        document.getElementById('assignSkipInfo').textContent = skipped > 0 ? ` (${skipped} job bỏ qua: đang chạy/hoàn thành/hủy)` : '';
+        lastFocusedElement = e.currentTarget;
+        showPopover(assignPopover, e.currentTarget);
+      });
+      document.getElementById('assignCancel').addEventListener('click', () => closePopover(assignPopover));
+      assignPopover.querySelectorAll('[data-assignee]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const assignee = btn.dataset.assignee;
+          const count = document.getElementById('assignJobCount').textContent;
+          const msg = assignee ? `Đã gán ${count} job cho ${assignee}` : `Đã bỏ gán ${count} job`;
+          showToast(msg);
+          closePopover(assignPopover);
+          document.querySelectorAll('.job-table tbody .job-check:checked').forEach(cb => cb.checked = false);
+          updateBulkBar();
+          updateSelectAllState();
+        });
+      });
+
+      // Popover helpers
+      function showPopover(popover, anchor) {
+        const rect = anchor.getBoundingClientRect();
+        popover.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        popover.style.left = rect.left + 'px';
+        popover.classList.add('is-open');
+        popover.setAttribute('aria-hidden', 'false');
+        trapFocus(popover);
+      }
+      function closePopover(popover) {
+        popover.classList.remove('is-open');
+        popover.setAttribute('aria-hidden', 'true');
+        removeFocusTrap();
+        if (lastFocusedElement) lastFocusedElement.focus();
+      }
+
+      // Open drawer with dynamic content
+      document.querySelectorAll('.detail-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+          e.stopPropagation();
+          lastFocusedElement = btn;
+          const jobId = btn.dataset.job;
+          renderDrawer(jobId);
+          openDrawer();
+        });
+      });
+
+      function openDrawer() {
+        jobDrawer.classList.add('is-open');
+        jobDrawer.setAttribute('aria-hidden', 'false');
+        drawerScrim.classList.add('is-open');
+        trapFocus(jobDrawer);
+      }
+
+      // Close drawer
+      function closeDrawer() {
+        jobDrawer.classList.remove('is-open');
+        jobDrawer.setAttribute('aria-hidden', 'true');
+        drawerScrim.classList.remove('is-open');
+        removeFocusTrap();
+        if (lastFocusedElement) lastFocusedElement.focus();
+      }
+      drawerScrim.addEventListener('click', closeDrawer);
+
+      // Focus trap for modal - only one listener at a time
+      function trapFocus(element) {
+        removeFocusTrap();
+        const focusable = element.querySelectorAll('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        first.focus();
+        focusTrapHandler = e => {
+          if (e.key === 'Tab') {
+            if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+            else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+          }
+        };
+        element.addEventListener('keydown', focusTrapHandler);
+      }
+
+      function removeFocusTrap() {
+        if (focusTrapHandler) {
+          document.querySelectorAll('.modal-layer, .drawer, .popover').forEach(el => {
+            el.removeEventListener('keydown', focusTrapHandler);
+          });
+          focusTrapHandler = null;
+        }
+      }
+
+      // Cancel modal
+      document.getElementById('bulkCancelBtn').addEventListener('click', e => {
+        const checked = getVisibleCheckboxes().filter(cb => cb.checked);
+        const cancellable = checked.filter(cb => !['done', 'cancelled'].includes(cb.closest('tr').dataset.status));
+        const skipped = checked.length - cancellable.length;
+        let msg = `${cancellable.length} job sẽ bị hủy`;
+        if (skipped > 0) msg += ` (${skipped} job bỏ qua vì đã hoàn thành/hủy)`;
+        document.getElementById('cancelJobId').textContent = msg;
+        lastFocusedElement = e.currentTarget;
+        openModal(cancelModal);
+      });
+      document.getElementById('cancelModalClose').addEventListener('click', () => closeModal(cancelModal));
+      document.getElementById('confirmCancel').addEventListener('click', () => {
+        closeModal(cancelModal);
+        closeDrawer();
+        showToast('Job đã được hủy thành công');
+        document.querySelectorAll('.job-table tbody .job-check:checked').forEach(cb => cb.checked = false);
+        updateBulkBar();
+        updateSelectAllState();
+      });
+
+      // Modal helpers
+      function openModal(modal) {
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+        trapFocus(modal);
+      }
+      function closeModal(modal) {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        removeFocusTrap();
+        if (lastFocusedElement) lastFocusedElement.focus();
+      }
+
+      // Demo toolbar for UI states
+      const demoToolbar = document.getElementById('demoToolbar');
+      const loadingState = document.getElementById('loadingState');
+      const emptyState = document.getElementById('emptyState');
+      const errorState = document.getElementById('errorState');
+      const workerOffline = document.getElementById('workerOfflineNotice');
+      const tableWrap = document.querySelector('.table-wrap');
+      const pagination = document.querySelector('.pagination');
+
+      function setDemoState(state) {
+        demoToolbar.querySelectorAll('button').forEach(b => b.classList.remove('is-active'));
+        document.querySelector(`#demo${state.charAt(0).toUpperCase() + state.slice(1)}`).classList.add('is-active');
+
+        loadingState.hidden = true;
+        emptyState.hidden = true;
+        errorState.hidden = true;
+        workerOffline.hidden = true;
+        tableWrap.hidden = false;
+        pagination.hidden = false;
+
+        if (state === 'loading') {
+          loadingState.hidden = false;
+          tableWrap.hidden = true;
+          pagination.hidden = true;
+        } else if (state === 'empty') {
+          emptyState.hidden = false;
+          emptyState.querySelector('strong').textContent = 'Chưa có job nào';
+          emptyState.querySelector('span').textContent = 'Hãy thêm video mới từ màn hình Khám phá video để bắt đầu xử lý.';
+          tableWrap.hidden = true;
+          pagination.hidden = true;
+        } else if (state === 'filteredEmpty') {
+          emptyState.hidden = false;
+          emptyState.querySelector('strong').textContent = 'Không tìm thấy job phù hợp';
+          emptyState.querySelector('span').textContent = 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.';
+          tableWrap.hidden = true;
+        } else if (state === 'error') {
+          errorState.hidden = false;
+          tableWrap.hidden = true;
+          pagination.hidden = true;
+        } else if (state === 'workerOffline') {
+          workerOffline.hidden = false;
+        } else {
+          applyFilters();
+        }
+      }
+
+      document.getElementById('demoLoading').addEventListener('click', () => setDemoState('loading'));
+      document.getElementById('demoEmpty').addEventListener('click', () => setDemoState('empty'));
+      document.getElementById('demoFilteredEmpty').addEventListener('click', () => setDemoState('filteredEmpty'));
+      document.getElementById('demoError').addEventListener('click', () => setDemoState('error'));
+      document.getElementById('demoWorkerOffline').addEventListener('click', () => setDemoState('workerOffline'));
+      document.getElementById('demoNormal').addEventListener('click', () => setDemoState('normal'));
+
+      // Refresh button
+      document.getElementById('refreshBtn').addEventListener('click', () => showToast('Đã làm mới danh sách'));
+
+      // Reset filters
+      document.getElementById('resetFilters').addEventListener('click', () => {
+        document.getElementById('filterStatus').value = '';
+        document.getElementById('filterStep').value = '';
+        document.getElementById('filterProfile').value = '';
+        document.getElementById('filterWorker').value = '';
+        document.getElementById('filterRange').value = '7d';
+        document.getElementById('filterSearch').value = '';
+        document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('is-active'));
+        currentPage = 1;
+        pageSize = 20;
+        document.getElementById('pageSize').value = '20';
+        applyFilters();
+        history.replaceState(null, '', window.location.pathname);
+      });
+
+      // URL query parameter handling
+      function updateURLParams() {
+        const params = new URLSearchParams();
+        const status = document.getElementById('filterStatus').value;
+        const step = document.getElementById('filterStep').value;
+        const profile = document.getElementById('filterProfile').value;
+        const worker = document.getElementById('filterWorker').value;
+        const range = document.getElementById('filterRange').value;
+        const search = document.getElementById('filterSearch').value;
+        const kpiActive = document.querySelector('.kpi-card.is-active');
+        if (status) params.set('status', status);
+        if (step) params.set('step', step);
+        if (profile) params.set('profile', profile);
+        if (worker) params.set('worker', worker);
+        if (range && range !== '7d') params.set('range', range);
+        if (search) params.set('q', search);
+        if (kpiActive) params.set('kpi', kpiActive.dataset.filter);
+        if (currentPage > 1) params.set('page', String(currentPage));
+        if (pageSize !== 20) params.set('pageSize', String(pageSize));
+        const url = params.toString() ? '?' + params.toString() : window.location.pathname;
+        history.replaceState(null, '', url);
+      }
+
+      // Update selectAll checkbox state based on visible rows
+      function updateSelectAllState() {
+        const visibleChecks = getVisibleCheckboxes();
+        const allChecked = visibleChecks.length > 0 && visibleChecks.every(cb => cb.checked);
+        const someChecked = visibleChecks.some(cb => cb.checked);
+        selectAll.checked = allChecked;
+        selectAll.indeterminate = someChecked && !allChecked;
+      }
+
+      // Apply filters from URL on load
+      (function initFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('status')) document.getElementById('filterStatus').value = params.get('status');
+        if (params.get('step')) document.getElementById('filterStep').value = params.get('step');
+        if (params.get('profile')) document.getElementById('filterProfile').value = params.get('profile');
+        if (params.get('worker')) document.getElementById('filterWorker').value = params.get('worker');
+        if (params.get('range')) document.getElementById('filterRange').value = params.get('range');
+        if (params.get('q')) document.getElementById('filterSearch').value = params.get('q');
+        if (params.get('page')) currentPage = parseInt(params.get('page')) || 1;
+        if (params.get('pageSize')) {
+          pageSize = parseInt(params.get('pageSize')) || 20;
+          document.getElementById('pageSize').value = String(pageSize);
+        }
+        if (params.get('kpi')) {
+          const kpiCard = document.querySelector(`.kpi-card[data-filter="${params.get('kpi')}"]`);
+          if (kpiCard) kpiCard.classList.add('is-active');
+        }
+        applyFilters();
+      })();
+
+      // Escape key - close in priority order
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+          // Close in order: popover > modal > drawer > dropdown > menu
+          if (priorityPopover.classList.contains('is-open')) {
+            closePopover(priorityPopover);
+          } else if (assignPopover.classList.contains('is-open')) {
+            closePopover(assignPopover);
+          } else if (cancelModal.classList.contains('is-open')) {
+            closeModal(cancelModal);
+          } else if (jobDrawer.classList.contains('is-open')) {
+            closeDrawer();
+          } else {
+            actionsMenu.classList.remove('is-open');
+            actionsBtn.setAttribute('aria-expanded', 'false');
+            notificationCenter.classList.remove('is-open');
+            notificationButton.setAttribute('aria-expanded', 'false');
+            notificationCenter.setAttribute('aria-hidden', 'true');
+            app.classList.remove('is-menu-open');
+          }
+        }
+      });
+
+      // Click outside to close popovers
+      document.addEventListener('click', e => {
+        if (priorityPopover.classList.contains('is-open') && !priorityPopover.contains(e.target) && !document.getElementById('bulkPriorityBtn').contains(e.target)) {
+          closePopover(priorityPopover);
+        }
+        if (assignPopover.classList.contains('is-open') && !assignPopover.contains(e.target) && !document.getElementById('bulkAssignBtn').contains(e.target)) {
+          closePopover(assignPopover);
+        }
+      });
+    })();
+  </script>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

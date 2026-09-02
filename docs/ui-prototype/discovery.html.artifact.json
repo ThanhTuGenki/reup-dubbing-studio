@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/discovery.html",
+  "entry": "docs/ui-prototype/discovery.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-31T10:17:41.900Z",
+  "updatedAt": "2026-08-31T10:17:41.900Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

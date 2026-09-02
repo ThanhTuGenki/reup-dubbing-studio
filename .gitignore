@@ -7,3 +7,4 @@ tools/
 .superpowers/
 *.egg-info/
 .pytest_cache/
+.codex/

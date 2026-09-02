@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/profiles.html",
+  "entry": "docs/ui-prototype/profiles.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-09-01T08:54:27.159Z",
+  "updatedAt": "2026-09-01T08:54:27.159Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

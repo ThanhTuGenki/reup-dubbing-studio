@@ -22,7 +22,7 @@
 
 **Architecture:** Monorepo Python duy nhất (`src/reup/`), mỗi bước pipeline là một module thuần có hàm build-command/transform tách khỏi side-effect để test được. Công cụ ngoài nặng (video-subtitle-remover, TTS engine) gọi qua **command template trong config.toml** — đổi CLI của tool không phải sửa code. File lưu trong thư mục local `data/videos/{id}/` (chuẩn bị sẵn layout giống Asset Store R2 sau này).
 
-**Tech Stack:** Python 3.11+, yt-dlp, video-subtitle-remover (subprocess), PaddleOCR, faster-whisper, Anthropic SDK (dịch), VieNeu-TTS (+ F5-TTS-VN, OmniVoice khi có CUDA), Demucs, ffmpeg, typer (CLI), pytest.
+**Tech Stack:** Python 3.11+, yt-dlp, video-subtitle-remover (subprocess), PaddleOCR, faster-whisper, Anthropic SDK (dịch), OmniVoice trên Docker GPU, Demucs, ffmpeg, typer (CLI), pytest.
 
 **Spec:** `docs/superpowers/specs/2026-08-23-reup-dubbing-studio-design.md`
 
@@ -156,7 +156,7 @@ markers = ["integration: needs models/network/ffmpeg, run manually"]
 testpaths = ["tests"]
 ```
 
-(PaddleOCR, demucs, TTS engine cài ở task tương ứng — chúng nặng và kén platform.)
+(PaddleOCR, demucs và OmniVoice worker cài ở task tương ứng — chúng nặng và kén platform.)
 
 - [ ] **Step 3: config.toml khung**
 
@@ -172,14 +172,9 @@ model = "claude-sonnet-5"
 # template điền ở Task 4 sau khi probe CLI thật của video-subtitle-remover
 cmd = ""
 
-[tts.vieneu]
-cmd = ""                      # điền ở Task 7
-
-[tts.f5]
-cmd = ""                      # điền ở Task 8 (cần CUDA)
-
 [tts.omnivoice]
-cmd = ""                      # điền ở Task 8 (cần CUDA)
+endpoint = ""                 # Interactive TTS Worker, điền ở Task 7
+language_id = "vi"
 ```
 
 - [ ] **Step 4: package + venv + cài + smoke test**
@@ -789,183 +784,44 @@ def translate(segs: list[Segment], client=None, model: str = "claude-sonnet-5") 
 
 ---
 
-### Task 7: TTS adapter + VieNeu
+### Task 7: OmniVoice client + Interactive TTS Worker contract
 
 **Files:**
-- Create: `src/reup/tts.py`; sửa `config.toml [tts.vieneu].cmd`
+- Create: `src/reup/tts.py`; sửa `config.toml [tts.omnivoice]`
 - Test: `tests/test_tts.py`
 
 **Interfaces:**
-- Produces:
-  - `class TemplateTTS(name: str, template: str)` với `synth(text: str, out_wav: Path) -> Path` — template có `{text}` và `{out}`.
-  - `synth_segments(segs, adapter, dub_dir: Path) -> list[Path]` — mỗi câu 1 file `dub/{index:04d}.wav`, bỏ qua câu `text_vi` rỗng.
-  - `get_adapter(name: str, cfg: dict) -> TemplateTTS` — đọc `cfg["tts"][name]["cmd"]`.
+- `prepare_voice(ref_audio, ref_text) -> voice_prompt_id` — tạo một lần, lưu prompt.
+- `synth(text, language_id, voice_prompt_id, target_duration, out_wav) -> Path`.
+- `synth_segments(...)` tạo `dub/{index:04d}.wav`; segment không đổi được cache.
+- Client gọi đúng worker role `INTERACTIVE_TTS`; không chứa lựa chọn engine khác.
 
-- [ ] **Step 1: Failing tests**
-
-```python
-# tests/test_tts.py
-from pathlib import Path
-from reup.tts import TemplateTTS, synth_segments, get_adapter
-from reup.segments import Segment
-
-def test_template_cmd(monkeypatch):
-    calls = []
-    monkeypatch.setattr("subprocess.run", lambda cmd, check: calls.append(cmd))
-    a = TemplateTTS("x", 'echo --text {text} --out {out}')
-    a.synth("xin chào", Path("o.wav"))
-    assert calls[0] == ["echo", "--text", "xin chào", "--out", "o.wav"]
-
-def test_synth_segments_paths(monkeypatch, tmp_path):
-    monkeypatch.setattr("subprocess.run", lambda cmd, check: None)
-    a = TemplateTTS("x", "echo {text} {out}")
-    segs = [Segment(0, 0, 1, text_vi="A"), Segment(1, 1, 2, text_vi="")]
-    outs = synth_segments(segs, a, tmp_path)
-    assert outs == [tmp_path / "0000.wav"]
-
-def test_get_adapter_reads_config():
-    a = get_adapter("vieneu", {"tts": {"vieneu": {"cmd": "run {text} {out}"}}})
-    assert a.name == "vieneu"
-```
-
-- [ ] **Step 2: FAIL.** **Step 3: Implement**
-
-```python
-# src/reup/tts.py
-from __future__ import annotations
-import shlex, subprocess
-from pathlib import Path
-from .segments import Segment
-
-class TemplateTTS:
-    def __init__(self, name: str, template: str):
-        if not template:
-            raise RuntimeError(f"Chưa cấu hình [tts.{name}].cmd trong config.toml")
-        self.name, self.template = name, template
-
-    def synth(self, text: str, out_wav: Path) -> Path:
-        filled = self.template.replace("{text}", text).replace("{out}", str(out_wav))
-        subprocess.run(shlex.split(filled), check=True)
-        return out_wav
-
-def synth_segments(segs: list[Segment], adapter: TemplateTTS, dub_dir: Path) -> list[Path]:
-    dub_dir.mkdir(parents=True, exist_ok=True)
-    outs = []
-    for s in segs:
-        if not s.text_vi.strip():
-            continue
-        outs.append(adapter.synth(s.text_vi, dub_dir / f"{s.index:04d}.wav"))
-    return outs
-
-def get_adapter(name: str, cfg: dict) -> TemplateTTS:
-    return TemplateTTS(name, cfg["tts"][name]["cmd"])
-```
-
-Lưu ý escape: `shlex.split` chạy sau khi thay `{text}` — nếu text chứa quote gây lỗi, đổi sang ghi text ra file tạm và template dùng `{textfile}`; quyết định khi probe engine thật ở Step 5.
-
-- [ ] **Step 4: PASS.**
-- [ ] **Step 5: Cài VieNeu-TTS + viết script bọc + điền template (thủ công):**
-
-```bash
-git clone https://github.com/pnnbao97/VieNeu-TTS tools/vieneu
-cd tools/vieneu && python3 -m venv .venv && .venv/bin/pip install -e . 2>/dev/null || .venv/bin/pip install -r requirements.txt
-```
-
-Đọc README của VieNeu để biết API Python, rồi tạo `tools/vieneu_say.py` (script bọc — chỉnh import theo README thật):
-
-```python
-# tools/vieneu_say.py — usage: python vieneu_say.py "<text>" out.wav [ref.wav]
-import sys
-from vieneu import VieNeuTTS   # tên class/module theo README thật của VieNeu
-tts = VieNeuTTS()
-tts.synthesize(sys.argv[1], output_path=sys.argv[2])
-```
-
-Điền `config.toml`:
-```toml
-[tts.vieneu]
-cmd = "tools/vieneu/.venv/bin/python tools/vieneu_say.py {text} {out}"
-```
-Chạy thử 1 câu: nghe file wav ra loa. Ghi nhận xét độ tự nhiên vào `mvp-notes.md`.
-
-- [ ] **Step 6: Commit** `git commit -am "feat: TTS adapter with VieNeu template"`
+- [ ] Viết contract test cho request/response, timeout, retry idempotent và cache key.
+- [ ] Đóng gói OmniVoice đã pin vào `reup-dubbing-tts-worker` với CUDA/FlashInfer.
+- [ ] Tạo voice prompt từ reference 3–10 giây; lưu ngoài container.
+- [ ] Chạy initial dub của toàn bộ segment trên RTX 3060 12 GB.
+- [ ] Sửa một segment và xác nhận chỉ WAV của segment đó được sinh lại.
+- [ ] Commit `feat: OmniVoice interactive TTS worker contract`.
 
 ---
 
-### Task 8: Bench so sánh TTS (F5-TTS-VN + OmniVoice, cần CUDA — best-effort)
+### Task 8: OmniVoice latency, VRAM và stability acceptance
 
 **Files:**
-- Create: `src/reup/cli.py` (khởi tạo, mới có lệnh `bench-tts`); sửa `config.toml`
+- Create: `src/reup/cli.py` với lệnh `bench-omnivoice`; sửa `mvp-notes.md`
 - Test: `tests/test_cli.py`
 
-**Interfaces:**
-- Produces: lệnh `reup bench-tts --text "..." --engines vieneu,f5,omnivoice --out-dir bench/` — chạy cùng câu qua mọi engine **có template khác rỗng**, in bảng thời gian; engine chưa cấu hình thì báo "skipped".
-- Consumes: `tts.get_adapter`, `config.load_config`.
+Lệnh acceptance nhận file JSONL gồm text thật, language ID, voice prompt và target
+duration; in cold time, warm p50/p95, peak VRAM, duration error và số request lỗi.
 
-- [ ] **Step 1: Tạo `src/reup/config.py` + failing test**
-
-```python
-# src/reup/config.py
-from __future__ import annotations
-import tomllib
-from pathlib import Path
-
-def load_config(path: Path = Path("config.toml")) -> dict:
-    return tomllib.loads(path.read_text(encoding="utf-8"))
-```
-
-```python
-# tests/test_cli.py
-from typer.testing import CliRunner
-from reup.cli import app
-
-def test_bench_skips_unconfigured(tmp_path, monkeypatch):
-    cfgfile = tmp_path / "config.toml"
-    cfgfile.write_text('[tts.vieneu]\ncmd = ""\n[tts.f5]\ncmd = ""\n[tts.omnivoice]\ncmd = ""\n')
-    r = CliRunner().invoke(app, ["bench-tts", "--text", "xin chào",
-                                 "--out-dir", str(tmp_path), "--config", str(cfgfile)])
-    assert r.exit_code == 0
-    assert r.output.count("skipped") == 3
-```
-
-- [ ] **Step 2: FAIL.** **Step 3: Implement `cli.py` (khung + bench-tts)**
-
-```python
-# src/reup/cli.py
-from __future__ import annotations
-import time
-from pathlib import Path
-import typer
-from .config import load_config
-from .tts import TemplateTTS
-
-app = typer.Typer(no_args_is_help=True)
-
-@app.command("bench-tts")
-def bench_tts(text: str = typer.Option(...),
-              engines: str = typer.Option("vieneu,f5,omnivoice"),
-              out_dir: Path = typer.Option(Path("bench")),
-              config: Path = typer.Option(Path("config.toml"))):
-    cfg = load_config(config)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for name in engines.split(","):
-        tpl = cfg.get("tts", {}).get(name, {}).get("cmd", "")
-        if not tpl:
-            typer.echo(f"{name}: skipped (chưa cấu hình)")
-            continue
-        t0 = time.time()
-        TemplateTTS(name, tpl).synth(text, out_dir / f"{name}.wav")
-        typer.echo(f"{name}: {time.time() - t0:.1f}s -> {out_dir / (name + '.wav')}")
-
-if __name__ == "__main__":
-    app()
-```
-
-Thêm `reup = "reup.cli:app"` vào `[project.scripts]` trong pyproject, `pip install -e .` lại.
-
-- [ ] **Step 4: PASS.**
-- [ ] **Step 5: Cấu hình F5/OmniVoice (best-effort, thủ công):** trên Mac không CUDA — thử cài F5-TTS-VN chạy CPU/MPS (chậm chấp nhận được cho 1 câu bench); OmniVoice tương tự. Mỗi engine: clone/cài vào `tools/`, viết script bọc kiểu `tools/f5_say.py` như Task 7, điền template. **Nếu engine nào không chạy nổi trên Mac → để template rỗng, ghi chú vào `mvp-notes.md` "cần bench trên GPU thuê (Task 10)" — không block.** Chạy `reup bench-tts --text "<2 câu thật trong script.json>"` và nghe so sánh; ghi kết luận engine nào tự nhiên nhất.
-- [ ] **Step 6: Commit** `git commit -am "feat: bench-tts CLI comparing TTS engines"`
+- [ ] Chạy ít nhất 30 câu Việt và một nhóm câu Anh trên đúng EzyCloudX Docker GPU.
+- [ ] Chạy 100 request liên tiếp, concurrency 1; theo dõi VRAM tăng/OOM.
+- [ ] Xác minh Worker Agent restart tiến trình OmniVoice khi vượt ngưỡng mà không
+  mất prompt/output đã lưu.
+- [ ] So latency `na-01` và `eu-01` nếu cả hai khả dụng; ghi CP/giờ snapshot.
+- [ ] Ghi rõ production gate: pretrained model CC-BY-NC chưa được dùng cho kênh
+  kiếm tiền nếu chưa có quyền thương mại phù hợp.
+- [ ] Commit `test: accept OmniVoice on interactive GPU worker`.
 
 ---
 
@@ -1102,7 +958,7 @@ Sửa test `test_fit_tempo_clamps` dòng cuối cho khớp thiết kế (min_spe
 **Interfaces:**
 - Consumes: mọi module trước.
 - Produces:
-  - `reup run URL --mask ymin,ymax,xmin,xmax [--cookies file] [--engine vieneu] [--stt ocr|asr]` — chạy tuần tự: ingest → desub → stt(cả OCR lẫn ASR, dùng bản `--stt` chọn làm chính) → translate (batch 50 câu/lần) → tts → demucs+mix → render; sau **mỗi bước** ghi thời gian vào `timings.json`; bước đã có output thì skip (resume được).
+  - `reup run URL --mask ymin,ymax,xmin,xmax [--cookies file] [--engine omnivoice] [--stt ocr|asr]` — chạy tuần tự: ingest → desub → stt(cả OCR lẫn ASR, dùng bản `--stt` chọn làm chính) → translate (batch 50 câu/lần) → OmniVoice → demucs+mix → render; sau **mỗi bước** ghi thời gian vào `timings.json`; bước đã có output thì skip (resume được).
   - `reup report VID` — in markdown bảng so sánh OCR vs ASR từng câu (`segments_ocr.json` vs `segments_asr.json`) + tổng thời gian từng bước từ `timings.json`.
 
 - [ ] **Step 1: Failing test (điều phối + resume, mock toàn bộ stage)**
@@ -1220,7 +1076,7 @@ def stage_render(ctx: Ctx):
 def run(url: str,
         mask: str = typer.Option(..., help="ymin,ymax,xmin,xmax"),
         cookies: Path = typer.Option(None),
-        engine: str = typer.Option("vieneu"),
+        engine: str = typer.Option("omnivoice"),
         stt: str = typer.Option("ocr", help="ocr|asr — bản dùng để dịch"),
         data_root: Path = typer.Option(Path("data")),
         config: Path = typer.Option(Path("config.toml"))):
@@ -1258,5 +1114,5 @@ def report(vid: str, data_root: Path = typer.Option(Path("data"))):
 ## Self-review (đã chạy)
 
 - **Spec coverage (phạm vi MVP):** tải+cookie (T3), desub+mask (T4), OCR vs ASR (T5, T10 report), dịch LLM độ dài tương đương (T6), 1 giọng + bench 3 engine (T7, T8), Demucs giữ nhạc (T9), render 16:9 + sub Việt rời (T9), timing fit atempo ≤1.15 (T9 `fit_tempo`), đo chi phí (T10 timings + hướng dẫn GPU). Ngoài phạm vi MVP đúng như spec: không UI/Content Agent/Publishing Workspace/9:16/metadata/đa giọng.
-- **Placeholder scan:** các điểm "điền sau khi probe" (VSR CLI, VieNeu API, PaddleOCR output) là bước probe có hành động và kết quả cụ thể, cô lập trong config template/script bọc — code chính không đổi. Không còn TBD nào khác.
+- **Placeholder scan:** các điểm "điền sau khi probe" (VSR CLI, OmniVoice Worker API, PaddleOCR output) là bước probe có hành động và kết quả cụ thể, cô lập trong config/adapter — code chính không đổi. Không còn TBD nào khác.
 - **Type consistency:** `Segment` dùng thống nhất; `AssetStore.p/dir/write_json/read_json` khớp giữa T2 và T10; `TemplateTTS.synth(text, out_wav)` khớp T7/T8/T10; tên file asset thống nhất (`raw.mp4`, `desubbed.mp4`, `segments_ocr/asr.json`, `script.json`, `dub/`, `mix.wav`, `sub.srt`, `out_16x9.mp4`, `timings.json`).

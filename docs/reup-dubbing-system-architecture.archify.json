@@ -4,55 +4,58 @@
   "meta": {
     "title": "Reup Dubbing Studio — Thiết kế tổng thể & EzyCloudX",
     "quality_profile": "showcase",
-    "viewBox": [1380, 780]
+    "viewBox": [1380, 680]
   },
   "components": [
-    { "id": "sources", "type": "external", "label": "Nguồn video", "sublabel": "Douyin • Bilibili", "pos": [40, 105], "size": [150, 64] },
-    { "id": "user", "type": "external", "label": "Người vận hành", "sublabel": "trình duyệt desktop", "pos": [40, 475], "size": [150, 64] },
-    { "id": "platforms", "type": "external", "label": "YouTube • Facebook", "sublabel": "đăng thủ công", "pos": [30, 635], "size": [170, 64] },
-    { "id": "control_api", "type": "backend", "label": "Pipeline Orchestrator", "sublabel": "ingest • state • GPU adapter", "pos": [320, 105], "size": [180, 64] },
-    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "profile • task • URL", "pos": [660, 285], "size": [170, 64] },
-    { "id": "web_app", "type": "frontend", "label": "Web App", "sublabel": "Studio • Bàn đăng bài", "pos": [320, 475], "size": [180, 64] },
-    { "id": "job_queue", "type": "messagebus", "label": "Job Queue", "sublabel": "media jobs • retry", "pos": [650, 105], "size": [170, 64] },
-    { "id": "content_agent", "type": "backend", "label": "Language + Content Agent", "sublabel": "dịch • phân vai • SEO", "pos": [650, 475], "size": [190, 64] },
-    { "id": "llm_api", "type": "external", "label": "LLM API", "sublabel": "structured generation", "pos": [970, 475], "size": [180, 64] },
-    { "id": "gpu_worker", "type": "backend", "label": "GPU Media Worker", "sublabel": "VSR • OCR/ASR • dub • render", "pos": [1030, 105], "size": [200, 64] },
-    { "id": "r2", "type": "cloud", "label": "Cloudflare R2", "sublabel": "raw • desub • MP4 • SRT", "pos": [1045, 285], "size": [170, 64] }
+    { "id": "sources", "type": "external", "label": "Nguồn video", "sublabel": "Douyin • Bilibili", "pos": [40, 80], "size": [150, 64] },
+    { "id": "user", "type": "external", "label": "Người vận hành", "sublabel": "trình duyệt desktop", "pos": [40, 400], "size": [150, 64] },
+    { "id": "platforms", "type": "external", "label": "YouTube • Facebook", "sublabel": "đăng thủ công", "pos": [30, 565], "size": [170, 64] },
+    { "id": "control_api", "type": "backend", "label": "Pipeline Orchestrator", "sublabel": "ingest • state • GPU adapter", "pos": [320, 80], "size": [180, 64] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "profile • task • URL", "pos": [660, 235], "size": [170, 64] },
+    { "id": "web_app", "type": "frontend", "label": "Web App", "sublabel": "Studio • Bàn đăng bài", "pos": [320, 400], "size": [180, 64] },
+    { "id": "job_queue", "type": "messagebus", "label": "Job Queue", "sublabel": "media jobs • retry", "pos": [650, 80], "size": [170, 64] },
+    { "id": "content_agent", "type": "backend", "label": "Language + Content Agent", "sublabel": "LLM API • dịch • phân vai • SEO", "pos": [640, 400], "size": [210, 64] },
+    { "id": "worker_image", "type": "cloud", "label": "CI/CD + GHCR", "sublabel": "2 image • version • pull", "pos": [980, 10], "size": [190, 64] },
+    { "id": "batch_worker", "type": "backend", "label": "Batch Media Worker", "sublabel": "VSR • OCR/ASR • Demucs • render", "pos": [965, 105], "size": [220, 64] },
+    { "id": "tts_worker", "type": "backend", "label": "Interactive TTS Worker", "sublabel": "OmniVoice nóng • initial dub • re-gen", "pos": [965, 275], "size": [220, 64] },
+    { "id": "r2", "type": "cloud", "label": "Cloudflare R2", "sublabel": "assets • WAV • MP4 • SRT", "pos": [1210, 190], "size": [160, 64] }
   ],
   "boundaries": [
     { "kind": "region", "label": "VPS chạy 24/7 — control plane", "wraps": ["control_api", "web_app", "job_queue", "postgres", "content_agent"], "pad": 20 },
-    { "kind": "region", "label": "EzyCloudX GPU — hiện thuê/xóa thủ công", "wraps": ["gpu_worker"], "pad": 18 }
+    { "kind": "region", "label": "EzyCloudX Docker GPU — thuê/xóa thủ công", "wraps": ["batch_worker", "tts_worker"], "pad": 18 }
   ],
   "connections": [
     { "from": "sources", "to": "control_api", "label": "1 • ingest nguồn", "variant": "emphasis" },
     { "from": "user", "to": "web_app", "label": "chọn • duyệt • chỉnh", "variant": "emphasis" },
-    { "from": "user", "to": "platforms", "label": "10 • upload thủ công", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [216, 553] },
+    { "from": "user", "to": "platforms", "label": "10 • upload thủ công", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [216, 513] },
     { "from": "web_app", "to": "control_api", "label": "2 • lệnh + phê duyệt", "variant": "emphasis", "fromSide": "top", "toSide": "bottom", "route": "straight", "labelDx": 72 },
     { "from": "control_api", "to": "postgres", "label": "state + profiles" },
     { "from": "control_api", "to": "job_queue", "label": "3 • enqueue", "variant": "dashed" },
-    { "from": "job_queue", "to": "gpu_worker", "label": "4 • claim job", "variant": "emphasis" },
-    { "from": "gpu_worker", "to": "r2", "label": "5 • read/write raw + outputs", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [1255, 183] },
-    { "from": "postgres", "to": "content_agent", "label": "6 • context + asset links", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [845, 363] },
-    { "from": "content_agent", "to": "llm_api", "label": "7 • structured prompt", "variant": "dashed" },
-    { "from": "content_agent", "to": "web_app", "label": "8 • fields + file links", "variant": "emphasis" }
+    { "from": "job_queue", "to": "batch_worker", "label": "4a • media job", "variant": "emphasis" },
+    { "from": "job_queue", "to": "tts_worker", "label": "4b • initial/re-gen", "variant": "emphasis" },
+    { "from": "worker_image", "to": "batch_worker", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "from": "batch_worker", "to": "r2", "label": "5a • media assets", "variant": "emphasis", "labelAt": [1210, 179] },
+    { "from": "tts_worker", "to": "r2", "label": "5b • prompt + WAV", "variant": "emphasis", "labelAt": [1210, 264] },
+    { "from": "postgres", "to": "content_agent", "label": "6 • context + asset links", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelAt": [845, 340] },
+    { "from": "content_agent", "to": "web_app", "label": "7 • fields + file links", "variant": "emphasis" }
   ],
   "cards": [
     {
       "dot": "cyan",
-      "title": "Chạy ở đâu & thuê GPU thế nào?",
+      "title": "Triển khai & thuê GPU thế nào?",
       "items": [
-        "VPS 24/7: Web App, API/orchestrator, queue, database và Content Agent",
-        "EzyCloudX hiện ở manual mode: người dùng thuê/xóa; app đăng ký và giao job cho worker",
-        "Auto create/delete chỉ bật khi provider cấp API chính thức; không gọi API dashboard nội bộ"
+        "VPS chạy 24/7; hai Docker GPU độc lập cho batch media và OmniVoice",
+        "Thuê thêm không sửa code: chọn role, nhập CP/giờ, chạy bootstrap token",
+        "App giao job, đo heartbeat và báo SAFE_TO_TERMINATE; hiện vẫn xóa máy thủ công"
       ]
     },
     {
       "dot": "emerald",
       "title": "Một video đi hết hệ thống",
       "items": [
-        "Chọn nguồn → ingest raw → queue → GPU xóa sub và lồng tiếng",
-        "QA/retry trong pipeline → xuất MP4 lồng tiếng + SRT rời vào R2",
-        "Content Agent tạo SEO → người dùng duyệt, tải file và đăng thủ công"
+        "Batch Worker xóa sub/OCR/ASR/Demucs; OmniVoice tạo initial dub",
+        "Studio nghe/re-gen segment trên TTS Worker nóng; Batch Worker final render",
+        "Xuất MP4 lồng tiếng + SRT rời vào R2; Content Agent hỗ trợ đăng thủ công"
       ]
     },
     {
@@ -60,8 +63,8 @@
       "title": "Điều kiện hoàn tất",
       "items": [
         "App không burn-in sub Việt và không tự gọi API đăng mạng xã hội",
-        "Mỗi nền tảng có task, assignee, lịch, checklist và URL/post ID riêng",
-        "Chỉ cleanup file nặng khi mọi publication task bắt buộc đã verified"
+        "OmniVoice là TTS duy nhất; production kiếm tiền cần giải quyết quyền model CC-BY-NC",
+        "Mỗi nền tảng có task/checklist/URL riêng; chỉ cleanup khi đã verified"
       ]
     }
   ]

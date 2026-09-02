@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/index.html",
+  "entry": "docs/ui-prototype/index.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-31T08:05:01.203Z",
+  "updatedAt": "2026-08-31T08:05:01.203Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

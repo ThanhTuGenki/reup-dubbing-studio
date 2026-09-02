@@ -4,6 +4,8 @@
 - **Cập nhật:** 2026-08-31 — phụ đề Việt xuất thành file `.srt` rời, không burn-in vào video
 - **Cập nhật:** 2026-08-31 — bỏ Postiz; Content Agent chuẩn bị nội dung, người dùng đăng thủ công và app quản lý trạng thái
 - **Cập nhật:** 2026-08-31 — EzyCloudX dùng manual registered worker cho tới khi có API công khai chính thức
+- **Cập nhật:** 2026-08-31 — GPU Worker phát hành bằng Docker image có version; thêm máy thuê bằng cấu hình và bootstrap token, không sửa code
+- **Cập nhật:** 2026-09-01 — chốt OmniVoice là TTS engine duy nhất; tách Batch Media Worker và Interactive TTS Worker trên Docker GPU EzyCloudX
 - **Trạng thái:** Bản thiết kế chờ duyệt (design, pre-implementation)
 - **Chủ dự án:** tu_dinh@lrm.jp
 - **Artifact review duy nhất:** [Thiết kế hoàn chỉnh — kiến trúc, flow và GPU](../../reup-dubbing-complete-design.html)
@@ -17,8 +19,9 @@
 2. Người dùng chọn video nguồn; VPS tải raw và lưu vào R2.
 3. Media job được đưa vào queue. Nếu chưa có GPU, EzyCloudX hiện yêu cầu người
    dùng thuê Docker GPU/VM thủ công và chạy bootstrap command của app.
-4. Khi worker báo `READY`, app tự giao job xóa hard-sub, OCR/ASR, Demucs, TTS và
-   render. Người dùng không chạy từng công cụ bằng tay.
+4. Khi worker báo `READY`, app tự giao job theo vai trò: Batch Media Worker xử lý
+   VSR/OCR/ASR/Demucs/render; Interactive TTS Worker chạy OmniVoice và được giữ
+   nóng trong phiên Studio để nghe lại câu vừa sửa với độ trễ thấp.
 5. Worker trả về video đã lồng tiếng Việt và file SRT rời, không burn-in sub Việt.
 6. Content Agent dùng meta + toàn bộ SRT + thumbnail + Channel Profile để tạo gói
    YouTube/Facebook có cấu trúc, sửa/copy riêng từng trường.
@@ -91,7 +94,8 @@ dần theo tập), "hồ sơ" sát nghĩa hơn "template/preset" tĩnh. Chia 2 c
 Dùng chung cho cả kênh:
 - Intro/outro, logo/watermark.
 - Cấu hình phụ đề rời: ngôn ngữ, quy tắc đặt tên và giới hạn độ dài dòng SRT.
-- Engine giọng mặc định (adapter TTS nào).
+- Cấu hình OmniVoice mặc định: ngôn ngữ đích, voice profile, tốc độ và chính sách
+  khớp thời lượng segment.
 - Kênh đích: YouTube channel / Facebook Page; quy tắc giọng văn, CTA, template
   metadata và từ khóa nền cho Content Agent.
 - Cấu hình xuất mặc định: 16:9 và/hoặc 9:16.
@@ -124,13 +128,14 @@ Ba khối tách rời, nối nhau qua hàng đợi job + storage chung:
    - Content Agent + Manual Publishing Workspace; không tích hợp uploader mạng xã hội.
    - Ingest điều phối tải (yt-dlp) — tác vụ nhẹ, chạy tại đây.
 
-2. **GPU worker** (thuê theo giờ; khả năng tự bật/tắt phụ thuộc API provider)
-   - Xóa hard-sub (inpainting) — nặng nhất.
-   - ASR (faster-whisper).
-   - TTS lồng tiếng.
-   - Render ffmpeg.
+2. **GPU workers** (Docker GPU thuê theo giờ; khả năng tự bật/tắt phụ thuộc API provider)
+   - **Batch Media Worker:** xóa hard-sub, OCR/ASR, Demucs và final render; ưu tiên
+     GPU VRAM cao, chỉ bật khi có media job.
+   - **Interactive TTS Worker:** chỉ chạy OmniVoice; ưu tiên RTX 3060 12 GB và giữ
+     model nóng trong phiên Studio để sinh lại từng câu mà không chờ cold start.
    - Provider hiện dùng: **EzyCloudX**. Ở trạng thái thiết kế hiện tại, người dùng
-     thuê/xóa worker trên dashboard EzyCloudX; app tự giao job sau khi worker đăng ký.
+     thuê/xóa từng container trên dashboard EzyCloudX; app tự giao đúng loại job
+     sau khi worker đăng ký vai trò.
 
 3. **Storage chung** (S3-compatible)
    - Kho tài sản (asset store) trao đổi file giữa 2 khối trên.
@@ -148,7 +153,9 @@ Ba khối tách rời, nối nhau qua hàng đợi job + storage chung:
 | Nơi chạy | Thành phần | Trạng thái hoạt động | Trách nhiệm |
 |---|---|---|---|
 | VPS | Web App, API/Pipeline Orchestrator, Job Queue, PostgreSQL, Content Agent | 24/7 | UI, điều phối, trạng thái, profile, nội dung SEO và bàn đăng bài |
-| EzyCloudX GPU | GPU Media Worker | Hiện thuê/xóa thủ công; app điều phối job tự động | VSR inpainting, OCR/ASR, Demucs, TTS và ffmpeg render |
+| EzyCloudX Docker GPU | Batch Media Worker | Thuê/xóa thủ công; bật khi có media job | VSR inpainting, OCR/ASR, Demucs và final render |
+| EzyCloudX Docker GPU | Interactive TTS Worker | Giữ nóng trong phiên Studio; tắt sau phiên edit | OmniVoice initial dub, re-gen câu, preview audio và timing fit |
+| GitHub Actions + GHCR | CI/CD + Container Registry | Khi phát hành phiên bản worker | Build, kiểm tra và lưu Docker image GPU Worker theo version/digest để máy thuê pull |
 | Cloudflare R2 | Asset Store | Dịch vụ ngoài, dùng chung | Chuyển raw/desub/audio/MP4/SRT giữa VPS và GPU; cấp file cho người dùng tải |
 | LLM provider | LLM API | Gọi theo nhu cầu | Dịch, phân vai, chọn highlight và sinh nội dung có cấu trúc |
 | Trình duyệt người dùng | Studio + Bàn đăng bài | Khi người dùng thao tác | Duyệt, sửa, copy nội dung, tải MP4/SRT/thumbnail và upload thủ công |
@@ -165,6 +172,9 @@ Kết quả kiểm tra ngày 2026-08-31 trên tài liệu công khai của EzyCl
 - EzyCloudX có **GPU VM** và **Docker GPU**, tính bằng Computing Point. Docker GPU
   tính theo giờ chạy thực tế; xóa container thì ngừng tính phí. VM tự gia hạn cho
   tới khi người dùng chủ động xóa.
+- **Computing Point (CP) không phải VND** và EzyCloudX không công bố tỷ lệ quy đổi
+  cố định. App lưu/hiển thị CP trước; chỉ quy đổi ra tiền từ tỷ lệ thực tế của lần
+  mua CP do người dùng nhập.
 - Hướng dẫn chính thức mô tả quy trình thuê qua dashboard: đăng nhập, chọn GPU,
   chọn gói/thời gian và xác nhận thanh toán.
 - Frontend dashboard có gọi các endpoint nội bộ để tạo/kết thúc rental, nhưng
@@ -198,25 +208,162 @@ Không dùng browser automation, cookie đăng nhập hay gọi endpoint dashboa
 để giả lập API. Các cách đó dễ hỏng, khó bảo mật tài khoản thanh toán và có thể
 trái điều khoản nhà cung cấp.
 
+#### Snapshot chi phí Docker GPU để lập ngân sách
+
+Giá quan sát trên dashboard EzyCloudX ngày 2026-09-01, chỉ dùng làm snapshot và
+không hard-code vào app:
+
+| Docker GPU | Giá hiển thị | 4 giờ/ngày × 22 ngày | 8 giờ/ngày × 22 ngày | 24/7 × 30 ngày |
+|---|---:|---:|---:|---:|
+| 1× RTX 3060 12 GB `na-01` | 4.000 CP/giờ | 352.000 CP | 704.000 CP | 2.880.000 CP |
+| 1× RTX 3060 12 GB `eu-01` | 7.500 CP/giờ | 660.000 CP | 1.320.000 CP | 5.400.000 CP |
+| 2× RTX 3060 `eu-01` | 15.000 CP/giờ | 1.320.000 CP | 2.640.000 CP | 10.800.000 CP |
+
+Không thuê 2× RTX 3060 trong cùng container chỉ để chạy hai vai trò. Hai container
+1 GPU độc lập cho phép Batch Worker và TTS Worker có image, queue, vòng đời và
+chi phí riêng. Region rẻ nhất chưa chắc cho UX tốt nhất; MVP phải đo latency thật
+từ Studio tới `na-01` và `eu-01` trước khi chọn mặc định.
+
 ### 4.3 Luồng EzyCloudX hiện tại — manual registered worker
 
-1. Khi queue có job GPU nhưng chưa có worker, app đặt job ở `WAITING_FOR_GPU` và
-   hiển thị cấu hình đề xuất, ví dụ Docker GPU Linux, VRAM tối thiểu 24 GB.
+1. Khi queue có job GPU nhưng chưa có worker phù hợp, app đặt job ở
+   `WAITING_FOR_GPU` và hiển thị cấu hình theo vai trò: Batch Worker ưu tiên VRAM
+   cao; Interactive TTS Worker đề xuất 1× RTX 3060 12 GB.
 2. Người dùng mở EzyCloudX, thuê cấu hình và tạo Docker GPU/VM thủ công. **Ưu tiên
    Docker GPU** cho pipeline Python/CUDA vì gần với worker container và cơ chế
    tính phí theo giờ chạy thực tế.
 3. App sinh bootstrap command/token dùng một lần. Người dùng chạy command trên
    worker; worker kéo đúng image/version, kết nối queue/R2 và gửi heartbeat.
-4. Khi worker `READY`, app tự giao toàn bộ job media; người dùng không cần chạy
-   từng lệnh VSR/OCR/TTS/render.
+4. Khi worker `READY`, app giao job theo `worker_role`; người dùng không cần chạy
+   từng lệnh VSR/OCR/OmniVoice/Demucs/render.
 5. Worker upload kết quả lên R2, báo `SUCCEEDED`, sau đó chuyển sang `IDLE`.
-6. Sau idle TTL 10–15 phút và queue trống, app đặt worker `SAFE_TO_TERMINATE`, gửi
-   cảnh báo. Người dùng xóa container/VM trên EzyCloudX rồi bấm xác nhận; app lưu
-   `terminated_at` và chi phí ước tính.
+6. Batch Worker có idle TTL 10–15 phút. TTS Worker không dùng TTL ngắn trong lúc
+   Studio còn phiên edit; app giữ model nóng rồi mới đặt `SAFE_TO_TERMINATE` khi
+   phiên edit kết thúc hoặc hết session timeout.
+7. Người dùng xóa container trên EzyCloudX rồi bấm xác nhận; app lưu
+   `terminated_at` và chi phí CP ước tính.
 
 Điểm giới hạn: ở mode này app **không thể đảm bảo tự ngừng tính phí**, vì thao tác
 xóa vẫn thuộc dashboard EzyCloudX. Cần cảnh báo nổi bật và nhắc lại cho tới khi
 người dùng xác nhận đã xóa.
+
+#### 4.3.1 Đóng gói và đưa code lên máy GPU thuê
+
+Không clone repository và không sửa source trực tiếp trên từng máy thuê. Hai vai
+trò dùng hai image nhỏ, độc lập để tránh xung đột dependency và cold start không
+cần thiết:
+
+```text
+ghcr.io/<owner>/reup-dubbing-media-worker:<version>
+ghcr.io/<owner>/reup-dubbing-tts-worker:<version>
+```
+
+Pipeline phát hành chuẩn:
+
+```text
+Git push/tag
+  → GitHub Actions chạy test và build CUDA image
+  → push image theo version + immutable digest lên GHCR
+  → máy EzyCloudX pull đúng image/digest
+  → container đăng ký với Control Plane
+```
+
+Hai image dùng chung Worker Agent base. Media image chứa FFmpeg, Video Subtitle
+Remover, OCR/ASR và Demucs; TTS image chỉ chứa OmniVoice, FlashInfer/CUDA tương
+thích và audio tooling tối thiểu. Model lớn, voice prompt và cache nằm trên volume
+hoặc R2; image không chứa API key, token đăng nhập hay credential R2 dài hạn.
+
+Control Plane luôn chạy trên VPS. Máy GPU chỉ chạy GPU Worker và có thể bị hủy mà
+không làm mất database, queue hoặc bản duy nhất của asset.
+
+#### 4.3.2 Thuê thêm GPU không yêu cầu sửa code
+
+Mỗi máy thuê là một bản ghi worker động trong database, không phải một cấu hình
+hard-code. Tại màn hình **GPU Workers**, người vận hành chọn **Thêm GPU Worker** và
+nhập:
+
+- tên hiển thị, ví dụ `worker-gpu-02`;
+- vai trò `BATCH_MEDIA` hoặc `INTERACTIVE_TTS`;
+- provider `EzyCloudX` và provider instance/container ID nếu có;
+- đơn giá CP/giờ, tỷ lệ mua CP thực tế nếu muốn quy đổi VND và thời điểm bắt đầu tính phí;
+- GPU/VRAM kỳ vọng và image version đã duyệt.
+
+App sinh enrollment token dùng một lần và bootstrap command. Ví dụ minh họa:
+
+```bash
+docker run -d \
+  --name reup-gpu-worker \
+  --restart unless-stopped \
+  --gpus all \
+  -e WORKER_ROLE=INTERACTIVE_TTS \
+  -e CONTROL_PLANE_URL=https://app.example.com \
+  -e ENROLLMENT_TOKEN=<one-time-token> \
+  -v /data/reup-worker:/workspace \
+  -v /data/model-cache:/models \
+  ghcr.io/<owner>/reup-dubbing-tts-worker:<version>
+```
+
+Người dùng SSH hoặc mở terminal của container/VM EzyCloudX và chạy command đó.
+Token một lần chỉ dùng để enrollment; sau khi đăng ký, Control Plane cấp credential
+riêng có phạm vi hẹp cho worker. Nếu GHCR để private, máy thuê dùng credential chỉ
+có quyền `read:packages` để pull image.
+
+#### 4.3.3 Nhận diện, heartbeat và trạng thái worker
+
+Worker tự đọc model GPU, VRAM, nhiệt độ và mức sử dụng bằng `nvidia-smi`; tên hiển
+thị và đơn giá lấy từ bản ghi do người dùng tạo. Agent gửi heartbeat định kỳ cùng
+image version, job hiện tại và các metric vận hành. App suy ra trạng thái:
+
+| Điều kiện | Trạng thái hiển thị |
+|---|---|
+| Có heartbeat, chưa nhận job | `READY` / Đang rảnh |
+| Có heartbeat, đang giữ job lease | `BUSY` / Đang bận |
+| Ngừng nhận job mới, chờ job cuối hoàn tất | `DRAINING` |
+| Queue trống, artifact cuối đã upload/commit | `SAFE_TO_TERMINATE` |
+| Mất heartbeat quá safety timeout | `OFFLINE` / cần kiểm tra |
+
+Dashboard đang giám sát **GPU Worker Agent**, không giám sát trực tiếp tài khoản
+EzyCloudX. Vì vậy nhãn UI dùng `GPU Worker online`; `EzyCloudX` được hiển thị ở
+trường provider của worker.
+
+#### 4.3.4 Phiên thuê và chi phí ước tính
+
+Đơn giá không hard-code theo model GPU và không yêu cầu deploy lại app. Mỗi lần
+thuê hoặc thay đổi giá tạo một `WorkerBillingSession` mới với snapshot:
+
+```text
+worker_id
+provider
+provider_instance_id
+hourly_rate_cp
+paid_vnd_per_cp_optional
+billing_started_at
+billing_ended_at
+```
+
+Chi phí gốc hiển thị là `thời gian phiên × hourly_rate_cp`, được ghi rõ **ước
+tính**. Chỉ hiển thị VND khi có `paid_vnd_per_cp_optional` từ giao dịch mua CP
+thực tế. Khi chưa có official billing API, số này có thể lệch hóa đơn do quy tắc
+làm tròn, khuyến mãi hoặc thời điểm EzyCloudX bắt đầu tính. Thay đổi đơn giá hiện
+tại không được làm thay đổi lịch sử các phiên trước.
+
+#### 4.3.5 Cập nhật worker và tắt máy an toàn
+
+Không hot-edit container đang chạy. Phiên bản mới được CI build thành image mới;
+người vận hành drain worker, pull image đã duyệt rồi tạo lại container. Dashboard
+hiển thị image version hiện tại và cảnh báo khi có bản mới.
+
+Trước khi xóa máy thuê:
+
+```text
+BUSY → DRAINING → upload/commit artifact cuối → SAFE_TO_TERMINATE
+     → người dùng xóa trên EzyCloudX → xác nhận TERMINATED trong app
+```
+
+Chỉ hiển thị `SAFE_TO_TERMINATE` khi worker không còn job lease, queue không còn
+job dành riêng cho worker và mọi output cần thiết đã có trên R2. Việc dừng Docker
+container không đồng nghĩa chắc chắn đã ngừng tính phí; người dùng vẫn phải xóa
+rental trên EzyCloudX theo cơ chế hiện tại.
 
 ### 4.4 Luồng tự động khi EzyCloudX có API chính thức
 
@@ -245,13 +392,19 @@ TERMINATING → TERMINATED`.
    Job Queue  <----------------------------+
         |                                   |
         v                                   |
-   GPU Worker: desub -> ASR -> (dịch) ------+ (dịch có thể chạy ở VPS qua LLM API)
-        |            -> gán nhân vật
-        v
-   Studio (VPS web): duyệt cast sheet, sửa ngoại lệ
+   Batch Media Worker: desub -> OCR/ASR -> Demucs
         |
         v
-   GPU Worker: TTS -> render video lồng tiếng (16:9 + 9:16) + SRT rời
+   VPS: dịch -> gán nhân vật
+        |
+        v
+   Interactive TTS Worker: OmniVoice initial dub
+        v
+   Studio (VPS web): xem/nghe preview -> sửa câu/cast/giọng
+        |                              |
+        |<-- OmniVoice re-gen câu -----+
+        v
+   Batch Media Worker: final render video lồng tiếng (16:9 + 9:16) + SRT rời
         |
         v
    Content Agent -> Bàn đăng bài -> người dùng upload thủ công
@@ -274,9 +427,9 @@ gán nhân vật theo câu → TTS theo câu → khớp lại timestamp gốc.
 | 3 | Bóc lời: **OCR hard-sub** (chính) + ASR (đối chiếu) → transcript + timestamp câu | PaddleOCR / faster-whisper | GPU |
 | 4 | Dịch transcript → kịch bản Việt theo câu | LLM (API) | VPS |
 | 5 | Gán nhân vật (nếu chế độ `multi-auto`) + **LLM chọn đoạn highlight** cho bản 9:16 | LLM | VPS |
-| 6 | Studio: duyệt cast sheet 1 lần/bộ + sửa ngoại lệ + chỉnh highlight nếu muốn | Web UI | VPS |
-| 7 | Lồng tiếng từng câu theo giọng đã gán | TTS adapter | GPU |
-| 8 | **Tách audio (Demucs): bỏ giọng gốc, giữ nhạc + hiệu ứng** → ghép giọng lồng tiếng Việt + intro/outro; xuất video 16:9 & 9:16 (highlight), không burn-in phụ đề | Demucs + ffmpeg | GPU |
+| 6 | OmniVoice tạo initial dub từng segment và preview có tiếng | OmniVoice | Interactive TTS Worker |
+| 7 | Studio: xem/nghe preview; duyệt cast sheet; sửa câu/cast/giọng; re-gen đúng segment đã đổi | Web UI + OmniVoice | VPS + Interactive TTS Worker giữ nóng |
+| 8 | **Tách audio (Demucs): bỏ giọng gốc, giữ nhạc + hiệu ứng** → ghép các WAV đã duyệt + intro/outro; final render 16:9 & 9:16, không burn-in phụ đề | Demucs + ffmpeg | Batch Media Worker |
 | 8a | Xuất phụ đề Việt thành file `.srt` riêng, cùng basename và nằm cạnh từng video thành phẩm | Python | VPS/GPU worker |
 | 8b | Content Agent nhận `meta` + toàn bộ SRT Việt + thumbnail + Channel Profile → sinh gói nội dung có cấu trúc riêng cho YouTube/Facebook | LLM API | VPS |
 | 9 | Bàn đăng bài: duyệt/sửa/copy từng trường; tải MP4/SRT/thumbnail; người dùng upload thủ công rồi nhập URL/post ID | Web UI + người dùng | VPS/trình duyệt |
@@ -296,17 +449,40 @@ gán nhân vật theo câu → TTS theo câu → khớp lại timestamp gốc.
   thực tế trong `config.toml [desub].cmd` chưa được cấu hình; chưa thể coi bước
   xóa sub là đã nghiệm thu.
 
-### 5.2 Lồng tiếng (bước 7) — TTS adapter
-Interface chung: `(text, giọng_mẫu/voice_id) -> WAV`. Viết 3 adapter, chọn theo
-config, đổi engine chỉ sửa 1 dòng:
-- [OmniVoice (k2-fsa)](https://github.com/k2-fsa/OmniVoice) — đa ngôn ngữ, rất
-  nhanh (RTF ~0.025), voice design; dự kiến thắng về tốc độ/chi phí GPU.
-- [F5-TTS-Vietnamese-ViVoice](https://huggingface.co/hynt/F5-TTS-Vietnamese-ViVoice)
-  — fine-tune riêng tiếng Việt; dự kiến tự nhiên nhất, cần GPU.
-- [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) — clone giọng tức thì,
-  chạy CPU realtime; phương án nhẹ/không GPU.
+### 5.2 Lồng tiếng (bước 6–7) — OmniVoice đã chốt
 
-Chốt engine bằng cách chạy thử cùng một đoạn qua cả ba rồi nghe chọn.
+TTS engine duy nhất của thiết kế là
+[OmniVoice (k2-fsa)](https://github.com/k2-fsa/OmniVoice). App vẫn giữ interface
+nội bộ ổn định nhưng không xây màn hình chọn nhiều engine:
+
+```text
+prepare_voice(ref_audio, ref_text) -> voice_prompt
+synthesize(text, language_id, voice_prompt, target_duration) -> WAV
+```
+
+- Tạo `voice_prompt` từ clip tham chiếu 3–10 giây một lần, lưu vào R2/cache và tái
+  sử dụng; không chạy auto-transcription trong mỗi lần re-gen.
+- `language_id` là dữ liệu của video/profile (`vi`, `en`, ...), nên luồng Trung →
+  Anh về sau dùng cùng OmniVoice; bước dịch ngôn ngữ vẫn do LLM riêng thực hiện.
+- Cross-lingual clone có thể mang accent của reference gốc sang ngôn ngữ đích;
+  Channel/Series Profile cho phép lưu voice prompt riêng theo ngôn ngữ đích.
+- Truyền `target_duration` theo slot timestamp của segment; chỉ dùng ffmpeg
+  `atempo` để tinh chỉnh nhỏ sau TTS.
+- Initial dub và re-gen đều do Interactive TTS Worker xử lý. Worker giữ model nóng
+  trong phiên Studio; mỗi lần sửa chỉ sinh lại segment bị thay đổi.
+- Cấu hình ban đầu: 1× RTX 3060 12 GB, concurrency 1, câu ngắn theo segment. MVP
+  phải đo p50/p95 latency, peak VRAM và chạy lặp tối thiểu 100 request.
+- Có báo cáo cộng đồng về VRAM tăng qua nhiều lần generate; Worker Agent phải giám
+  sát VRAM và restart tiến trình OmniVoice an toàn khi vượt ngưỡng hoặc sau số
+  request cấu hình được.
+- Benchmark tốc độ chính thức của dự án chạy trên H100, không dùng để suy ra trực
+  tiếp tốc độ RTX 3060; acceptance dựa trên phép đo của chính container EzyCloudX.
+
+**Gate giấy phép:** code OmniVoice là Apache 2.0 nhưng
+[pretrained model công bố CC-BY-NC](https://huggingface.co/k2-fsa/OmniVoice#license).
+Thiết kế kỹ thuật chốt OmniVoice cho prototype/MVP; trước khi dùng cho kênh kiếm
+tiền phải có quyền thương mại phù hợp hoặc trọng số được cấp phép khác. Không âm
+thầm thay engine trong production.
 
 ### 5.3 Chế độ giọng (bước 5–7)
 - `single`: 1 giọng đọc tất cả (video game, recap truyền thống). Rẻ nhất.
@@ -484,7 +660,9 @@ khối qua job queue/API cho phép cắm n8n vào sau mà không sửa phần l�
 | Rủi ro | Mức | Xử lý |
 |--------|-----|-------|
 | Xóa hard-sub để lại vệt mờ trên nền động | Cao | Kiểm chứng ở MVP; giới hạn cố hữu của mã nguồn mở |
-| Giọng lồng chưa tự nhiên | Trung | So sánh 3 engine ở MVP trước khi cam kết |
+| OmniVoice chưa đạt latency/chất lượng trên RTX 3060 | Trung | Benchmark câu thật; giữ model nóng; cache voice prompt; đo p50/p95 và peak VRAM |
+| OmniVoice tăng VRAM sau nhiều lượt generate | Cao | Segment ngắn; concurrency 1; giám sát VRAM; restart tiến trình TTS có kiểm soát |
+| Pretrained model OmniVoice là CC-BY-NC | Cao | Chặn production kiếm tiền cho tới khi có quyền thương mại hoặc trọng số phù hợp |
 | LLM gán nhân vật sai | Trung | Bước sửa ngoại lệ; chế độ `dual`/`single` an toàn hơn |
 | Quên xóa EzyCloudX worker gây tiếp tục tính phí | Cao | Idle TTL, cảnh báo lặp lại, trạng thái `SAFE_TO_TERMINATE`; ưu tiên official API nếu có |
 | Chi phí GPU cho desub | Trung | Mask vùng nhỏ; batch job; theo dõi chi phí/video và snapshot đơn giá lúc thuê |
@@ -494,9 +672,9 @@ khối qua job queue/API cho phép cắm n8n vào sau mà không sửa phần l�
 | Bản quyền (Content ID) | Ngoài kỹ thuật | Trách nhiệm chủ dự án về nguồn đầu vào |
 
 ### 9.1 Ước tính chi phí vận hành (ở 10 video/ngày — MVP sẽ đo số thật)
-- GPU EzyCloudX (desub + Demucs + TTS + render): chưa chốt ngân sách cho tới khi
-  benchmark clip thật. App lưu snapshot CP/giờ hoặc VND/giờ lúc thuê, thời điểm
-  worker READY/TERMINATED và chi phí ước tính; không hard-code bảng giá website.
+- GPU EzyCloudX: tách chi phí Batch Media Worker và Interactive TTS Worker. App
+  lưu snapshot CP/giờ, thời điểm READY/TERMINATED và chi phí ước tính; chỉ quy đổi
+  VND từ tỷ lệ mua CP thực tế, không xem số CP là số tiền.
 - LLM API (dịch + gán nhân vật + metadata): ~1–5 USD/tháng.
 - VPS control plane: ~10–20 USD/tháng. R2: ~vài USD/tháng (đăng xong xóa file nặng).
 - **Tổng cỡ 100–350 USD/tháng** khi chạy hết công suất.
@@ -539,7 +717,8 @@ Nhóm điều hướng và các màn hình chính (phần lớn thuộc Giai đo
 2. **Nguồn & Watchlist** — dán link kênh/tác giả hoặc tìm kiếm → bảng video → tick
    chọn → tải hàng loạt; quản lý watchlist tự quét video mới; chống trùng.
 3. **Hàng đợi xử lý (Jobs)** — job theo từng bước pipeline + tiến độ; retry job lỗi;
-   xem log; bật/tắt GPU worker; theo dõi chi phí.
+   xem log; thêm/enroll/drain GPU worker; theo dõi heartbeat, image version và
+   chi phí ước tính; hướng dẫn người dùng xóa rental trên EzyCloudX.
 4. **Thư viện video (Library)** — mọi video + trạng thái (raw → published); lọc theo
    kênh/bộ/trạng thái; mở chi tiết để vào Studio.
 
@@ -549,18 +728,18 @@ Nhóm điều hướng và các màn hình chính (phần lớn thuộc Giai đo
    lệ; preview → xác nhận render.
 
 **Nhóm Cấu hình**
-6. **Hồ sơ (Channel & Series)** — intro/outro, kiểu sub, engine giọng, nền tảng
+6. **Hồ sơ (Channel & Series)** — intro/outro, kiểu sub, cấu hình OmniVoice, nền tảng
    đăng; mask vùng xóa sub (vẽ khung trực tiếp); chế độ giọng; cast sheet.
 7. **Bàn đăng bài & Kênh** — calendar/task sắp đăng; gói MP4/SRT/thumbnail;
    Content Agent; form YouTube/Facebook có Copy từng trường; assignee/checklist;
    nhập URL/post ID và xác nhận hoàn tất.
-8. **Cài đặt** — engine TTS, LLM API key; GPU provider; Asset Store (MinIO/R2);
+8. **Cài đặt** — OmniVoice, LLM API key; GPU provider; Asset Store (MinIO/R2);
    cookie nguồn; chính sách lưu giữ mặc định.
 
 ## 12. Tech stack
 
 Ràng buộc quyết định: **toàn bộ chuỗi AI/media (yt-dlp, video-subtitle-remover,
-faster-whisper, OmniVoice/F5-TTS/VieNeu, pyannote, LLM SDK) đều là Python** →
+faster-whisper, OmniVoice, pyannote, LLM SDK) đều là Python** →
 pipeline + GPU worker bắt buộc Python.
 
 | Lớp | Ngôn ngữ / Công cụ | Lý do |
@@ -571,6 +750,7 @@ pipeline + GPU worker bắt buộc Python.
 | Database | PostgreSQL | Trạng thái, hồ sơ, segment, cast sheet, job |
 | Frontend (Dashboard + Studio) | TypeScript + React | Studio editor tương tác cao |
 | Object storage | MinIO / R2 | Asset Store |
+| Phát hành GPU Worker | Docker + GitHub Actions + GHCR | Build một lần, pull image theo version/digest trên mọi máy thuê |
 | Chuẩn bị đăng | Content Agent trong FastAPI + React workspace | Sinh nội dung có cấu trúc, copy/download, checklist và trạng thái |
 | Đăng bài | Người dùng thao tác trên YouTube/Facebook | Giữ toàn quyền SEO, thumbnail, playlist và thiết lập nền tảng |
 
@@ -587,6 +767,16 @@ TypeScript/React chỉ xuất hiện ở GĐ2 khi dựng giao diện.
 - Nguồn đầu vào: video người khác từ Douyin/Bilibili (chủ dự án chịu trách nhiệm bản quyền).
 - Định dạng ra: cả 16:9 và 9:16.
 - Hạ tầng: VPS + GPU cloud thuê theo giờ (bật khi dùng studio).
+- GPU runtime: ưu tiên EzyCloudX Docker GPU headless; Batch Media Worker và
+  Interactive TTS Worker là hai container/vòng đời độc lập, không thuê 2 GPU trong
+  một container chỉ để gộp hai vai trò.
+- TTS: **chỉ OmniVoice**; initial dub và re-gen segment chạy trên Interactive TTS
+  Worker giữ nóng trong phiên edit. Production kiếm tiền bị chặn cho tới khi giải
+  quyết quyền sử dụng pretrained model CC-BY-NC.
+- Triển khai GPU Worker: Docker image có version trên GHCR; thuê thêm worker bằng
+  bản ghi động + enrollment token, không sửa code và không clone source lên máy thuê.
+- Chi phí GPU: snapshot đơn giá theo từng phiên thuê và hiển thị là ước tính cho
+  tới khi provider có official billing API.
 - Khối lượng: 5–10 video/ngày, 3–5 kênh.
 - Thể loại: recap phim/truyện, tin tức/trend, game/highlight, kiến thức tổng hợp.
 - Sub gốc: hard-sub cháy vào hình; nguồn nước ngoài → dịch sang Việt.

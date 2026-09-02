@@ -147,58 +147,36 @@ the result as `script.json`, and read through it to judge translation
 quality. `reup run` already batches 50 lines per call via `stage_translate`
 in `cli.py`, so for a video that's the command to use directly (see step 7).
 
-## 5. Set up a TTS engine (Task 7)
+## 5. Set up OmniVoice on the Interactive TTS Worker (Task 7)
 
-1. Clone and set up VieNeu-TTS:
-   ```bash
-   git clone https://github.com/pnnbao97/VieNeu-TTS tools/vieneu
-   cd tools/vieneu && python3 -m venv .venv && .venv/bin/pip install -e . 2>/dev/null || .venv/bin/pip install -r requirements.txt
-   ```
-2. Read VieNeu's actual README for its Python API (class/module names below
-   are placeholders — confirm against the real README).
-3. Create a wrapper script `tools/vieneu_say.py` — **critical constraint: the
-   wrapper must accept the text as a single argv element**
-   (`sys.argv[1]`), since `TemplateTTS.synth` guarantees `{text}` is passed
-   as exactly one shell/argv token no matter what punctuation or spaces it
-   contains:
-   ```python
-   # tools/vieneu_say.py — usage: python vieneu_say.py "<text>" out.wav [ref.wav]
-   import sys
-   from vieneu import VieNeuTTS   # tên class/module theo README thật của VieNeu
-   tts = VieNeuTTS()
-   tts.synthesize(sys.argv[1], output_path=sys.argv[2])
-   ```
-4. Fill in `config.toml` — exact template shape:
-   ```toml
-   [tts.vieneu]
-   cmd = "tools/vieneu/.venv/bin/python tools/vieneu_say.py {text} {out}"
-   ```
-   `{text}` and `{out}` are the only placeholders `TemplateTTS` substitutes;
-   both must appear as separate whitespace-delimited tokens in the `cmd`
-   string (per `shlex.split` rules) so each becomes its own argv element —
-   e.g. do NOT write `{text}{out}` or embed `{text}` inside a larger token
-   expecting shell-level quoting, since substitution happens per
-   already-split token, not before splitting.
-5. Run one sentence through the real adapter, listen to the resulting wav,
-   and record naturalness notes in `docs/superpowers/plans/mvp-notes.md`.
-6. Commit the `config.toml` change separately, e.g.
-   `git commit -am "feat: TTS adapter with VieNeu template"`.
+1. Thuê một EzyCloudX Docker GPU 1× RTX 3060 12 GB và đăng ký worker với vai trò
+   `INTERACTIVE_TTS`. Không cài engine TTS trên Mac để làm acceptance chính.
+2. Cài phiên bản OmniVoice đã pin trong image `reup-dubbing-tts-worker`; ghi lại
+   phiên bản PyTorch, CUDA và FlashInfer trong `mvp-notes.md`.
+3. Tạo voice-clone prompt một lần từ reference audio 3–10 giây và transcript đã
+   biết; lưu prompt để các lần sinh sau không tải/transcribe lại reference.
+4. Wrapper/API phải nhận tối thiểu `text`, `language_id`, `voice_prompt`,
+   `target_duration` và `out`. Mỗi segment tạo một WAV riêng.
+5. Chạy câu tiếng Việt thật, nghe kết quả và xác nhận duration khớp slot. Ghi nhận
+   độ tự nhiên, phát âm, thời gian cold/warm và peak VRAM.
+6. Không dùng cho production kiếm tiền cho tới khi trạng thái quyền thương mại của
+   pretrained model CC-BY-NC đã được giải quyết và ghi nhận.
 
-## 6. Best-effort F5-TTS / OmniVoice on Mac, no CUDA (Task 8)
+## 6. OmniVoice stability and interactive-latency acceptance (Task 8)
 
-On a Mac with no CUDA — try installing F5-TTS-VN to run on CPU/MPS (slow is
-acceptable for a one-sentence bench); try OmniVoice the same way. For each
-engine: clone/install into `tools/`, write a wrapper script like
-`tools/f5_say.py` (same single-argv-element constraint as step 5), fill in
-the template. If an engine won't run on Mac at all, leave its `cmd` empty
-and note "needs benchmarking on a rented GPU (see step 8)" in
-`mvp-notes.md` — do not block on it.
+Chạy acceptance trên đúng Docker GPU dự kiến dùng cho Studio:
 
-Then compare:
-```bash
-.venv/bin/reup bench-tts --text "<2 câu thật trong script.json>"
-```
-Listen to the outputs and write down which engine sounds most natural.
+- ít nhất 30 câu Việt, gồm tên riêng, số, câu dài và hội thoại ngắn;
+- một nhóm câu tiếng Anh để kiểm tra hướng đa ngôn ngữ tương lai;
+- đo warm p50/p95 latency và peak VRAM;
+- chạy liên tục ít nhất 100 request, concurrency 1, để phát hiện VRAM tăng/OOM;
+- sửa một segment trong Studio, re-gen đúng segment đó và nghe preview mà không
+  render lại toàn video;
+- thử `na-01` và `eu-01` nếu có thể; chọn region bằng latency thật, không chỉ bằng
+  CP/giờ hoặc băng thông quảng cáo.
+
+Nếu VRAM tăng vượt ngưỡng, xác minh Worker Agent restart tiến trình OmniVoice có
+kiểm soát và tiếp tục nhận request mà không mất voice prompt/output đã lưu.
 
 ## 7. Install demucs and run a real mix/render smoke test (Task 9)
 
@@ -218,8 +196,8 @@ Run `demucs_cmd(...)` on a real test clip, use the resulting
 ## 8. Full pipeline acceptance pass (Task 10, brief Step 5)
 
 Once steps 1–7 above are done (real download works, desub template filled
-in, `paddleocr`/`paddlepaddle` installed, at least one TTS engine
-configured, demucs installed), export the Anthropic key `stage_translate`
+in, `paddleocr`/`paddlepaddle` installed, OmniVoice worker configured,
+demucs installed), export the Anthropic key `stage_translate`
 needs (the same one used in step 4 — `reup run` calls it just as much):
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
@@ -240,7 +218,7 @@ print('model OK')
 ```
 Then run the whole pipeline end to end on a **full video** (not a clip):
 ```bash
-.venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine vieneu] [--stt ocr]
+.venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine omnivoice] [--stt ocr]
 .venv/bin/reup report <vid>
 ```
 `reup run` is resumable — re-running the same command after a failure skips

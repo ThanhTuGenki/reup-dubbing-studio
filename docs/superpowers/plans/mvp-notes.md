@@ -1,8 +1,8 @@
 # MVP Notes — Reup Dubbing Studio
 
 This file is where every manual/acceptance result referenced by
-`docs/MANUAL-CHECKLIST.md` gets recorded: desub template probing notes, TTS
-engine listening notes, and the four MVP acceptance questions from the final
+`docs/MANUAL-CHECKLIST.md` gets recorded: desub template probing notes, OmniVoice
+acceptance notes, and the four MVP acceptance questions from the final
 end-to-end run. Fill in each section as you complete the corresponding
 checklist step; leave a section marked "not yet run" until it is.
 
@@ -13,14 +13,14 @@ checklist step; leave a section marked "not yet run" until it is.
 - Run time on a 30s clip:
 - Notes on subtitle-region cleanliness:
 
-## TTS engine listening notes (Task 7-8 / checklist steps 5-6)
+## OmniVoice acceptance notes (Task 7-8 / checklist steps 5-6)
 
-- VieNeu-TTS naturalness notes:
-- F5-TTS-VN: configured? naturalness notes, or "needs benchmarking on a
-  rented GPU":
-- OmniVoice: configured? naturalness notes, or "needs benchmarking on a
-  rented GPU":
-- Engine judged most natural overall:
+- EzyCloudX Docker GPU/region/rate snapshot:
+- OmniVoice version, CUDA/FlashInfer configuration:
+- Vietnamese naturalness and pronunciation notes:
+- English/cross-lingual voice-cloning notes:
+- Warm p50/p95 latency, peak VRAM and 100-request stability:
+- License/commercial-rights status:
 
 ## (a) Desub quality
 

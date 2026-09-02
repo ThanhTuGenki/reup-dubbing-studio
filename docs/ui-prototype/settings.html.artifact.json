@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/settings.html",
+  "entry": "docs/ui-prototype/settings.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-09-01T14:20:30.159Z",
+  "updatedAt": "2026-09-01T14:20:30.159Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

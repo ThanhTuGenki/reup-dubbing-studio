@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/queue.html",
+  "entry": "docs/ui-prototype/queue.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-31T15:28:36.038Z",
+  "updatedAt": "2026-08-31T15:28:36.038Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

@@ -1,0 +1,1218 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Reup Dubbing Studio — GPU Workers</title>
+  <style>
+:root {
+  --bg:           #F5F8F4;
+  --surface:      #FFFFFF;
+  --surface-warm: #F2F7F2;
+  --panel-subtle: #EDF4EE;
+  --fg:    #1F2D22;
+  --fg-2:  var(--fg);
+  --muted: #647168;
+  --meta:  var(--muted);
+  --border:      #D9E4DA;
+  --border-soft: color-mix(in oklch, var(--border) 72%, transparent);
+  --accent:        #4F8A59;
+  --accent-strong: #397246;
+  --accent-soft:   #DDEDE0;
+  --accent-on:     #FFFFFF;
+  --accent-hover:  var(--accent-strong);
+  --accent-active: color-mix(in oklch, var(--accent-strong) 88%, var(--fg));
+  --success: var(--accent-strong);
+  --warn:    #8A5D00;
+  --danger:  #B42318;
+  --disabled-bg: #E8EDE9;
+  --disabled-fg: #7B877E;
+  --font-display: "Inter Variable", "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-body:    "Inter Variable", "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono:    "Berkeley Mono", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  --text-xs:   12px;
+  --text-sm:   14px;
+  --text-base: 16px;
+  --text-lg:   18px;
+  --text-xl:   24px;
+  --text-2xl:  32px;
+  --leading-body: 1.5;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   12px;
+  --radius-pill: 9999px;
+  --card-shadow: 0 1px 2px rgba(31, 45, 34, 0.04), 0 6px 18px rgba(31, 45, 34, 0.025);
+  --elev-raised: rgba(31, 45, 34, 0.10) 0px 12px 32px, 0 0 0 1px rgba(31, 45, 34, 0.06);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent-strong);
+  --motion-fast:   150ms;
+  --motion-base:   200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body { margin: 0; min-width: 320px; color: var(--fg); background: var(--bg); font-family: var(--font-body); font-size: var(--text-sm); line-height: var(--leading-body); font-feature-settings: "cv01", "ss03"; }
+button, input, select { font: inherit; font-feature-settings: inherit; }
+button, select { min-height: 44px; }
+button { color: inherit; }
+button:disabled, select:disabled, input:disabled { color: var(--disabled-fg); background: var(--disabled-bg); border-color: var(--border); cursor: not-allowed; opacity: 1; }
+svg { display: block; stroke-linecap: round; stroke-linejoin: round; }
+a { color: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+.app { min-height: 100vh; }
+.sidebar { position: fixed; inset: 0 auto 0 0; z-index: 30; width: 248px; display: flex; flex-direction: column; background: var(--surface-warm); border-right: 1px solid var(--border); transition: width var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard); }
+.sidebar-top { height: 64px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); border-bottom: 1px solid var(--border-soft); }
+.brand-mark { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-strong); color: var(--accent-on); font: 590 var(--text-xs)/1 var(--font-display); letter-spacing: -0.03em; }
+.brand-copy { min-width: 0; }
+.brand-name { font-weight: 590; white-space: nowrap; letter-spacing: -0.18px; }
+.brand-env { color: var(--meta); font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+.collapse-btn, .icon-btn { margin-left: auto; width: 44px; min-width: 44px; display: grid; place-items: center; padding: 0; border: 0; border-radius: var(--radius-sm); color: var(--muted); background: transparent; cursor: pointer; transition: color var(--motion-fast), background var(--motion-fast); }
+.collapse-btn:hover, .icon-btn:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.collapse-btn svg, .icon-btn svg, .nav-icon { width: 18px; height: 18px; }
+.nav { flex: 1; overflow-y: auto; padding: var(--space-3) var(--space-2); }
+.nav-group-label { padding: var(--space-3) var(--space-3) var(--space-2); color: var(--meta); font: 510 10px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.07em; }
+.nav-item { position: relative; width: 100%; min-height: 44px; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); color: var(--muted); background: transparent; text-align: left; cursor: pointer; transition: color var(--motion-fast), background var(--motion-fast); }
+.nav-item:hover { color: var(--fg); background: var(--panel-subtle); }
+.nav-item[aria-current="page"] { color: var(--accent-strong); background: var(--accent-soft); }
+.nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; width: 3px; height: 22px; border-radius: var(--radius-pill); background: var(--accent-strong); }
+.nav-text { white-space: nowrap; font-weight: 510; }
+.nav-count { margin-left: auto; min-width: 22px; padding: 1px 6px; border: 1px solid var(--border-soft); border-radius: var(--radius-pill); color: var(--meta); font: 510 10px/1.5 var(--font-mono); text-align: center; }
+.sidebar-footer { padding: var(--space-3); border-top: 1px solid var(--border-soft); }
+.worker-mini { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); margin-bottom: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-md); background: color-mix(in oklch, var(--surface) 76%, var(--surface-warm)); }
+.status-dot { width: 8px; height: 8px; flex: 0 0 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 3px color-mix(in oklch, var(--success) 16%, transparent); }
+.worker-copy { min-width: 0; }
+.worker-copy strong { display: block; font-size: var(--text-xs); font-weight: 510; }
+.worker-copy span { display: block; color: var(--meta); font: 400 10px/1.4 var(--font-mono); white-space: nowrap; }
+.profile { display: flex; align-items: center; gap: var(--space-3); min-height: 48px; padding: 0 var(--space-2); }
+.avatar { width: 30px; height: 30px; flex: 0 0 30px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); font-size: var(--text-xs); font-weight: 590; }
+.profile-copy { min-width: 0; }
+.profile-copy strong { display: block; font-size: var(--text-xs); font-weight: 510; white-space: nowrap; }
+.profile-copy span { color: var(--meta); font-size: 10px; white-space: nowrap; }
+
+.main-shell { min-height: 100vh; margin-left: 248px; transition: margin-left var(--motion-base) var(--ease-standard); }
+.topbar { position: sticky; top: 0; z-index: 20; height: 64px; display: flex; align-items: center; gap: var(--space-4); padding: 0 var(--space-6); border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 94%, transparent); backdrop-filter: blur(18px); }
+.mobile-menu { display: none; margin-left: 0; }
+.breadcrumb { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.breadcrumb span:first-child { color: var(--meta); }
+.breadcrumb-sep { color: var(--meta); }
+.breadcrumb strong { font-weight: 510; }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+.notification-wrap { position: relative; }
+.notification-dot { position: absolute; top: 9px; right: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); border: 1px solid var(--bg); pointer-events: none; }
+.notification-center { position: absolute; z-index: 55; top: calc(100% + 10px); right: 0; width: min(400px, calc(100vw - 24px)); overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-6px); transition: opacity var(--motion-fast), visibility var(--motion-fast), transform var(--motion-fast); }
+.notification-center.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+.notification-head { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.notification-head h2 { color: var(--fg); font: 590 var(--text-base)/1.4 var(--font-display); }
+.notification-mark-all { padding: 0; border: 0; background: none; color: var(--accent-strong); font-size: var(--text-xs); font-weight: 590; cursor: pointer; }
+.notification-mark-all:hover { text-decoration: underline; }
+.notification-list { max-height: 360px; overflow-y: auto; }
+.notification-item { width: 100%; display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-4); border: 0; border-bottom: 1px solid var(--border-soft); background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; transition: background var(--motion-fast); }
+.notification-item:hover { background: var(--panel-subtle); }
+.notification-item.is-unread { background: color-mix(in oklch, var(--accent-soft) 40%, var(--surface)); }
+.notification-signal { width: 8px; height: 8px; margin-top: 6px; border-radius: 50%; background: var(--accent-strong); }
+.notification-signal.is-danger { background: var(--danger); }
+.notification-signal.is-success { background: var(--success); }
+.notification-copy { min-width: 0; }
+.notification-copy strong { display: block; margin-bottom: 2px; font-weight: 590; }
+.notification-copy span { display: block; color: var(--muted); font-size: var(--text-xs); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.notification-time { color: var(--meta); font: 400 10px/1.4 var(--font-mono); text-align: right; white-space: nowrap; }
+.notification-empty { padding: var(--space-6); text-align: center; color: var(--muted); font-size: var(--text-sm); }
+.notification-foot { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); color: var(--muted); font-size: var(--text-xs); text-align: center; }
+
+.content { width: min(100%, 1600px); margin: 0 auto; padding: var(--space-8); padding-bottom: 120px; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: var(--space-2); color: var(--fg); font: 590 clamp(28px, 2.5vw, var(--text-2xl))/1.13 var(--font-display); letter-spacing: -0.704px; }
+.page-subtitle { max-width: 680px; margin-bottom: 0; color: var(--muted); }
+
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-6); margin-bottom: var(--space-6); }
+.header-actions { display: flex; align-items: center; gap: var(--space-2); }
+.btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-4); border: 1px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-weight: 590; transition: color var(--motion-fast), background var(--motion-fast), border-color var(--motion-fast); }
+.btn-primary { color: var(--accent-on); background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn-primary:hover { background: var(--accent-active); border-color: var(--accent-active); }
+.btn-secondary { color: var(--accent-strong); background: var(--surface); border-color: var(--border); }
+.btn-secondary:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.btn svg { width: 16px; height: 16px; }
+.dropdown-wrap { position: relative; }
+.dropdown-menu { position: absolute; z-index: 50; top: calc(100% + 6px); right: 0; min-width: 180px; padding: var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity var(--motion-fast), visibility var(--motion-fast), transform var(--motion-fast); }
+.dropdown-menu.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+.dropdown-item { width: 100%; min-height: 40px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-sm); color: var(--fg); background: transparent; text-align: left; cursor: pointer; }
+.dropdown-item:hover { color: var(--accent-strong); background: var(--accent-soft); }
+.dropdown-item.is-danger { color: var(--danger); }
+.dropdown-item.is-danger:hover { background: color-mix(in oklch, var(--danger) 8%, var(--surface)); }
+.dropdown-item svg { width: 16px; height: 16px; }
+
+.card { border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--card-shadow); }
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-5); }
+.kpi-card { padding: var(--space-4); cursor: pointer; transition: border-color var(--motion-fast), background var(--motion-fast); }
+.kpi-card:hover, .kpi-card.is-active { border-color: var(--accent); background: color-mix(in oklch, var(--accent-soft) 42%, var(--surface)); }
+.kpi-card.is-active { border-width: 2px; }
+.kpi-label { display: flex; align-items: center; gap: var(--space-2); color: var(--muted); font-size: var(--text-xs); font-weight: 510; }
+.kpi-dot { width: 8px; height: 8px; border-radius: 50%; }
+.kpi-dot.running { background: var(--accent-strong); }
+.kpi-dot.waiting { background: #6B7280; }
+.kpi-dot.gpu { background: #8B5CF6; }
+.kpi-dot.review { background: var(--warn); }
+.kpi-dot.failed { background: var(--danger); }
+.kpi-dot.done { background: var(--success); }
+.kpi-value { margin-top: var(--space-2); font: 590 24px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+
+/* Filters */
+.filter-section { margin-bottom: var(--space-4); padding: var(--space-4); }
+.filter-grid { display: grid; grid-template-columns: 140px 160px 180px 140px 160px minmax(200px, 1fr) auto; gap: var(--space-3); align-items: end; }
+.control { display: grid; gap: var(--space-1); min-width: 0; }
+.control label { color: var(--muted); font-size: var(--text-xs); font-weight: 510; }
+.control input, .control select { width: 100%; min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); background: var(--surface); }
+.control input::placeholder { color: var(--meta); }
+.control input:hover, .control select:hover { border-color: var(--accent); }
+.control input:focus, .control select:focus { outline: none; border-color: var(--accent-strong); box-shadow: var(--focus-ring); }
+.search-field { position: relative; }
+.search-field svg { position: absolute; left: var(--space-3); bottom: 11px; width: 16px; height: 16px; color: var(--muted); pointer-events: none; }
+.search-field input { padding-left: 38px; }
+.btn-reset { min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted); background: var(--surface); cursor: pointer; font-weight: 510; white-space: nowrap; }
+.btn-reset:hover { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+
+/* GPU Waiting Notice */
+.gpu-notice { margin-bottom: var(--space-4); padding: var(--space-4); border: 1px solid color-mix(in oklch, #8B5CF6 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, #8B5CF6 6%, var(--surface)); }
+.gpu-notice-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-2); }
+.gpu-notice-head strong { color: var(--fg); font-weight: 590; }
+.gpu-notice p { margin: 0 0 var(--space-3); color: var(--muted); font-size: var(--text-xs); }
+.gpu-notice-meta { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-3); color: var(--fg); font-size: var(--text-xs); }
+.gpu-notice-meta span { display: flex; align-items: center; gap: var(--space-1); }
+.gpu-notice-meta strong { font-weight: 590; font-variant-numeric: tabular-nums; }
+.gpu-notice-footer { padding-top: var(--space-3); border-top: 1px solid color-mix(in oklch, #8B5CF6 20%, var(--border)); color: var(--muted); font-size: var(--text-xs); }
+.gpu-notice-footer a { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Job Table */
+.table-card { overflow: hidden; }
+.table-toolbar { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); }
+.table-title strong { color: var(--fg); font-weight: 590; }
+.table-title span { color: var(--muted); font-size: var(--text-xs); }
+.table-wrap { overflow-x: auto; }
+.job-table { width: 100%; min-width: 1100px; border-collapse: collapse; }
+.job-table th { height: 40px; padding: 0 var(--space-3); color: var(--muted); background: var(--panel-subtle); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 590; text-align: left; white-space: nowrap; }
+.job-table th:first-child { width: 44px; text-align: center; }
+.job-table td { padding: var(--space-3); border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+.job-table tbody tr { cursor: pointer; transition: background var(--motion-fast); }
+.job-table tbody tr:hover { background: color-mix(in oklch, var(--panel-subtle) 72%, var(--surface)); }
+.job-table tbody tr.is-selected { background: color-mix(in oklch, var(--accent-soft) 58%, var(--surface)); }
+.job-check { width: 18px; height: 18px; accent-color: var(--accent-strong); cursor: pointer; }
+
+.video-cell { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.video-thumb { width: 64px; height: 36px; flex: 0 0 64px; border: 1px solid var(--border); border-radius: 4px; background: linear-gradient(135deg, var(--accent-soft), var(--panel-subtle)); display: grid; place-items: center; }
+.video-thumb svg { width: 14px; height: 14px; color: var(--accent-strong); }
+.video-info { min-width: 0; }
+.video-info strong { display: block; color: var(--fg); font-weight: 590; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+.video-info span { display: block; color: var(--meta); font: 400 10px/1.4 var(--font-mono); }
+
+.cell-mono { font: 400 var(--text-xs)/1.4 var(--font-mono); color: var(--muted); }
+.cell-main { display: block; color: var(--fg); font-weight: 510; }
+.cell-sub { display: block; color: var(--muted); font-size: 11px; }
+
+.step-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: 11px; font-weight: 510; white-space: nowrap; }
+.step-badge svg { width: 12px; height: 12px; }
+
+.status-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: 10px; font-weight: 590; white-space: nowrap; }
+.status-running { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+.status-waiting { color: #6B7280; background: #F3F4F6; border-color: #D1D5DB; }
+.status-gpu { color: #7C3AED; background: #EDE9FE; border-color: #C4B5FD; }
+.status-review { color: var(--warn); background: color-mix(in oklch, var(--warn) 10%, var(--surface)); border-color: color-mix(in oklch, var(--warn) 30%, var(--border)); }
+.status-failed { color: var(--danger); background: color-mix(in oklch, var(--danger) 8%, var(--surface)); border-color: color-mix(in oklch, var(--danger) 28%, var(--border)); }
+.status-done { color: var(--success); background: color-mix(in oklch, var(--success) 10%, var(--surface)); border-color: color-mix(in oklch, var(--success) 30%, var(--border)); }
+.status-cancelled { color: var(--muted); background: var(--panel-subtle); }
+
+.progress-cell { min-width: 100px; }
+.progress-bar { height: 6px; border-radius: var(--radius-pill); background: var(--accent-soft); overflow: hidden; }
+.progress-fill { height: 100%; border-radius: inherit; background: var(--accent-strong); transition: width var(--motion-base); }
+.progress-fill.is-failed { background: var(--danger); }
+.progress-text { margin-top: 2px; color: var(--meta); font: 400 10px/1.4 var(--font-mono); }
+
+.detail-btn { min-height: 32px; padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); color: var(--accent-strong); background: transparent; cursor: pointer; font-size: var(--text-xs); font-weight: 590; white-space: nowrap; }
+.detail-btn:hover { color: var(--fg); background: var(--accent-soft); }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+.pagination-info { color: var(--muted); font-size: var(--text-xs); }
+.pagination-controls { display: flex; align-items: center; gap: var(--space-2); }
+.pagination select { min-height: 36px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--fg); background: var(--surface); }
+.page-btn { min-width: 36px; min-height: 36px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; display: grid; place-items: center; }
+.page-btn:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+.page-btn:disabled { color: var(--disabled-fg); background: var(--disabled-bg); cursor: not-allowed; }
+.page-btn svg { width: 16px; height: 16px; }
+.page-current { min-width: 80px; color: var(--fg); font-weight: 590; text-align: center; }
+
+/* Bulk Bar */
+.bulk-bar { position: fixed; z-index: 40; bottom: var(--space-4); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--accent); border-radius: var(--radius-md); background: color-mix(in oklch, var(--surface) 96%, transparent); box-shadow: var(--elev-raised); backdrop-filter: blur(14px); opacity: 0; visibility: hidden; transition: opacity var(--motion-fast), visibility var(--motion-fast); }
+.bulk-bar.is-visible { opacity: 1; visibility: visible; }
+.bulk-count { color: var(--fg); font-weight: 590; }
+.bulk-bar .btn { min-height: 36px; padding: 0 var(--space-3); font-size: var(--text-xs); }
+
+/* States */
+.loading-state, .empty-state, .error-state { padding: 80px var(--space-6); text-align: center; }
+.loading-ring { width: 32px; height: 32px; margin: 0 auto var(--space-3); border: 3px solid var(--accent-soft); border-top-color: var(--accent-strong); border-radius: 50%; animation: spin 800ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state strong, .error-state strong { display: block; margin-bottom: var(--space-1); color: var(--fg); font-size: var(--text-base); }
+.empty-state span, .error-state span { color: var(--muted); }
+.error-state { color: var(--danger); }
+.error-state .btn { margin-top: var(--space-4); }
+.worker-offline { padding: var(--space-4); margin-bottom: var(--space-4); border: 1px solid color-mix(in oklch, var(--danger) 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); color: var(--danger); font-size: var(--text-xs); }
+
+/* Progress indeterminate */
+.progress-bar.is-indeterminate { background: linear-gradient(90deg, var(--accent-soft) 0%, var(--accent) 50%, var(--accent-soft) 100%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
+.progress-bar.is-indeterminate .progress-fill { display: none; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Status downloading/processing/rendering */
+.status-downloading { color: #0369A1; background: #E0F2FE; border-color: #7DD3FC; }
+.status-processing { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+.status-rendering { color: #7C3AED; background: #EDE9FE; border-color: #C4B5FD; }
+
+/* Toast */
+.toast { position: fixed; z-index: 120; bottom: var(--space-6); right: var(--space-6); max-width: 380px; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(8px); transition: all var(--motion-base); }
+.toast.is-visible { opacity: 1; visibility: visible; transform: translateY(0); }
+.toast.is-success { border-color: color-mix(in oklch, var(--success) 30%, var(--border)); background: color-mix(in oklch, var(--success) 6%, var(--surface)); }
+.toast.is-error { border-color: color-mix(in oklch, var(--danger) 30%, var(--border)); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); color: var(--danger); }
+
+/* Priority & Assign Popover */
+.popover { position: fixed; z-index: 100; min-width: 220px; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); opacity: 0; visibility: hidden; transform: translateY(-4px); transition: all var(--motion-fast); }
+.popover.is-open { opacity: 1; visibility: visible; transform: translateY(0); }
+.popover-title { margin: 0 0 var(--space-3); font-weight: 590; font-size: var(--text-sm); }
+.popover-info { margin-bottom: var(--space-3); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: var(--text-xs); color: var(--muted); }
+.popover-info strong { color: var(--fg); }
+.popover-list { list-style: none; margin: 0; padding: 0; }
+.popover-list li { margin-bottom: var(--space-1); }
+.popover-list button { width: 100%; min-height: 40px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); text-align: left; cursor: pointer; font-size: var(--text-sm); }
+.popover-list button:hover { background: var(--accent-soft); border-color: var(--accent); }
+.popover-list button.is-selected { background: var(--accent-soft); border-color: var(--accent-strong); color: var(--accent-strong); }
+.popover-footer { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: var(--space-2); }
+.priority-high { color: var(--danger); }
+.priority-normal { color: var(--fg); }
+.priority-low { color: var(--muted); }
+
+/* Demo toolbar */
+.demo-toolbar { position: fixed; z-index: 200; top: var(--space-3); right: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); box-shadow: var(--elev-raised); font-size: var(--text-xs); }
+.demo-toolbar strong { margin-bottom: var(--space-1); }
+.demo-toolbar button { min-height: 32px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); cursor: pointer; font-size: 11px; white-space: nowrap; }
+.demo-toolbar button:hover { background: var(--accent-soft); }
+.demo-toolbar button.is-active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-strong); }
+
+/* Bulk bar enhancements */
+.bulk-bar .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.bulk-bar .btn[title] { position: relative; }
+
+/* Review notice in table */
+.review-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--warn) 8%, var(--surface)); font-size: 10px; color: var(--warn); }
+.review-notice a { color: var(--accent-strong); text-decoration: underline; }
+
+/* Error notice in table */
+.error-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--danger) 8%, var(--surface)); font-size: 10px; color: var(--danger); }
+
+/* Cancel notice in table */
+.cancel-notice { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); padding: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font-size: 10px; color: var(--muted); }
+
+/* Log section enhancements */
+.log-header { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
+.log-header h3 { margin-bottom: 0; }
+.copy-btn { min-height: 32px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; font-size: 11px; font-weight: 590; display: inline-flex; align-items: center; gap: var(--space-1); }
+.copy-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.copy-btn svg { width: 14px; height: 14px; }
+
+/* Output validation status */
+.output-status { display: inline-flex; align-items: center; gap: 4px; margin-left: var(--space-2); padding: 2px 6px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 590; }
+.output-status.is-pass { color: var(--success); background: color-mix(in oklch, var(--success) 12%, var(--surface)); }
+.output-status.is-fail { color: var(--danger); background: color-mix(in oklch, var(--danger) 12%, var(--surface)); }
+.output-actions { display: flex; gap: var(--space-2); }
+
+/* Error section in drawer */
+.error-section { padding: var(--space-4); border: 1px solid color-mix(in oklch, var(--danger) 30%, var(--border)); border-radius: var(--radius-md); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); margin-bottom: var(--space-4); }
+.error-section h4 { margin: 0 0 var(--space-2); color: var(--danger); font-size: var(--text-sm); font-weight: 590; }
+.error-section p { margin: 0 0 var(--space-2); color: var(--fg); font-size: var(--text-xs); }
+.error-section code { display: block; padding: var(--space-2); margin-top: var(--space-2); border-radius: var(--radius-sm); background: var(--panel-subtle); font: 400 10px/1.5 var(--font-mono); color: var(--muted); }
+.error-section .retry-info { margin-top: var(--space-2); color: var(--muted); font-size: 11px; }
+
+/* Drawer */
+.drawer-scrim { position: fixed; inset: 0; z-index: 60; border: 0; background: color-mix(in oklch, var(--fg) 18%, transparent); opacity: 0; visibility: hidden; transition: opacity var(--motion-base), visibility var(--motion-base); }
+.drawer-scrim.is-open { opacity: 1; visibility: visible; }
+.drawer { position: fixed; z-index: 70; top: 0; right: 0; width: min(520px, 100vw); height: 100vh; overflow-y: auto; padding: var(--space-6); border-left: 1px solid var(--border); background: var(--surface); box-shadow: var(--elev-raised); transform: translateX(100%); transition: transform var(--motion-base) var(--ease-standard); }
+.drawer.is-open { transform: translateX(0); }
+.drawer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-5); }
+.drawer-header h2 { margin-bottom: var(--space-1); font: 590 var(--text-xl)/1.2 var(--font-display); }
+.drawer-header p { margin-bottom: 0; color: var(--muted); font-size: var(--text-xs); }
+.drawer-close { margin-left: 0; }
+
+.drawer-section { padding: var(--space-4) 0; border-top: 1px solid var(--border-soft); }
+.drawer-section:first-of-type { border-top: 0; padding-top: 0; }
+.drawer-section h3 { margin-bottom: var(--space-3); color: var(--fg); font: 590 var(--text-sm)/1.4 var(--font-display); }
+.detail-grid { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--space-2) var(--space-3); }
+.detail-grid dt { color: var(--muted); font-size: var(--text-xs); }
+.detail-grid dd { margin: 0; color: var(--fg); font-size: var(--text-sm); }
+.detail-grid dd code { font: 400 var(--text-xs)/1.5 var(--font-mono); color: var(--muted); }
+
+.timeline { display: grid; gap: var(--space-3); }
+.timeline-item { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--space-2); align-items: start; }
+.timeline-dot { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-strong); }
+.timeline-dot svg { width: 12px; height: 12px; }
+.timeline-dot.is-active { background: var(--accent-strong); color: var(--accent-on); }
+.timeline-dot.is-done { background: var(--accent-soft); color: var(--success); }
+.timeline-dot.is-failed { background: color-mix(in oklch, var(--danger) 12%, var(--surface)); color: var(--danger); }
+.timeline-dot.is-pending { background: var(--panel-subtle); color: var(--muted); }
+.timeline-dot.is-waiting { background: color-mix(in oklch, var(--warn) 12%, var(--surface)); color: var(--warn); }
+.timeline-dot.is-cancelled { background: var(--panel-subtle); color: var(--muted); }
+.timeline-copy strong { display: block; color: var(--fg); font-weight: 510; }
+.timeline-copy span { color: var(--muted); font-size: var(--text-xs); }
+.timeline-time { color: var(--meta); font: 400 10px/1.4 var(--font-mono); text-align: right; }
+
+.log-box { max-height: 160px; overflow-y: auto; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); font: 400 11px/1.6 var(--font-mono); color: var(--muted); white-space: pre-wrap; word-break: break-all; }
+.log-box .error { color: var(--danger); }
+
+.cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); }
+.cost-item span { display: block; color: var(--muted); font-size: var(--text-xs); }
+.cost-item strong { display: block; margin-top: var(--space-1); color: var(--fg); font: 590 var(--text-base)/1.2 var(--font-body); font-variant-numeric: tabular-nums; }
+
+.output-list { display: grid; gap: var(--space-3); }
+.output-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel-subtle); }
+.output-icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--accent-soft); color: var(--accent-strong); }
+.output-icon svg { width: 18px; height: 18px; }
+.output-info { min-width: 0; flex: 1; }
+.output-info strong { display: block; color: var(--fg); font-weight: 590; }
+.output-info span { display: block; color: var(--muted); font-size: var(--text-xs); }
+.output-download { min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent-strong); background: var(--surface); cursor: pointer; font-size: var(--text-xs); font-weight: 590; }
+.output-download:hover { color: var(--fg); background: var(--accent-soft); border-color: var(--accent); }
+
+.drawer-footer { position: sticky; bottom: calc(var(--space-6) * -1); display: flex; justify-content: space-between; gap: var(--space-2); margin: var(--space-6) calc(var(--space-6) * -1) calc(var(--space-6) * -1); padding: var(--space-4) var(--space-6); border-top: 1px solid var(--border); background: var(--surface); }
+.drawer-footer .btn { min-height: 40px; }
+.btn-danger { color: var(--danger); background: transparent; border-color: var(--border); }
+.btn-danger:hover { color: var(--accent-on); background: var(--danger); border-color: var(--danger); }
+
+/* Confirm Modal */
+.modal-layer { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--space-6); background: color-mix(in oklch, var(--fg) 22%, transparent); opacity: 0; visibility: hidden; transition: opacity var(--motion-base), visibility var(--motion-base); }
+.modal-layer.is-open { opacity: 1; visibility: visible; }
+.modal { width: min(440px, 100%); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--elev-raised); }
+.modal-header { padding: var(--space-5); border-bottom: 1px solid var(--border); }
+.modal-header h2 { margin-bottom: var(--space-1); color: var(--fg); font: 590 var(--text-lg)/1.3 var(--font-display); }
+.modal-header p { margin-bottom: 0; color: var(--muted); font-size: var(--text-xs); }
+.modal-body { padding: var(--space-5); }
+.modal-body p { margin: 0; color: var(--fg); }
+.modal-footer { display: flex; justify-content: flex-end; gap: var(--space-2); padding: var(--space-4) var(--space-5); border-top: 1px solid var(--border); }
+.modal-footer .btn { min-height: 40px; }
+
+/* Responsive */
+@media (max-width: 1400px) {
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .filter-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .filter-grid .search-field { grid-column: span 2; }
+}
+@media (max-width: 1179px) {
+  .sidebar { width: 80px; }
+  .main-shell { margin-left: 80px; }
+  .brand-copy, .nav-group-label, .nav-text, .nav-count, .worker-copy, .profile-copy, .collapse-btn { display: none; }
+  .sidebar-top { padding: 0 var(--space-3); }
+  .nav-item { justify-content: center; padding: 0; }
+  .worker-mini, .profile { justify-content: center; }
+  .content { padding: var(--space-6); padding-bottom: 120px; }
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filter-grid { grid-template-columns: 1fr 1fr; }
+  .filter-grid .search-field { grid-column: 1 / -1; }
+  .filter-grid .btn-reset { grid-column: 1 / -1; }
+  .gpu-notice-meta { flex-direction: column; gap: var(--space-2); }
+}
+.scrim { display: none; }
+@media (max-width: 767px) {
+  .sidebar { width: 248px; transform: translateX(-100%); box-shadow: var(--elev-raised); }
+  .app.is-menu-open .sidebar { transform: translateX(0); }
+  .app.is-menu-open .scrim { display: block; position: fixed; inset: 0; z-index: 25; border: 0; background: color-mix(in oklch, var(--fg) 18%, transparent); }
+  .main-shell { margin-left: 0; }
+  .brand-copy, .nav-group-label, .nav-text, .nav-count, .worker-copy, .profile-copy { display: block; }
+  .sidebar-top { padding: 0 var(--space-4); }
+  .nav-item { justify-content: flex-start; padding: 0 var(--space-3); }
+  .worker-mini, .profile { justify-content: flex-start; }
+  .mobile-menu { display: grid; }
+  .topbar { padding: 0 var(--space-3); }
+  .breadcrumb span:first-child, .breadcrumb-sep { display: none; }
+  .content { padding: var(--space-4); padding-bottom: 120px; }
+  .page-header { flex-direction: column; gap: var(--space-4); }
+  .header-actions { width: 100%; }
+  .header-actions .btn { flex: 1; }
+  .kpi-grid { grid-template-columns: 1fr; }
+  .filter-grid { grid-template-columns: 1fr; }
+  .filter-section { padding: var(--space-3); }
+  .drawer { width: 100%; padding: var(--space-4); }
+  .drawer-footer { margin: var(--space-5) calc(var(--space-4) * -1) calc(var(--space-4) * -1); padding: var(--space-4); }
+  .bulk-bar { left: var(--space-4); right: var(--space-4); transform: none; flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+.app.is-collapsed .sidebar { width: 80px; }
+.app.is-collapsed .main-shell { margin-left: 80px; }
+.app.is-collapsed .brand-copy, .app.is-collapsed .nav-group-label, .app.is-collapsed .nav-text, .app.is-collapsed .nav-count, .app.is-collapsed .worker-copy, .app.is-collapsed .profile-copy { display: none; }
+.app.is-collapsed .sidebar-top { padding: 0 var(--space-3); }
+.app.is-collapsed .collapse-btn { display: none; }
+.app.is-collapsed .nav-item { justify-content: center; padding: 0; }
+.app.is-collapsed .worker-mini, .app.is-collapsed .profile { justify-content: center; }
+
+/* ── Library screen ── */
+/* KPI: 7 thẻ chia đều trên desktop; dưới 1400px thẻ Tổng span 2 để không lẻ hàng */
+.kpi-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.kpi-card { padding: var(--space-3); }
+/* Bộ lọc gọn: 6 select một hàng, tìm kiếm + đặt lại hàng dưới */
+.filter-section { padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); }
+.lib-filters { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-2) var(--space-3); }
+.lib-filters .search-field { grid-column: span 5; }
+.lib-filters label { font-size: 11px; }
+@media (max-width: 1400px) {
+  .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .kpi-card[data-kpi=""] { grid-column: span 2; }
+  .lib-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .lib-filters .search-field { grid-column: span 3; }
+}
+@media (max-width: 900px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lib-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lib-filters .search-field { grid-column: span 2; }
+}
+@media (max-width: 767px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-card[data-kpi=""] { grid-column: auto; }
+  .lib-filters { grid-template-columns: 1fr; }
+  .lib-filters .search-field { grid-column: auto; }
+}
+.video-info strong { max-width: 260px; }
+.video-info span { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Demo toolbar chỉ hiển thị khi mở library.html?demo=1 */
+.demo-toolbar[hidden] { display: none !important; }
+
+/* ── Chế độ biên tập trong Thư viện (Task 7) ── */
+.content > section[hidden] { display: none !important; }
+.ed-stage { position: relative; aspect-ratio: 16 / 9; max-width: 760px; border: 1px solid var(--border); border-radius: var(--radius-md); background: linear-gradient(135deg, #14331D, #0E2415 55%, #1E4A2A); display: grid; place-items: center; color: #DDEDE0; }
+.ed-play { width: 60px; height: 60px; display: grid; place-items: center; border: 2px solid rgba(221, 237, 224, 0.8); border-radius: 50%; background: rgba(8, 20, 12, 0.55); color: #FFFFFF; cursor: pointer; transition: transform var(--motion-fast), background var(--motion-fast); }
+.ed-play:hover { background: rgba(8, 20, 12, 0.8); transform: scale(1.05); }
+.ed-play:focus-visible { outline: 2px solid var(--accent-on); outline-offset: 3px; }
+.ed-play svg { width: 22px; height: 22px; }
+.ed-toolbar { display: flex; align-items: center; gap: var(--space-3); max-width: 760px; margin-top: var(--space-3); }
+.ed-seek { flex: 1; height: 6px; border-radius: var(--radius-pill); background: var(--accent-soft); cursor: pointer; }
+.ed-fill { height: 100%; width: 0; border-radius: inherit; background: var(--accent-strong); transition: width 200ms linear; }
+.seg-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 210px; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-soft); cursor: pointer; background: var(--surface); }
+.seg-row:last-child { border-bottom: 0; }
+.seg-row:hover { background: color-mix(in oklch, var(--panel-subtle) 72%, var(--surface)); }
+.seg-row.is-active { background: color-mix(in oklch, var(--accent-soft) 55%, var(--surface)); box-shadow: inset 3px 0 0 var(--accent-strong); }
+.seg-time { font: 400 11px/1.6 var(--font-mono); color: var(--muted); }
+.seg-src { margin: 0 0 var(--space-1); color: var(--muted); font-size: var(--text-xs); }
+.seg-ta { width: 100%; box-sizing: border-box; min-height: 38px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; font-size: var(--text-sm); resize: vertical; }
+.seg-ta:hover { border-color: var(--accent); }
+.seg-ta:focus { outline: none; border-color: var(--accent-strong); box-shadow: var(--focus-ring); }
+.seg-meta { display: grid; gap: var(--space-2); align-content: start; }
+.seg-meta select { width: 100%; min-height: 32px; padding: 0 var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font-size: var(--text-xs); }
+.seg-meta select:focus { outline: none; border-color: var(--accent-strong); box-shadow: var(--focus-ring); }
+.seg-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--space-2); }
+.seg-regen { color: var(--warn); font-size: 11px; font-weight: 590; }
+.seg-done { color: var(--accent-strong); font-size: 11px; font-weight: 590; }
+@media (max-width: 767px) { .seg-row { grid-template-columns: 60px minmax(0, 1fr); } .seg-meta { grid-column: 2; } .ed-toolbar { flex-wrap: wrap; } }
+.editor-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); align-items: start; }
+@media (min-width: 1180px) {
+  .editor-grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+  .ed-left { position: sticky; top: calc(64px + var(--space-4)); } /* nằm dưới topbar */
+}
+.seg-flag { display: inline-flex; align-items: center; gap: 4px; color: var(--warn); font-size: 11px; font-weight: 590; }
+.output-badges { display: flex; flex-wrap: wrap; gap: 4px; max-width: 158px; }
+.out-badge { font: 510 10.5px/1.6 var(--font-mono); padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--panel-subtle); color: var(--fg); white-space: nowrap; }
+.out-badge.is-missing { color: var(--muted); border-style: dashed; background: transparent; }
+.pub-chip { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; font-size: 10.5px; font-weight: 590; padding: 0 8px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; white-space: nowrap; transition: border-color var(--motion-fast), background var(--motion-fast); }
+.pub-chip:hover { border-color: var(--accent); }
+.pub-chip:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.pub-chip .pub-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 6px; }
+.pub-chip.pub-verified { color: var(--accent-strong); background: var(--accent-soft); border-color: var(--accent); }
+.pub-chip.pub-posted { color: var(--accent-strong); }
+.pub-chip.pub-warn { color: var(--warn); background: color-mix(in oklch, var(--warn) 9%, var(--surface)); border-color: color-mix(in oklch, var(--warn) 32%, var(--border)); }
+.pub-chip.pub-danger { color: var(--danger); background: color-mix(in oklch, var(--danger) 7%, var(--surface)); border-color: color-mix(in oklch, var(--danger) 28%, var(--border)); }
+.pub-chip.pub-none { color: var(--muted); border-style: dashed; background: transparent; }
+.qa-pass { color: var(--accent-strong); }
+.qa-fail { color: var(--danger); }
+.qa-warn { color: var(--warn); }
+.version-item { display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--surface); }
+.version-item + .version-item { margin-top: var(--space-2); }
+.version-item.is-current { border-color: var(--accent); background: color-mix(in oklch, var(--accent-soft) 35%, var(--surface)); }
+.version-badge { font: 590 10px/1.5 var(--font-mono); align-self: start; padding: 2px 7px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--panel-subtle); color: var(--fg); }
+.version-item.is-current .version-badge { color: var(--accent-on); background: var(--accent-strong); border-color: var(--accent-strong); }
+.version-meta { font-size: var(--text-xs); color: var(--muted); }
+.version-actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.version-actions button { min-height: 30px; font-size: 11px; padding: 0 10px; }
+.asset-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 7px 0; border-bottom: 1px solid var(--border-soft); font-size: var(--text-xs); }
+.asset-row:last-child { border-bottom: 0; }
+.asset-row .asset-keep { color: var(--accent-strong); font-weight: 590; }
+.asset-row .asset-heavy { color: var(--warn); font-weight: 590; }
+.cleanup-blocked { margin-top: var(--space-3); padding: var(--space-3); border: 1px solid color-mix(in oklch, var(--warn) 32%, var(--border)); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--warn) 7%, var(--surface)); color: var(--fg); font-size: var(--text-xs); }
+.missing-proof { display: inline-flex; align-items: center; gap: 4px; color: var(--danger); font-size: var(--text-xs); font-weight: 590; }
+.pack-summary dt { color: var(--muted); }
+.pack-summary dd { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.job-table { min-width: 920px; }
+.status-revision { color: var(--danger); background: var(--surface); border-color: color-mix(in oklch, var(--danger) 42%, var(--border)); }
+.warn-chip { display: flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 10px; font-weight: 590; color: var(--warn); white-space: nowrap; }
+.warn-chip.is-danger { color: var(--danger); }
+.warning-list { display: grid; gap: var(--space-2); }
+.warning-item { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-2) var(--space-3); border: 1px solid color-mix(in oklch, var(--warn) 32%, var(--border)); border-radius: var(--radius-sm); background: color-mix(in oklch, var(--warn) 7%, var(--surface)); color: var(--fg); font-size: var(--text-xs); }
+.warning-item.is-danger { border-color: color-mix(in oklch, var(--danger) 30%, var(--border)); background: color-mix(in oklch, var(--danger) 6%, var(--surface)); }
+.modal-input { width: 100%; box-sizing: border-box; min-height: 40px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; margin-top: var(--space-2); }
+.modal-input:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+.activity-log { display: grid; font-size: var(--text-xs); }
+.pub-task-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* ── Bàn đăng bài (Task 8) ── */
+.pub-note { margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--panel-subtle); color: var(--muted); font-size: var(--text-xs); line-height: 1.6; }
+.ws-grid { display: grid; grid-template-columns: 1fr; gap: var(--space-4); align-items: start; }
+@media (min-width: 1180px) {
+  .ws-grid { grid-template-columns: minmax(0, 1.2fr) 360px; }
+  .ws-right { position: sticky; top: calc(64px + var(--space-4)); }
+}
+.plat-tabs { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--panel-subtle); margin-bottom: var(--space-3); }
+.plat-tab { min-height: 34px; padding: 0 var(--space-4); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--muted); cursor: pointer; font-size: var(--text-xs); font-weight: 590; transition: color var(--motion-fast), background var(--motion-fast); }
+.plat-tab:hover { color: var(--fg); }
+.plat-tab:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+.plat-tab.is-active { background: var(--surface); color: var(--accent-strong); box-shadow: var(--elev-ring); }
+.fld { padding: var(--space-3) 0; border-bottom: 1px solid var(--border-soft); }
+.fld:last-child { border-bottom: 0; }
+.fld-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-1); flex-wrap: wrap; }
+.fld-head label { flex: 1; min-width: 120px; font-size: 11px; font-weight: 590; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.fld-btn { min-height: 26px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--accent-strong); cursor: pointer; font-size: 11px; font-weight: 590; }
+.fld-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+.fld-btn:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 1px; }
+.fld-btn:disabled { color: var(--disabled-fg); background: var(--disabled-bg); cursor: not-allowed; border-color: var(--border); }
+.fld-btn.is-locked { color: var(--warn); }
+.fld-val { font-size: var(--text-sm); line-height: 1.6; color: var(--fg); white-space: pre-wrap; word-break: break-word; }
+.fld-val.is-locked { opacity: 0.75; }
+.fld textarea { width: 100%; box-sizing: border-box; min-height: 64px; padding: var(--space-2) var(--space-3); border: 1px solid var(--accent-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; font-size: var(--text-sm); resize: vertical; }
+.fld textarea:focus { outline: none; box-shadow: var(--focus-ring); }
+.fld-regen { color: var(--warn); font-size: 11px; font-weight: 590; }
+.ws-check { display: flex; gap: var(--space-2); align-items: flex-start; padding: 6px 0; font-size: var(--text-sm); cursor: pointer; }
+.ws-check input { width: 16px; height: 16px; flex: 0 0 16px; margin-top: 3px; accent-color: var(--accent-strong); }
+.ws-input { width: 100%; box-sizing: border-box; min-height: 38px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; font-size: var(--text-sm); }
+.ws-input:focus { outline: none; border-color: var(--accent-strong); box-shadow: var(--focus-ring); }
+textarea.ws-input { min-height: 64px; padding: var(--space-2) var(--space-3); resize: vertical; }
+.field-err { display: block; margin-top: 3px; color: var(--danger); font-size: 11px; line-height: 1.5; }
+.field-err[hidden] { display: none; }
+
+/* ── GPU Workers (Task 9) ── */
+.wk-group { margin-bottom: var(--space-6); }
+.wk-group-head { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.wk-group-head h2 { font: 590 var(--text-lg)/1.3 var(--font-display); }
+.wk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--space-4); }
+.wk-card { padding: var(--space-4); display: grid; gap: var(--space-3); align-content: start; }
+.wk-card.is-offline { background: color-mix(in oklch, var(--danger) 3%, var(--surface)); }
+.wk-head { display: flex; align-items: flex-start; gap: var(--space-2); flex-wrap: wrap; }
+.wk-head strong { font: 590 var(--text-base)/1.3 var(--font-display); }
+.role-chip { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: var(--radius-pill); font-size: 10px; font-weight: 590; white-space: nowrap; }
+.role-batch { color: var(--accent-strong); background: var(--accent-soft); border: 1px solid var(--accent); }
+.role-tts { color: #7C3AED; background: #EDE9FE; border: 1px solid #C4B5FD; }
+.wk-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-3); font-size: var(--text-xs); }
+.wk-metrics dt { color: var(--muted); }
+.wk-metrics dd { margin: 0; color: var(--fg); font: 510 var(--text-xs)/1.5 var(--font-mono); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.util-bar { height: 6px; border-radius: var(--radius-pill); background: var(--accent-soft); overflow: hidden; }
+.util-fill { height: 100%; border-radius: inherit; background: var(--accent-strong); }
+.util-fill.is-hot { background: var(--warn); }
+.wk-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.wk-note { padding: var(--space-2) var(--space-3); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); background: var(--panel-subtle); color: var(--muted); font-size: 11px; line-height: 1.6; }
+.token-box { padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); font: 400 11px/1.7 var(--font-mono); color: var(--fg); white-space: pre-wrap; word-break: break-all; }
+.term-steps { margin: var(--space-2) 0 0; padding-left: var(--space-5); font-size: var(--text-xs); color: var(--fg); line-height: 1.8; }
+
+/* ── Card GPU thiết kế lại ── */
+.wk-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); align-items: start; } /* card cao tự nhiên, không kéo theo card dài nhất */
+.wk-m.is-cost { flex-wrap: wrap; }
+.wk-m-val.is-wrap { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.6; }
+.wk-card { transition: box-shadow var(--motion-fast), transform var(--motion-fast), border-color var(--motion-fast); }
+.wk-card:hover { border-color: var(--accent); box-shadow: var(--elev-raised); transform: translateY(-2px); }
+.wk-card.is-terminated { opacity: 0.82; }
+.status-badge .wk-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 5px; flex: 0 0 7px; }
+.wk-body { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: var(--space-4); align-items: center; }
+.wk-donut-wrap { position: relative; width: 96px; height: 96px; }
+.wk-donut { width: 96px; height: 96px; transform: rotate(-90deg); }
+.wk-donut-bg { fill: none; stroke: var(--panel-subtle); stroke-width: 9; }
+.wk-donut-fg { fill: none; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset var(--motion-base); }
+.wk-donut-val { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; font: 590 var(--text-lg)/1 var(--font-mono); color: var(--fg); }
+.wk-donut-val span { display: block; margin-top: 3px; font: 510 9px/1 var(--font-mono); color: var(--muted); letter-spacing: 0.06em; }
+.wk-mlist { display: grid; gap: 6px; min-width: 0; }
+.wk-m { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); min-width: 0; }
+.wk-m svg { width: 14px; height: 14px; flex: 0 0 14px; color: var(--accent-strong); }
+.wk-m-label { color: var(--muted); flex: 0 0 66px; }
+.wk-m-val { flex: 1; min-width: 0; font: 510 var(--text-xs)/1.5 var(--font-mono); color: var(--fg); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-m-val.is-strong { font-size: var(--text-sm); font-weight: 590; }
+.wk-detail { border-top: 1px solid var(--border-soft); padding-top: var(--space-3); display: grid; gap: 6px; }
+@media (max-width: 480px) { .wk-body { grid-template-columns: 1fr; justify-items: center; } .wk-mlist { width: 100%; } .wk-m-label { flex-basis: 92px; } }
+  </style>
+</head>
+<body>
+  <svg class="sr-only" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2.1 4.9-4.9 2.1 2.1-4.9 4.9-2.1Z"/></symbol>
+    <symbol id="i-queue" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="15" r="3"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m10 9 5 3-5 3V9Z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L16.5 3.5Z"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+    <symbol id="i-profile" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="i-temp" viewBox="0 0 24 24"><path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0Z"/></symbol>
+    <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5c0-1 1.1-1.7 2.5-1.7s2.5.7 2.5 1.7-1 1.5-2.5 1.9-2.5.9-2.5 1.9 1.1 1.7 2.5 1.7 2.5-.7 2.5-1.7"/></symbol>
+    <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4V8Z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.7 2.5 17.2A2 2 0 0 0 4.2 20h15.6a2 2 0 0 0 1.7-2.8L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-file-video" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M10 11l5 3-5 3v-6Z"/></symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="i-x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+  </svg>
+
+  <div class="app" id="app" data-od-id="application-shell">
+    <button class="scrim" id="scrim" aria-label="Đóng thanh điều hướng"></button>
+    <aside class="sidebar" id="sidebar" data-od-id="primary-sidebar" aria-label="Điều hướng chính">
+      <div class="sidebar-top">
+        <div class="brand-mark" aria-hidden="true">RD</div>
+        <div class="brand-copy">
+          <div class="brand-name">Reup Dubbing</div>
+          <div class="brand-env">Studio vận hành</div>
+        </div>
+        <button class="collapse-btn" id="collapseSidebar" type="button" aria-label="Thu gọn thanh điều hướng">
+          <svg fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-panel"/></svg>
+        </button>
+      </div>
+      <nav class="nav" data-od-id="main-navigation">
+        <div class="nav-group-label">Không gian làm việc</div>
+        <a class="nav-item" href="index.html" data-od-id="nav-overview"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-grid"/></svg><span class="nav-text">Tổng quan</span></a>
+        <a class="nav-item" href="discovery.html" data-od-id="nav-discovery"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-compass"/></svg><span class="nav-text">Khám phá video</span><span class="nav-count">12</span></a>
+        <a class="nav-item" href="queue.html" data-od-id="nav-queue"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-queue"/></svg><span class="nav-text">Hàng đợi xử lý</span><span class="nav-count">7</span></a>
+        <a class="nav-item" href="library.html" data-od-id="nav-library"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-library"/></svg><span class="nav-text">Thư viện video</span><span class="nav-count">14</span></a>
+        <a class="nav-item" href="publishing.html" data-od-id="nav-publishing"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-send"/></svg><span class="nav-text">Bàn đăng bài</span><span class="nav-count">9</span></a>
+        <div class="nav-group-label">Cấu hình nội dung</div>
+        <a class="nav-item" href="profiles.html" data-od-id="nav-profiles"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-profile"/></svg><span class="nav-text">Hồ sơ</span><span class="nav-count">8</span></a>
+        <a class="nav-item" href="voice-library.html" data-od-id="nav-voices"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-mic"/></svg><span class="nav-text">Thư viện giọng</span><span class="nav-count">10</span></a>
+        <div class="nav-group-label">Hệ thống</div>
+        <a class="nav-item" href="workers.html" data-od-id="nav-workers" aria-current="page"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-cpu"/></svg><span class="nav-text">GPU Workers</span><span class="nav-count">6</span></a>
+        <a class="nav-item" href="settings.html" data-od-id="nav-settings"><svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="1.7"><use href="#i-settings"/></svg><span class="nav-text">Cài đặt</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="worker-mini" data-od-id="sidebar-worker-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <div class="worker-copy"><strong>GPU Worker online</strong><span>worker-gpu-01 · EzyCloudX · A10</span></div>
+        </div>
+        <div class="profile" data-od-id="sidebar-profile">
+          <div class="avatar" aria-hidden="true">GH</div>
+          <div class="profile-copy"><strong>Gia Huy</strong><span>Quản trị vận hành</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar" data-od-id="topbar">
+        <button class="icon-btn mobile-menu" id="mobileMenu" type="button" aria-label="Mở thanh điều hướng" aria-expanded="false">
+          <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-menu"/></svg>
+        </button>
+        <div class="breadcrumb"><span>Reup Dubbing Studio</span><span class="breadcrumb-sep">/</span><strong>GPU Workers</strong></div>
+        <div class="topbar-actions">
+          <div class="notification-wrap">
+            <button class="icon-btn" id="notificationButton" data-od-id="open-alerts" type="button" aria-label="Mở trung tâm thông báo, 3 thông báo chưa đọc" aria-expanded="false" aria-controls="notificationCenter">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-bell"/></svg>
+            </button>
+            <span class="notification-dot" aria-hidden="true"></span>
+            <div class="notification-center" id="notificationCenter" data-od-id="notification-center" role="dialog" aria-modal="false" aria-labelledby="notificationTitle" aria-hidden="true">
+              <div class="notification-head"><h2 id="notificationTitle">Thông báo</h2><button class="notification-mark-all" id="markNotificationsRead" type="button">Đánh dấu tất cả đã đọc</button></div>
+              <div class="notification-list">
+                <button class="notification-item is-unread" data-notification="gpu" type="button"><span class="notification-signal is-danger" aria-hidden="true"></span><span class="notification-copy"><strong>4 job đang chờ GPU</strong><span>Không có worker ở trạng thái READY với đủ VRAM.</span></span><span class="notification-time">14 phút</span></button>
+                <button class="notification-item is-unread" data-notification="review" type="button"><span class="notification-signal" aria-hidden="true"></span><span class="notification-copy"><strong>2 job chờ duyệt cast sheet</strong><span>JOB-4516 và JOB-4515 cần duyệt.</span></span><span class="notification-time">1 giờ</span></button>
+                <button class="notification-item is-unread" data-notification="failed" type="button"><span class="notification-signal is-danger" aria-hidden="true"></span><span class="notification-copy"><strong>JOB-4514 thất bại</strong><span>FFmpeg out of memory khi render.</span></span><span class="notification-time">2 giờ</span></button>
+                <button class="notification-item" data-notification="worker" type="button"><span class="notification-signal is-success" aria-hidden="true"></span><span class="notification-copy"><strong>GPU Worker hoạt động bình thường</strong><span>worker-gpu-01 · EzyCloudX · A10 đang online.</span></span><span class="notification-time">1 phút</span></button>
+              </div>
+              <div class="notification-foot"><span id="notificationUnreadCount">3 thông báo chưa đọc</span> · Dữ liệu mẫu</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content" data-od-id="workers-screen">
+        <!-- Page Header -->
+        <section class="page-header" data-od-id="workers-header">
+          <div>
+            <h1>GPU Workers</h1>
+            <p class="page-subtitle">Theo dõi các GPU worker bạn thuê thủ công từ nhà cung cấp bên ngoài (hiện đang dùng EzyCloudX). Dữ liệu mẫu.</p>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-secondary" id="refreshBtn" type="button">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-refresh"/></svg>
+              Làm mới
+            </button>
+            <button class="btn btn-primary" id="addWorkerBtn" type="button">
+              <svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-cpu"/></svg>
+              Thêm GPU Worker
+            </button>
+          </div>
+        </section>
+
+        <div class="pub-note" data-od-id="workers-policy">Bạn <strong>tự thuê và tự xóa</strong> Docker GPU từ nhà cung cấp bên ngoài (hiện đang dùng EzyCloudX, không giới hạn provider) bằng tài khoản của mình. App <strong>không tự provision/terminate máy</strong> và <strong>không dùng API nội bộ của nhà cung cấp</strong> — app chỉ nhận worker qua enrollment token và theo dõi heartbeat.</div>
+
+        <!-- Batch Media Workers -->
+        <section class="wk-group" data-od-id="batch-workers">
+          <div class="wk-group-head">
+            <h2>Batch Media Workers</h2>
+            <span class="cell-sub" id="batchCount"></span>
+            <span class="cell-sub">· container render nặng theo job, scheduler tự giao việc</span>
+          </div>
+          <div class="wk-grid" id="batchGrid"></div>
+        </section>
+
+        <!-- Interactive TTS Workers -->
+        <section class="wk-group" data-od-id="tts-workers">
+          <div class="wk-group-head">
+            <h2>Interactive TTS Workers</h2>
+            <span class="cell-sub" id="ttsCount"></span>
+            <span class="cell-sub">· container OmniVoice phản hồi nhanh cho nghe thử/tạo giọng</span>
+          </div>
+          <div class="wk-grid" id="ttsGrid"></div>
+        </section>
+
+        <div class="pub-note">Batch Media Worker và Interactive TTS Worker là <strong>hai container Docker độc lập</strong> — mỗi container một vai trò, không có worker nào tự chạy cả hai.</div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal: Thêm GPU Worker -->
+  <div class="modal-layer" id="addModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="addTitle">
+    <div class="modal" style="width:min(560px,100%)">
+      <div class="modal-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3)">
+        <div>
+          <h2 id="addTitle">Thêm GPU Worker</h2>
+          <p>Bạn tự thuê máy từ nhà cung cấp GPU rồi chạy lệnh bootstrap bên dưới — app không tự tạo máy.</p>
+        </div>
+        <button class="icon-btn" id="addClose" type="button" aria-label="Đóng"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body" id="addBody" style="max-height:min(60vh,480px);overflow-y:auto">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)">
+          <div class="control"><label for="awName">Tên worker <span style="color:var(--danger)">*</span></label><input class="ws-input" id="awName" type="text" placeholder="VD: worker-gpu-05"><span class="field-err" id="awNameErr" hidden></span></div>
+          <div class="control"><label for="awRole">Vai trò <span style="color:var(--danger)">*</span></label><select class="ws-input" id="awRole"><option value="batch">Batch Media Worker</option><option value="tts">Interactive TTS Worker</option></select></div>
+          <div class="control"><label for="awProviderName">Nhà cung cấp</label><input class="ws-input" id="awProviderName" type="text" value="EzyCloudX" placeholder="VD: EzyCloudX, Vast.ai…"></div>
+          <div class="control"><label for="awContainer">Container / Rental ID</label><input class="ws-input" id="awContainer" type="text" placeholder="VD: ctr-8f2a91"></div>
+          <div class="control"><label for="awGpu">GPU dự kiến</label><input class="ws-input" id="awGpu" type="text" placeholder="VD: A10 24 GB"></div>
+          <div class="control"><label for="awRate">Đơn giá thuê (theo giờ)</label><input class="ws-input" id="awRate" type="number" min="0" placeholder="VD: 15000"></div>
+          <div class="control"><label for="awCurrency">Tiền tệ</label><select class="ws-input" id="awCurrency"><option value="VND" selected>VND (₫)</option><option value="USD">USD ($)</option></select></div>
+          <div class="control"><label for="awImage">Image version</label><input class="ws-input" id="awImage" type="text" placeholder="batch-media:1.8.2"></div>
+        </div>
+        <div id="tokenArea" hidden style="margin-top:var(--space-4)">
+          <strong style="font-size:var(--text-sm)">Enrollment token &amp; lệnh bootstrap</strong>
+          <p class="cell-sub" style="margin:var(--space-1) 0 var(--space-2)">Chạy lệnh này trong máy GPU bạn vừa thuê từ nhà cung cấp — worker sẽ tự đăng ký và bắt đầu gửi heartbeat.</p>
+          <div class="token-box" id="tokenBox"></div>
+          <div class="pub-task-actions" style="margin-top:var(--space-2)">
+            <button class="output-download" type="button" id="copyToken">Copy token</button>
+            <button class="output-download" type="button" id="copyCmd">Copy lệnh Docker</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="addCancel">Đóng</button>
+        <button class="btn btn-primary" type="button" id="genToken">Tạo enrollment token</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Xác nhận đã xóa rental -->
+  <div class="modal-layer" id="termModal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="termTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="termTitle">Xác nhận đã xóa rental</h2>
+        <p>Chỉ xác nhận sau khi bạn đã tự Stop và xóa container trên console của nhà cung cấp.</p>
+      </div>
+      <div class="modal-body" id="termBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" id="termCancel">Quay lại</button>
+        <button class="btn btn-danger" type="button" id="termOk">Xác nhận đã xóa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  'use strict';
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+  // ───────── Shell ─────────
+  const app = $('#app');
+  $('#collapseSidebar').addEventListener('click', () => app.classList.toggle('is-collapsed'));
+  $('#mobileMenu').addEventListener('click', function () {
+    const open = app.classList.toggle('is-nav-open');
+    this.setAttribute('aria-expanded', String(open));
+  });
+  $('#scrim').addEventListener('click', () => { app.classList.remove('is-nav-open'); $('#mobileMenu').setAttribute('aria-expanded', 'false'); });
+  const notifBtn = $('#notificationButton'), notifCenter = $('#notificationCenter');
+  notifBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = notifCenter.classList.toggle('is-open');
+    notifCenter.setAttribute('aria-hidden', String(!open));
+    notifBtn.setAttribute('aria-expanded', String(open));
+  });
+  $('#markNotificationsRead').addEventListener('click', () => {
+    $$('.notification-item.is-unread').forEach(n => n.classList.remove('is-unread'));
+    $('#notificationUnreadCount').textContent = '0 thông báo chưa đọc';
+  });
+  document.addEventListener('click', () => {
+    notifCenter.classList.remove('is-open'); notifCenter.setAttribute('aria-hidden', 'true'); notifBtn.setAttribute('aria-expanded', 'false');
+  });
+  notifCenter.addEventListener('click', e => e.stopPropagation());
+
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.className = 'toast is-visible' + (type === 'success' ? ' is-success' : type === 'error' ? ' is-error' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('is-visible'), 3600);
+  }
+
+  // ───────── Dữ liệu mẫu ─────────
+  // Nhãn hiển thị tiếng Việt; mã kỹ thuật giữ trong "Xem chi tiết"
+  const WK_STATUS = {
+    WAITING_FOR_ENROLLMENT: { label: 'Chờ kích hoạt', cls: 'status-waiting' },
+    READY: { label: 'Sẵn sàng', cls: 'status-done' },
+    BUSY: { label: 'Đang bận', cls: 'status-processing' },
+    DRAINING: { label: 'Đang dừng an toàn', cls: 'status-review' },
+    SAFE_TO_TERMINATE: { label: 'Có thể tắt máy', cls: 'status-gpu' },
+    OFFLINE: { label: 'Mất kết nối', cls: 'status-failed' },
+    TERMINATED: { label: 'Đã kết thúc', cls: 'status-cancelled' }
+  };
+  const GHCR_OWNER = 'mokimcuong';
+  const WORKERS = [
+    { id: 'worker-gpu-01', role: 'batch', gpu: 'A10 · 24 GB VRAM', status: 'BUSY', temp: '68°C', util: 92, heartbeat: '5 giây trước', job: 'JOB-4521 · Render (bước 7/9)', image: 'batch-media:1.8.2', rented: '3 giờ 12 phút', hourlyRate: 15000, provider: 'EzyCloudX · ctr-8f2a91' },
+    { id: 'worker-gpu-02', role: 'batch', gpu: 'L40 · 48 GB VRAM', status: 'READY', temp: '41°C', util: 3, heartbeat: '4 giây trước', job: null, image: 'batch-media:1.8.2', rented: '0 giờ 47 phút', hourlyRate: 30000, provider: 'EzyCloudX · ctr-1d77c0' },
+    { id: 'worker-gpu-03', role: 'batch', gpu: 'A10 · 24 GB VRAM', status: 'DRAINING', temp: '62°C', util: 55, heartbeat: '6 giây trước', job: 'JOB-4515 · đang hoàn tất', image: 'batch-media:1.7.9', rented: '9 giờ 40 phút', hourlyRate: 15000, provider: 'EzyCloudX · ctr-49be13' },
+    { id: 'worker-gpu-04', role: 'batch', gpu: 'RTX 3090 · 24 GB VRAM', status: 'SAFE_TO_TERMINATE', temp: '35°C', util: 0, heartbeat: '12 giây trước', job: null, image: 'batch-media:1.7.9', rented: '12 giờ 05 phút', hourlyRate: 13500, provider: 'EzyCloudX · ctr-77aa02' },
+    { id: 'tts-worker-01', role: 'tts', gpu: 'RTX 3060 · 12 GB VRAM', status: 'READY', temp: '45°C', util: 8, heartbeat: '5 giây trước', job: 'Phục vụ nghe thử OmniVoice', image: 'tts-omnivoice:0.9.4', rented: '6 giờ 03 phút', hourlyRate: 6500, provider: 'EzyCloudX · ctr-c3d502' },
+    { id: 'tts-worker-02', role: 'tts', gpu: 'RTX 3060 · 12 GB VRAM', status: 'OFFLINE', temp: '—', util: 0, heartbeat: '8 phút trước (mất kết nối)', job: null, image: 'tts-omnivoice:0.9.3', rented: '2 giờ 10 phút', hourlyRate: 6500, provider: 'EzyCloudX · ctr-90ff41' }
+  ];
+  // Chi phí trung lập với nhà cung cấp: hourlyRate + currency + billingUnit + sessionStartedAt
+  // EzyCloudX dùng dữ liệu mẫu VND; provider khác có thể dùng USD… — card hiển thị đúng tiền tệ của rental
+  const RENTED_MINS = { 'worker-gpu-01': 192, 'worker-gpu-02': 47, 'worker-gpu-03': 580, 'worker-gpu-04': 725, 'tts-worker-01': 363, 'tts-worker-02': 130 };
+  const SESSION_STARTED = { 'worker-gpu-01': '01/09/2026 07:20', 'worker-gpu-02': '01/09/2026 09:45', 'worker-gpu-03': '31/08/2026 20:52', 'worker-gpu-04': '31/08/2026 18:27', 'tts-worker-01': '01/09/2026 04:29', 'tts-worker-02': '01/09/2026 08:22' };
+  WORKERS.forEach(w => {
+    w.rentedMins = RENTED_MINS[w.id] || 0;
+    w.currency = w.currency || 'VND';
+    w.billingUnit = 'giờ'; // MVP: chỉ tính giá theo giờ
+    // Tách provider thành nhà cung cấp + container/rental ID — không giới hạn EzyCloudX
+    const parts = String(w.provider).split(' · ');
+    w.providerName = parts[0] || 'Nhà cung cấp';
+    w.containerId = parts[1] || '—';
+    w.sessionStartedAt = SESSION_STARTED[w.id] || '—';
+    w.leaseReleased = w.job == null;      // job lease đã hết?
+    w.artifactCommitted = w.job == null;  // artifact cuối đã upload/commit?
+  });
+  function fmtMoney(n, currency) {
+    if (currency === 'VND') return n.toLocaleString('vi-VN') + ' ₫';
+    if (currency === 'USD') return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    return n.toLocaleString('vi-VN') + ' ' + currency;
+  }
+  const rateText = w => `${fmtMoney(w.hourlyRate, w.currency)}/${w.billingUnit}`;
+  const estimatedSessionCost = w => Math.round(w.rentedMins / 60 * w.hourlyRate);
+  const sessionCostText = w => fmtMoney(estimatedSessionCost(w), w.currency);
+  // Mẫu DRAINING: lease đã hết nhưng artifact cuối còn đang upload
+  {
+    const g3 = WORKERS.find(w => w.id === 'worker-gpu-03');
+    g3.leaseReleased = true;
+    g3.artifactCommitted = false;
+  }
+  // VRAM đã dùng / tổng (GB) — dữ liệu mẫu
+  const VRAM_INFO = { 'worker-gpu-01': [18.2, 24], 'worker-gpu-02': [1.1, 48], 'worker-gpu-03': [9.5, 24], 'worker-gpu-04': [0, 24], 'tts-worker-01': [4.2, 12], 'tts-worker-02': [null, 12] };
+  WORKERS.forEach(w => { w.vram = VRAM_INFO[w.id] || null; });
+  const NEUTRAL_STATES = ['OFFLINE', 'WAITING_FOR_ENROLLMENT', 'TERMINATED'];
+  function donut(w) {
+    const C = 226.2; // chu vi r=36
+    const neutral = NEUTRAL_STATES.includes(w.status);
+    const p = neutral ? 0 : Math.max(0, Math.min(100, w.util));
+    const color = neutral ? 'var(--border)' : p >= 90 ? 'var(--danger)' : p >= 70 ? 'var(--warn)' : 'var(--accent-strong)';
+    return `<div class="wk-donut-wrap" title="Mức sử dụng GPU">
+      <svg viewBox="0 0 84 84" class="wk-donut" aria-hidden="true">
+        <circle class="wk-donut-bg" cx="42" cy="42" r="36"/>
+        <circle class="wk-donut-fg" cx="42" cy="42" r="36" style="stroke:${color};stroke-dasharray:${C};stroke-dashoffset:${(C * (1 - p / 100)).toFixed(1)}"/>
+      </svg>
+      <div class="wk-donut-val">${neutral ? '—' : p + '%'}<span>GPU</span></div>
+    </div>`;
+  }
+  const mrow = (icon, label, val, strong) => `<div class="wk-m"><svg fill="none" stroke="currentColor" stroke-width="1.8"><use href="#${icon}"/></svg><span class="wk-m-label">${label}</span><span class="wk-m-val ${strong ? 'is-strong' : ''}" title="${String(val).replace(/"/g, '')}">${val}</span></div>`;
+
+
+  // ───────── Render worker cards ─────────
+  function wkCard(w) {
+    const st = WK_STATUS[w.status];
+    const canDrain = ['READY', 'BUSY'].includes(w.status);
+    const vramText = w.vram ? `${w.vram[0] == null ? '—' : w.vram[0]} / ${w.vram[1]} GB` : '—';
+    const costRow = mrow('i-coin', 'Đơn giá', rateText(w)) + mrow('i-coin', 'Phiên này', sessionCostText(w), true);
+    return `<article class="card wk-card ${w.status === 'OFFLINE' ? 'is-offline' : ''} ${w.status === 'TERMINATED' ? 'is-terminated' : ''}" data-wk="${w.id}">
+      <div class="wk-head">
+        <strong>${w.id}</strong>
+        <span class="role-chip ${w.role === 'batch' ? 'role-batch' : 'role-tts'}">${w.role === 'batch' ? 'Batch' : 'Interactive TTS'}</span>
+        <span style="flex:1"></span>
+        <span class="status-badge ${st.cls}"><span class="wk-dot" aria-hidden="true"></span>${st.label}</span>
+      </div>
+      <div class="wk-body">
+        ${donut(w)}
+        <div class="wk-mlist">
+          ${mrow('i-cpu', 'GPU', w.gpu.split(' · ')[0])}
+          ${mrow('i-grid', 'VRAM', vramText)}
+          ${mrow('i-temp', 'Nhiệt độ', w.temp)}
+          ${mrow('i-queue', 'Job', w.job || 'Đang rảnh')}
+          ${mrow('i-clock', 'Thuê', w.rented)}
+          ${costRow}
+        </div>
+      </div>
+      ${w.status === 'WAITING_FOR_ENROLLMENT' ? `<div class="wk-note">Chờ heartbeat đầu tiên sau khi bạn chạy lệnh bootstrap trong máy ${w.providerName}. Token dùng một lần${w.tokenExpiry ? `, hết hạn lúc ${w.tokenExpiry}` : ''} — worker chưa được coi là Sẵn sàng.</div>` : ''}
+      ${w.status === 'DRAINING' ? `<div class="wk-note">Đang dừng an toàn — chỉ chuyển sang “Có thể tắt máy” khi đủ cả hai điều kiện:<br>${w.leaseReleased ? '✓' : '⏳'} Job lease đã hết${w.leaseReleased ? '' : ' (đang chờ job hiện tại)'}<br>${w.artifactCommitted ? '✓' : '⏳'} Artifact cuối đã upload/commit${w.artifactCommitted ? '' : ' (đang upload)'}</div>` : ''}
+      ${w.status === 'OFFLINE' ? `<div class="wk-note">Mất heartbeat — kiểm tra container trên ${w.providerName} hoặc chạy lại lệnh bootstrap. App không thể tự khởi động lại máy.</div>` : ''}
+      ${w.status === 'TERMINATED' ? `<div class="wk-note"><strong>Đã kết thúc phiên thuê.</strong> Lịch sử chi phí được giữ lại: thuê ${w.rented} · tổng ${sessionCostText(w)} (${rateText(w)}).</div>` : ''}
+      ${w.status === 'SAFE_TO_TERMINATE' ? `<div class="wk-note"><strong>An toàn để xóa rental.</strong> Xác nhận đã xóa để kết thúc phiên thuê — worker chuyển TERMINATED và vẫn được giữ trong lịch sử chi phí. Các bước xóa trên ${w.providerName} nằm trong “Xem chi tiết”.</div>` : ''}
+      <div class="wk-actions">
+        ${canDrain ? `<button class="btn btn-secondary" type="button" data-drain="${w.id}" style="min-height:32px;font-size:var(--text-xs)">Dừng nhận job</button>` : ''}
+        ${w.status === 'DRAINING' ? '<button class="btn btn-secondary" type="button" disabled style="min-height:32px;font-size:var(--text-xs)" title="Đang chờ job lease hết và artifact commit">Đang dừng an toàn…</button>' : ''}
+        ${w.status === 'SAFE_TO_TERMINATE' ? `<button class="btn btn-secondary" type="button" data-removed="${w.id}" style="min-height:32px;font-size:var(--text-xs)">Đã xóa rental trên ${w.providerName}</button>` : ''}
+        <span style="flex:1"></span>
+        <button class="detail-btn" type="button" data-toggle="${w.id}">${w._open ? 'Thu gọn' : 'Xem chi tiết'}</button>
+      </div>
+      ${w._open ? `<div class="wk-detail">
+        ${mrow('i-alert', 'Mã trạng thái', `<code>${w.status}</code>`)}
+        ${mrow('i-folder', 'Nhà cung cấp', w.providerName)}
+        ${mrow('i-folder', 'Container/Rental', `<code>${w.containerId}</code>`)}
+        ${mrow('i-pulse', 'Heartbeat', w.heartbeat)}
+        ${mrow('i-settings', 'Image', `<code>${w.image}</code>`)}
+        ${mrow('i-clock', 'Token hạn', w.tokenExpiry || '—')}
+        ${mrow('i-clock', 'Bắt đầu phiên', w.sessionStartedAt || '—')}
+        ${mrow('i-queue', 'Job lease', w.leaseReleased ? 'Đã hết' : 'Đang giữ')}
+        ${mrow('i-check', 'Artifact', w.artifactCommitted ? 'Đã upload/commit' : 'Chưa commit')}
+        <div class="wk-note" style="margin-top:var(--space-1)"><strong>Hướng dẫn shutdown an toàn (tự thực hiện — app không tự xóa máy):</strong><ol class="term-steps"><li>Bấm “Dừng nhận job” và chờ trạng thái <code>SAFE_TO_TERMINATE</code> (job lease hết + artifact đã commit).</li><li>Mở console của ${w.providerName} → Containers, Stop container <code>${w.containerId}</code>.</li><li>Xóa container/rental để dừng tính phí.</li><li>Quay lại đây bấm “Đã xóa rental trên ${w.providerName}” để kết thúc phiên thuê — worker được giữ TERMINATED trong lịch sử chi phí.</li></ol></div>
+      </div>` : ''}
+    </article>`;
+  }
+  function render() {
+    const batch = WORKERS.filter(w => w.role === 'batch');
+    const tts = WORKERS.filter(w => w.role === 'tts');
+    $('#batchCount').textContent = `· ${batch.length} worker`;
+    $('#ttsCount').textContent = `· ${tts.length} worker`;
+    $('#batchGrid').innerHTML = batch.length ? batch.map(wkCard).join('') : '<p class="cell-sub">Chưa có Batch Media Worker nào — bấm “Thêm GPU Worker”.</p>';
+    $('#ttsGrid').innerHTML = tts.length ? tts.map(wkCard).join('') : '<p class="cell-sub">Chưa có Interactive TTS Worker nào — bấm “Thêm GPU Worker”.</p>';
+  }
+  document.querySelector('.content').addEventListener('click', e => {
+    const tg = e.target.closest('[data-toggle]');
+    if (tg) {
+      const w = WORKERS.find(x => x.id === tg.dataset.toggle);
+      if (w) { w._open = !w._open; render(); }
+      return;
+    }
+    const dr = e.target.closest('[data-drain]');
+    if (dr) {
+      const w = WORKERS.find(x => x.id === dr.dataset.drain);
+      w.status = 'DRAINING';
+      w.leaseReleased = w.job == null;
+      w.artifactCommitted = w.job == null;
+      render();
+      showToast(`${w.id} chuyển sang DRAINING — chờ job lease hết và artifact cuối được commit.`, 'success');
+      // Mô phỏng: lease hết → artifact commit → chỉ khi đủ CẢ HAI mới SAFE_TO_TERMINATE
+      const trySafe = () => {
+        if (w.status === 'DRAINING' && w.leaseReleased && w.artifactCommitted) {
+          w.status = 'SAFE_TO_TERMINATE'; w.util = 0; w.job = null; w.temp = '36°C';
+          render();
+          showToast(`${w.id} đã SAFE_TO_TERMINATE — job lease hết và artifact đã commit. Có thể tự xóa rental trên ${w.providerName}.`, 'success');
+        }
+      };
+      setTimeout(() => { if (w.status === 'DRAINING' && !w.leaseReleased) { w.leaseReleased = true; render(); } trySafe(); }, 2500);
+      setTimeout(() => { if (w.status === 'DRAINING' && !w.artifactCommitted) { w.artifactCommitted = true; render(); } trySafe(); }, 5000);
+      return;
+    }
+    const rm = e.target.closest('[data-removed]');
+    if (rm) openTermModal(rm.dataset.removed);
+  });
+  $('#refreshBtn').addEventListener('click', () => { render(); showToast('Đã làm mới trạng thái worker (dữ liệu mẫu).', 'success'); });
+
+  // ───────── Thêm GPU Worker ─────────
+  const addModal = $('#addModal');
+  let addTrap = null, addOpener = null;
+  function openAdd() {
+    addOpener = document.activeElement;
+    ['awName', 'awContainer', 'awGpu', 'awRate', 'awImage'].forEach(id => { $('#' + id).value = ''; });
+    $('#awProviderName').value = 'EzyCloudX'; // mặc định, cho phép nhập provider khác
+    $('#awRole').value = 'batch';
+    $('#awCurrency').value = 'VND';
+    $('#awNameErr').hidden = true;
+    $('#tokenArea').hidden = true;
+    addModal.classList.add('is-open');
+    addModal.setAttribute('aria-hidden', 'false');
+    addTrap = function (e) {
+      if (e.key !== 'Tab') return;
+      const f = $$('button, input, select', addModal).filter(x => !x.disabled && x.offsetParent !== null);
+      if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    addModal.addEventListener('keydown', addTrap);
+    $('#awName').focus();
+  }
+  function closeAdd() {
+    addModal.classList.remove('is-open');
+    addModal.setAttribute('aria-hidden', 'true');
+    if (addTrap) { addModal.removeEventListener('keydown', addTrap); addTrap = null; }
+    if (addOpener && document.body.contains(addOpener)) addOpener.focus();
+    addOpener = null;
+  }
+  $('#addWorkerBtn').addEventListener('click', openAdd);
+  $('#addClose').addEventListener('click', closeAdd);
+  $('#addCancel').addEventListener('click', closeAdd);
+  addModal.addEventListener('click', e => { if (e.target === addModal) closeAdd(); });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    const tm = document.getElementById('termModal');
+    if (tm && tm.classList.contains('is-open')) { closeTermModal(); return; }
+    if (addModal.classList.contains('is-open')) { closeAdd(); return; }
+    notifCenter.classList.remove('is-open');
+  });
+
+  // Xác nhận đã xóa rental → TERMINATED, giữ lịch sử phiên thuê
+  const termModal = $('#termModal');
+  let termTarget = null;
+  function openTermModal(id) {
+    termTarget = WORKERS.find(x => x.id === id);
+    if (!termTarget) return;
+    $('#termBody').innerHTML = `<p style="margin-bottom:var(--space-2)">Xác nhận đã xóa rental của <strong>${termTarget.id}</strong> trên ${termTarget.providerName} để <strong>kết thúc phiên thuê</strong>?</p>
+      <p class="cell-sub">Worker chuyển sang <strong>TERMINATED</strong> và vẫn được giữ trong lịch sử chi phí: thuê ${termTarget.rented} · tổng ${sessionCostText(termTarget)} (${rateText(termTarget)}). Bản ghi không bị xóa.</p>`;
+    termModal.classList.add('is-open');
+    termModal.setAttribute('aria-hidden', 'false');
+    $('#termCancel').focus();
+  }
+  function closeTermModal() {
+    termModal.classList.remove('is-open');
+    termModal.setAttribute('aria-hidden', 'true');
+    termTarget = null;
+  }
+  $('#termCancel').addEventListener('click', closeTermModal);
+  termModal.addEventListener('click', e => { if (e.target === termModal) closeTermModal(); });
+  $('#termOk').addEventListener('click', () => {
+    if (!termTarget) return;
+    termTarget.status = 'TERMINATED';
+    termTarget.util = 0; termTarget.job = null; termTarget.heartbeat = '— (đã kết thúc)'; termTarget.temp = '—';
+    const name = termTarget.id, pv = termTarget.providerName;
+    closeTermModal();
+    render();
+    showToast(`${name} đã kết thúc phiên thuê (TERMINATED) — lịch sử chi phí được giữ lại. Kiểm tra rental đã ngừng tính phí trên ${pv}.`, 'success');
+  });
+
+  // Sinh token: tên phải an toàn cho Docker; token dùng một lần và có hạn 30 phút
+  const DOCKER_NAME_RE = /^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,62}$/;
+  let lastCmd = '', lastToken = '';
+  $('#genToken').addEventListener('click', () => {
+    const name = $('#awName').value.trim();
+    const err = $('#awNameErr');
+    if (!name) { err.hidden = false; err.textContent = 'Nhập tên worker trước khi tạo token.'; return; }
+    if (!DOCKER_NAME_RE.test(name)) {
+      err.hidden = false;
+      err.textContent = 'Tên không hợp lệ cho Docker: bắt đầu bằng chữ/số, chỉ gồm a–z, 0–9, "_", ".", "-", tối đa 63 ký tự, không dấu và không khoảng trắng.';
+      return;
+    }
+    if (WORKERS.some(w => w.id === name)) { err.hidden = false; err.textContent = `Tên “${name}” đã tồn tại trong danh sách worker.`; return; }
+    err.hidden = true;
+    const role = $('#awRole').value;
+    const tag = ($('#awImage').value.trim() || (role === 'batch' ? '1.8.2' : '0.9.4')).replace(/^.*:/, '');
+    const image = `ghcr.io/${GHCR_OWNER}/reup-dubbing-${role === 'batch' ? 'media' : 'tts'}-worker:${tag}`;
+    const expiry = new Date(Date.now() + 30 * 60e3);
+    const expiryText = `${String(expiry.getHours()).padStart(2, '0')}:${String(expiry.getMinutes()).padStart(2, '0')}`;
+    lastToken = 'enroll_' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10);
+    lastCmd = `docker run -d --gpus all --restart unless-stopped --name ${name} \\
+  -e ENROLLMENT_TOKEN=${lastToken} \\
+  -e CONTROL_PLANE_URL=https://studio.mokimcuong.local \\
+  -v /opt/reup/models:/models \\
+  -v /opt/reup/workspace:/workspace \\
+  ${image}`;
+    $('#tokenBox').textContent = `Token: ${lastToken}\n(dùng một lần · hết hạn lúc ${expiryText} · sinh token mới sẽ vô hiệu token cũ)\n\n${lastCmd}`;
+    $('#tokenArea').hidden = false;
+    // Worker vào danh sách ở trạng thái WAITING_FOR_ENROLLMENT — chỉ READY sau heartbeat đầu tiên
+    const gpu = $('#awGpu').value.trim() || 'Chưa rõ (chờ worker báo về)';
+    const now = new Date();
+    const nw = {
+      id: name, role, gpu, status: 'WAITING_FOR_ENROLLMENT', temp: '—', util: 0,
+      heartbeat: 'Chưa có — chờ heartbeat đầu tiên', job: null,
+      image: image.replace(/^ghcr\.io\/[^/]+\//, ''), rented: '0 phút', rentedMins: 0,
+      hourlyRate: Math.max(0, +$('#awRate').value || 0),
+      currency: $('#awCurrency').value,
+      billingUnit: 'giờ', // MVP: chỉ theo giờ
+      sessionStartedAt: `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      providerName: $('#awProviderName').value.trim() || 'Nhà cung cấp',
+      containerId: $('#awContainer').value.trim() || '—',
+      leaseReleased: true, artifactCommitted: true, tokenExpiry: expiryText
+    };
+    nw.provider = `${nw.providerName} · ${nw.containerId}`;
+    WORKERS.push(nw);
+    render();
+    showToast(`Đã sinh token cho ${name} — worker ở trạng thái WAITING_FOR_ENROLLMENT cho tới heartbeat đầu tiên.`, 'success');
+    // Mô phỏng heartbeat đầu tiên sau khi người dùng chạy bootstrap
+    setTimeout(() => {
+      if (nw.status === 'WAITING_FOR_ENROLLMENT') {
+        nw.status = 'READY'; nw.heartbeat = '3 giây trước'; nw.temp = '38°C';
+        render();
+        showToast(`${name} đã gửi heartbeat đầu tiên — chuyển sang READY.`, 'success');
+      }
+    }, 8000);
+  });
+  function copyText(text, msg) {
+    const done = () => showToast(msg, 'success');
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done);
+    else done();
+  }
+  $('#copyToken').addEventListener('click', () => copyText(lastToken, 'Đã copy enrollment token.'));
+  $('#copyCmd').addEventListener('click', () => copyText(lastCmd, 'Đã copy lệnh Docker bootstrap.'));
+
+  // ───────── Khởi tạo ─────────
+  render();
+  // Mô phỏng worker-gpu-03 (DRAINING): artifact cuối commit xong → đủ 2 điều kiện → SAFE_TO_TERMINATE
+  setTimeout(() => {
+    const g3 = WORKERS.find(w => w.id === 'worker-gpu-03');
+    if (g3 && g3.status === 'DRAINING') {
+      g3.artifactCommitted = true;
+      if (g3.leaseReleased) {
+        g3.status = 'SAFE_TO_TERMINATE'; g3.util = 0; g3.job = null; g3.temp = '36°C';
+      }
+      render();
+      showToast('worker-gpu-03: artifact cuối đã commit — đủ điều kiện SAFE_TO_TERMINATE.', 'success');
+    }
+  }, 7000);
+  </script>
+</body>
+</html>

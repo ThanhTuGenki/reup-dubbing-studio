@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "html",
+  "title": "docs/ui-prototype/create-job.html",
+  "entry": "docs/ui-prototype/create-job.html",
+  "renderer": "html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-09-01T10:07:38.214Z",
+  "updatedAt": "2026-09-01T10:07:38.214Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}
