@@ -1,0 +1,54 @@
+name: Task
+description: Việc gắn đúng MỘT repo, tạo một PR review độc lập
+title: "[Task] "
+labels: [task]
+body:
+  - type: markdown
+    attributes:
+      value: "Trạng thái do GitHub Project quản lý, không điền vào đây."
+  - type: dropdown
+    id: type
+    attributes: {label: Type, options: [feature, bug, research, debt, incident]}
+    validations: {required: true}
+  - type: dropdown
+    id: priority
+    attributes: {label: Priority, options: [P0, P1, P2, P3]}
+    validations: {required: true}
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      description: "Lead chốt ở Triage. Agent chỉ được NÂNG, chỉ Tú được hạ. low ⇒ bỏ được Verify."
+      options: [low, medium, high]
+    validations: {required: true}
+  - type: input
+    id: repository
+    attributes: {label: Repository, description: "Đúng một repo. Nhiều repo ⇒ dùng template Epic."}
+    validations: {required: true}
+  - type: input
+    id: parent
+    attributes: {label: Epic cha (nếu có)}
+  - type: textarea
+    id: outcome
+    attributes: {label: Outcome, description: "Kết quả mong muốn, KHÔNG phải danh sách việc"}
+    validations: {required: true}
+  - type: textarea
+    id: context
+    attributes: {label: Context, description: "Spec, ADR, contract, thảo luận liên quan"}
+  - type: textarea
+    id: scope
+    attributes: {label: Scope}
+    validations: {required: true}
+  - type: textarea
+    id: out_of_scope
+    attributes: {label: Ngoài scope, description: "Không viết thì agent sẽ tự mở rộng"}
+  - type: textarea
+    id: acceptance_criteria
+    attributes: {label: Acceptance criteria, description: "Mỗi dòng một tiêu chí KIỂM TRA ĐƯỢC. Đánh số AC1, AC2…"}
+    validations: {required: true}
+  - type: textarea
+    id: blocked_by
+    attributes: {label: Blocked by, description: "Issue đang chặn, gồm sub-issue thay đổi contract"}
+  - type: textarea
+    id: test_plan
+    attributes: {label: Test plan, description: "Lệnh nào phải chạy, bằng chứng nào phải dán vào PR"}
