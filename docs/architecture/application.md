@@ -1,11 +1,14 @@
 # Reup Dubbing Studio — Kiến trúc ứng dụng và công nghệ
 
 - **Ngày tạo:** 2026-09-02
-- **Trạng thái:** Chốt sơ bộ, dùng làm nền cho các vòng phân tích chi tiết
+- **Trạng thái:** `ACCEPTED` (chốt sơ bộ, dùng làm nền cho các vòng phân tích chi tiết)
+- **Nguồn chuẩn cho:** stack kỹ thuật, cấu trúc monorepo, contract-first, CI gate.
+- **Thay thế:** §12 *Tech stack* của [`docs/product/design.md`](../product/design.md).
+  Backend đổi FastAPI → NestJS; hàng đợi đổi Redis/RQ → PostgreSQL task queue.
 - **Phạm vi:** Cấu trúc source code, runtime, giao tiếp giữa Control Plane và GPU Worker, lưu trữ, chiến lược concurrency và quy trình phát triển song song
 - **Không thuộc phạm vi tài liệu này:** Database schema chi tiết, API endpoint đầy đủ, thuật toán media, cấu hình production cuối cùng và mã nguồn triển khai
-- **Thiết kế nghiệp vụ nguồn:** [2026-08-23-reup-dubbing-studio-design.md](./2026-08-23-reup-dubbing-studio-design.md)
-- **UI prototype:** [docs/ui-prototype/index.html](../../ui-prototype/index.html)
+- **Thiết kế nghiệp vụ nguồn:** [`docs/product/design.md`](../product/design.md)
+- **UI prototype (đã archive):** [`docs/reference/ui-prototype/index.html`](../reference/ui-prototype/index.html)
 
 ## 1. Mục tiêu kiến trúc
 

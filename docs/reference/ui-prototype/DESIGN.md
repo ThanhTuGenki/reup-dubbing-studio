@@ -1,5 +1,11 @@
 # Reup Dubbing Studio — Dashboard Prototype
 
+> **Trạng thái:** `ARCHIVED`. Prototype này đã được archive ở commit `5485698`.
+> Nó **không phải** giao diện đang chạy, và không được sửa để "cập nhật cho khớp
+> code". Dùng nó cho đúng một việc: tra **route mapping** và bố cục màn hình đã
+> duyệt, theo [`docs/architecture/application.md`](../../architecture/application.md) §5.9.
+
+
 ## Mục tiêu
 
 Prototype tập trung vào Application Shell và hai màn hình vận hành của Reup Dubbing Studio: Tổng quan và Khám phá video. Giao diện giúp người dùng theo dõi pipeline, kiểm tra metadata nguồn và chủ động chọn video trước khi tải.

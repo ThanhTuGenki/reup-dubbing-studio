@@ -1,5 +1,11 @@
 # Reup Dubbing Studio — Giai đoạn 1 (MVP) Implementation Plan
 
+> **Trạng thái:** `ARCHIVED cho phần triển khai`, `ACCEPTED cho phần thiết kế pipeline`.
+> Commit `5485698` đã archive prototype và **reset implementation** — code mô tả
+> trong tài liệu này **không còn trên `main`**. Kiểm bằng `git ls-files`, đừng kiểm
+> bằng `git log`. Thiết kế các stage vẫn dùng được khi dựng lại.
+
+
 > **Design change, 2026-08-31 (documentation only; code not updated yet):**
 > output must be a Vietnamese-dubbed video with no Vietnamese subtitles burned
 > into the picture, plus a separate same-basename SRT file beside it (for
@@ -24,7 +30,7 @@
 
 **Tech Stack:** Python 3.11+, yt-dlp, video-subtitle-remover (subprocess), PaddleOCR, faster-whisper, Anthropic SDK (dịch), OmniVoice trên Docker GPU, Demucs, ffmpeg, typer (CLI), pytest.
 
-**Spec:** `docs/superpowers/specs/2026-08-23-reup-dubbing-studio-design.md`
+**Spec:** `docs/product/design.md`
 
 ## Global Constraints
 
@@ -557,7 +563,7 @@ cd tools/vsr && python3 -m venv .venv && .venv/bin/pip install -r requirements.t
 .venv/bin/python backend/main.py --help || cat README.md | head -80
 ```
 
-Điền template thật vào `config.toml [desub].cmd` theo cú pháp tool in ra (dùng đúng placeholder `{input} {output} {ymin} {ymax} {xmin} {xmax}`; nếu tool nhận vùng qua biến môi trường/format khác, chỉnh template — **không sửa code desub.py**). Chạy thử trên clip 30 giây cắt từ video test (`ffmpeg -i raw.mp4 -t 30 -c copy clip.mp4`), mở output xem vùng sub đã sạch chưa. Ghi thời gian chạy vào `docs/superpowers/plans/mvp-notes.md`.
+Điền template thật vào `config.toml [desub].cmd` theo cú pháp tool in ra (dùng đúng placeholder `{input} {output} {ymin} {ymax} {xmin} {xmax}`; nếu tool nhận vùng qua biến môi trường/format khác, chỉnh template — **không sửa code desub.py**). Chạy thử trên clip 30 giây cắt từ video test (`ffmpeg -i raw.mp4 -t 30 -c copy clip.mp4`), mở output xem vùng sub đã sạch chưa. Ghi thời gian chạy vào `docs/operations/acceptance-log.md`.
 
 - [ ] **Step 6: Commit** `git commit -am "feat: desub wrapper with command template"`
 
@@ -953,7 +959,7 @@ Sửa test `test_fit_tempo_clamps` dòng cuối cho khớp thiết kế (min_spe
 **Files:**
 - Modify: `src/reup/cli.py`
 - Test: `tests/test_cli.py` (thêm)
-- Create: `docs/superpowers/plans/mvp-notes.md` (kết quả đo)
+- Create: `docs/operations/acceptance-log.md` (kết quả đo)
 
 **Interfaces:**
 - Consumes: mọi module trước.
@@ -1102,7 +1108,7 @@ def report(vid: str, data_root: Path = typer.Option(Path("data"))):
 ```
 
 - [ ] **Step 4: PASS (unit).**
-- [ ] **Step 5: Acceptance end-to-end (thủ công):** chạy `reup run <URL video có quyền dùng> --mask <đo từ frame thật>` trên **video đầy đủ** (không phải clip). Sau đó `reup report <vid>`. Đánh giá 4 câu hỏi MVP, ghi vào `docs/superpowers/plans/mvp-notes.md`:
+- [ ] **Step 5: Acceptance end-to-end (thủ công):** chạy `reup run <URL video có quyền dùng> --mask <đo từ frame thật>` trên **video đầy đủ** (không phải clip). Sau đó `reup report <vid>`. Đánh giá 4 câu hỏi MVP, ghi vào `docs/operations/acceptance-log.md`:
   - (a) Desub: xem 5 đoạn ngẫu nhiên — vệt mờ chấp nhận được?
   - (b) Giọng: nghe 3 phút — đủ tự nhiên để đăng?
   - (c) OCR vs ASR: bản nào đúng hơn (nhìn bảng report)?

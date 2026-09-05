@@ -72,7 +72,7 @@ expects, and the order every pipeline function (`desub.render_cmd`,
 `stt_ocr.frame_extract_cmd`) takes as its `mask: tuple[int, int, int, int]`
 argument. Check a few frames spread across the video (subtitle position is
 usually fixed, but confirm it doesn't move for on-screen graphics/credits).
-Record the mask you land on in `docs/superpowers/plans/mvp-notes.md`.
+Record the mask you land on in `docs/operations/acceptance-log.md`.
 
 ```bash
 mkdir -p tools && git clone https://github.com/YaoFANGUK/video-subtitle-remover tools/vsr
@@ -100,7 +100,7 @@ ffmpeg -i raw.mp4 -t 30 -c copy clip.mp4
 ```
 Run desub on `clip.mp4`, open the output, and visually confirm the
 subtitle-burned region is clean. Record the run time in
-`docs/superpowers/plans/mvp-notes.md`.
+`docs/operations/acceptance-log.md`.
 
 ## 3. Install `paddleocr`/`paddlepaddle` and run ASR + OCR on a real clip (Task 5)
 
@@ -227,7 +227,7 @@ a markdown table comparing OCR vs ASR text per segment plus every stage's
 timing from `timings.json`.
 
 Answer the four MVP acceptance questions and record the answers in
-`docs/superpowers/plans/mvp-notes.md`:
+`docs/operations/acceptance-log.md`:
 
 - **(a) Desub quality** — look at 5 random timestamps in `desubbed.mp4`
   (spread across the video): is the cleaned-up region acceptable (no

@@ -1,7 +1,7 @@
 # MVP Notes — Reup Dubbing Studio
 
 This file is where every manual/acceptance result referenced by
-`docs/MANUAL-CHECKLIST.md` gets recorded: desub template probing notes, OmniVoice
+`docs/operations/manual-checklist.md` gets recorded: desub template probing notes, OmniVoice
 acceptance notes, and the four MVP acceptance questions from the final
 end-to-end run. Fill in each section as you complete the corresponding
 checklist step; leave a section marked "not yet run" until it is.

@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/discovery.html",
-  "entry": "docs/ui-prototype/discovery.html",
+  "title": "docs/reference/ui-prototype/studio.html",
+  "entry": "docs/reference/ui-prototype/studio.html",
   "renderer": "html",
   "status": "complete",
   "exports": [
@@ -10,8 +10,8 @@
     "pdf",
     "zip"
   ],
-  "createdAt": "2026-08-31T10:17:41.900Z",
-  "updatedAt": "2026-08-31T10:17:41.900Z",
+  "createdAt": "2026-09-01T04:50:45.397Z",
+  "updatedAt": "2026-09-01T04:50:45.397Z",
   "metadata": {
     "inferred": true,
     "reconciled": true

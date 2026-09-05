@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/library.html",
-  "entry": "docs/ui-prototype/library.html",
+  "title": "docs/reference/ui-prototype/library.html",
+  "entry": "docs/reference/ui-prototype/library.html",
   "renderer": "html",
   "status": "complete",
   "exports": [
