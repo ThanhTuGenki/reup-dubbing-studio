@@ -1,5 +1,12 @@
 # Known follow-ups — Giai đoạn 1 (MVP)
 
+> ⚠️ **File này là tracker TẠM.** Nguồn chuẩn cho trạng thái công việc là
+> [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1), không phải
+> Markdown. Mỗi mục dưới đây cần được chuyển thành một Issue có `Risk` và
+> `Acceptance criteria`; chuyển xong thì xoá khỏi đây và để lại số Issue.
+> Giữ hai nơi song song sẽ drift.
+
+
 Những mục dưới đây được **phát hiện, xác minh và cố ý để lại** trong quá trình review.
 Không mục nào làm sai output đã render. Ghi lại ở đây để Giai đoạn 2 không phải tìm lại.
 

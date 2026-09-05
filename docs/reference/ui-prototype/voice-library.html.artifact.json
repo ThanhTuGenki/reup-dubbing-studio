@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/voice-library.html",
-  "entry": "docs/ui-prototype/voice-library.html",
+  "title": "docs/reference/ui-prototype/voice-library.html",
+  "entry": "docs/reference/ui-prototype/voice-library.html",
   "renderer": "html",
   "status": "complete",
   "exports": [

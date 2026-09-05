@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/review-policy.html",
-  "entry": "docs/ui-prototype/review-policy.html",
+  "title": "docs/reference/ui-prototype/review-policy.html",
+  "entry": "docs/reference/ui-prototype/review-policy.html",
   "renderer": "html",
   "status": "complete",
   "exports": [

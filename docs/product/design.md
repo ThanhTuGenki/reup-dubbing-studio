@@ -6,9 +6,12 @@
 - **Cập nhật:** 2026-08-31 — EzyCloudX dùng manual registered worker cho tới khi có API công khai chính thức
 - **Cập nhật:** 2026-08-31 — GPU Worker phát hành bằng Docker image có version; thêm máy thuê bằng cấu hình và bootstrap token, không sửa code
 - **Cập nhật:** 2026-09-01 — chốt OmniVoice là TTS engine duy nhất; tách Batch Media Worker và Interactive TTS Worker trên Docker GPU EzyCloudX
-- **Trạng thái:** Bản thiết kế chờ duyệt (design, pre-implementation)
-- **Chủ dự án:** tu_dinh@lrm.jp
-- **Artifact review duy nhất:** [Thiết kế hoàn chỉnh — kiến trúc, flow và GPU](../../reup-dubbing-complete-design.html)
+- **Trạng thái:** `ACCEPTED` cho phần nghiệp vụ. Phần **tech stack (§12) đã bị thay thế** — xem dưới.
+- **Nguồn chuẩn cho:** vấn đề, người dùng, phạm vi, luồng nghiệp vụ, khái niệm Profile.
+- **KHÔNG phải nguồn chuẩn cho:** stack kỹ thuật, cấu trúc source code, contract.
+  Những thứ đó ở [`docs/architecture/application.md`](../architecture/application.md).
+- **Ảnh chụp cũ (đã lệch):** [`docs/reference/design-snapshot-2026-08-31.html`](../reference/design-snapshot-2026-08-31.html)
+  — giữ để tham khảo, **không** dùng làm nguồn.
 
 ---
 
@@ -737,6 +740,16 @@ Nhóm điều hướng và các màn hình chính (phần lớn thuộc Giai đo
    cookie nguồn; chính sách lưu giữ mặc định.
 
 ## 12. Tech stack
+
+> 🛑 **SUPERSEDED — 2026-09-02.** Toàn bộ mục này đã bị thay thế bởi
+> [`docs/architecture/application.md`](../architecture/application.md) §2.
+> Cụ thể: Backend đổi từ **FastAPI (Python)** sang **NestJS + Fastify (TypeScript)**;
+> hàng đợi job đổi từ **Redis + RQ** sang **task queue trong PostgreSQL**
+> (tài liệu mới ghi rõ *"Không dùng Celery/RQ làm orchestrator chính"*).
+>
+> **Phần duy nhất còn hiệu lực** là ràng buộc nghiệp vụ ở đoạn ngay dưới: toàn bộ
+> chuỗi AI/media là Python nên **GPU Worker bắt buộc Python**. Bảng bên dưới giữ
+> lại để tra lịch sử quyết định, **đừng dùng để triển khai**.
 
 Ràng buộc quyết định: **toàn bộ chuỗi AI/media (yt-dlp, video-subtitle-remover,
 faster-whisper, OmniVoice, pyannote, LLM SDK) đều là Python** →

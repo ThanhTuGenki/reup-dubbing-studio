@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/workers.html",
-  "entry": "docs/ui-prototype/workers.html",
+  "title": "docs/reference/ui-prototype/workers.html",
+  "entry": "docs/reference/ui-prototype/workers.html",
   "renderer": "html",
   "status": "complete",
   "exports": [

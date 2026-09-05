@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/publishing.html",
-  "entry": "docs/ui-prototype/publishing.html",
+  "title": "docs/reference/ui-prototype/publishing.html",
+  "entry": "docs/reference/ui-prototype/publishing.html",
   "renderer": "html",
   "status": "complete",
   "exports": [

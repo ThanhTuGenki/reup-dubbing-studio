@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/studio.html",
-  "entry": "docs/ui-prototype/studio.html",
+  "title": "docs/reference/ui-prototype/settings.html",
+  "entry": "docs/reference/ui-prototype/settings.html",
   "renderer": "html",
   "status": "complete",
   "exports": [
@@ -10,8 +10,8 @@
     "pdf",
     "zip"
   ],
-  "createdAt": "2026-09-01T04:50:45.397Z",
-  "updatedAt": "2026-09-01T04:50:45.397Z",
+  "createdAt": "2026-09-01T14:20:30.159Z",
+  "updatedAt": "2026-09-01T14:20:30.159Z",
   "metadata": {
     "inferred": true,
     "reconciled": true

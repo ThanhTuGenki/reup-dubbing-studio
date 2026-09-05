@@ -1,8 +1,8 @@
 {
   "version": 1,
   "kind": "html",
-  "title": "docs/ui-prototype/create-job.html",
-  "entry": "docs/ui-prototype/create-job.html",
+  "title": "docs/reference/ui-prototype/create-job.html",
+  "entry": "docs/reference/ui-prototype/create-job.html",
   "renderer": "html",
   "status": "complete",
   "exports": [
