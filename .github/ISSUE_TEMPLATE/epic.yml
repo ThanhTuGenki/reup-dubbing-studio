@@ -1,0 +1,38 @@
+name: Epic
+description: Việc chạm NHIỀU repo. Gom sub-issue task. Không có owner, không chiếm WIP.
+title: "[Epic] "
+labels: [epic]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Epic không vào In Progress theo nghĩa có người làm — trạng thái suy ra từ sub-issue.
+        Thay đổi contract phải là sub-issue RIÊNG và Done trước các sub-issue implementation.
+  - type: dropdown
+    id: type
+    attributes: {label: Type, options: [feature, bug, research, debt, incident]}
+    validations: {required: true}
+  - type: dropdown
+    id: priority
+    attributes: {label: Priority, options: [P0, P1, P2, P3]}
+    validations: {required: true}
+  - type: dropdown
+    id: risk
+    attributes: {label: Risk, options: [low, medium, high]}
+    validations: {required: true}
+  - type: textarea
+    id: outcome
+    attributes: {label: Outcome cấp epic}
+    validations: {required: true}
+  - type: textarea
+    id: epic_acceptance_criteria
+    attributes: {label: Acceptance criteria cấp epic, description: "Kiểm ở bước Verify tích hợp, sau khi các sub-issue đã merge"}
+    validations: {required: true}
+  - type: textarea
+    id: children
+    attributes: {label: Sub-issue, description: "Mỗi dòng: sub-issue + repo của nó. Contract đi TRƯỚC."}
+  - type: textarea
+    id: release_plan
+    attributes:
+      label: Release plan
+      description: "Thứ tự phát hành (mặc định migration → backend → frontend) · tương thích ngược · feature flag · rollback khi một repo thất bại"
