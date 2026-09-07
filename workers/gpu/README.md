@@ -11,9 +11,7 @@ uv sync --all-groups
 export CONTROL_PLANE_URL=https://control.example.test
 uv run reup-batch-worker --version
 uv run reup-tts-worker --version
-uv run ruff check .
-uv run mypy src
-uv run pytest
+make check
 ```
 
 Set `LOG_FORMAT=json` for one JSON object per startup log line. Log context is
@@ -25,3 +23,14 @@ pure command/transform helpers stay separate from runners, heavy dependencies
 are imported inside the operation that needs them, and stage output will use
 per-stage logs when runtime work is added. Runtime protocol and task behavior
 are intentionally reserved for later issues.
+
+## Container preflight
+
+`make check` is the local quality gate. The production CUDA-base path is
+covered by `tests/docker_smoke.sh`, which builds both images with their default
+CUDA base, checks the bundled Python interpreter, runs version/health
+entrypoints, and verifies the non-root user.
+
+```bash
+tests/docker_smoke.sh
+```
