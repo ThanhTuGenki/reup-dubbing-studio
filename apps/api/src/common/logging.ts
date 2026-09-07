@@ -11,31 +11,36 @@ function redactUrl(request: RequestWithUrl): Record<string, unknown> {
   return { method: request.method, url: safeUrl };
 }
 
+const sensitiveKeys = [
+  'token',
+  'Token',
+  'secret',
+  'Secret',
+  'apiKey',
+  'ApiKey',
+  'password',
+  'Password',
+];
+const sensitivePaths = sensitiveKeys.flatMap((key) =>
+  ['', '*', '*.*', '*.*.*'].map((prefix) => (prefix ? `${prefix}.${key}` : key)),
+);
+
 export function loggingOptions() {
   const production = process.env.NODE_ENV === 'production';
-  return {
-    pinoHttp: {
-      level: process.env.LOG_LEVEL ?? (production ? 'info' : 'debug'),
-      transport: production
-        ? undefined
-        : { target: 'pino-pretty', options: { colorize: false, singleLine: true } },
-      redact: {
-        paths: [
-          'req.headers.authorization',
-          'req.headers.cookie',
-          '**.token',
-          '**.Token',
-          '**.secret',
-          '**.Secret',
-          '**.apiKey',
-          '**.ApiKey',
-          '**.password',
-          '**.Password',
-        ],
-        censor: '[Redacted]',
-      },
-      serializers: { req: redactUrl },
-      mixin: () => getRequestContext() ?? {},
+  const pinoHttp = {
+    level: process.env.LOG_LEVEL ?? (production ? 'info' : 'debug'),
+    ...(production
+      ? {}
+      : { transport: { target: 'pino-pretty', options: { colorize: false, singleLine: true } } }),
+    redact: {
+      paths: ['req.headers.authorization', 'req.headers.cookie', ...sensitivePaths],
+      censor: '[Redacted]',
     },
+    serializers: { req: redactUrl },
+    mixin: () => getRequestContext() ?? {},
+  };
+
+  return {
+    pinoHttp,
   };
 }
