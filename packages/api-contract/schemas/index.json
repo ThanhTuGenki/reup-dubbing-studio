@@ -10,7 +10,9 @@
       }
     }
   },
-  "required": ["operations"],
+  "required": [
+    "operations"
+  ],
   "additionalProperties": false,
   "operations": []
 }
