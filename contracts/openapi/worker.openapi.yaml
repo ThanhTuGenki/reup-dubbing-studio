@@ -1,0 +1,11 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio Worker API
+  version: 0.0.0
+  description: Contract skeleton for the control plane and GPU workers.
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-UNLICENSED
+servers:
+  - url: https://worker-api.example.invalid
+paths: {}

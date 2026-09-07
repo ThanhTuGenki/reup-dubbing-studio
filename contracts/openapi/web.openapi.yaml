@@ -1,0 +1,11 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio Web API
+  version: 0.0.0
+  description: Contract skeleton for the web application and control plane.
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-UNLICENSED
+servers:
+  - url: https://api.example.invalid
+paths: {}

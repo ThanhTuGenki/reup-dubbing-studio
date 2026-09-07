@@ -8,3 +8,19 @@ tools/
 *.egg-info/
 .pytest_cache/
 .codex/
+
+# Node / pnpm
+node_modules/
+pnpm-debug.log*
+*.tsbuildinfo
+dist/
+coverage/
+
+# Python / uv
+.python-version
+.ruff_cache/
+.mypy_cache/
+
+# Docker
+.docker/
+docker-compose.override.yml
