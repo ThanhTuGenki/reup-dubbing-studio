@@ -1,5 +1,16 @@
 {
   "name": "@reup-dubbing-studio/eslint-config",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./base.mjs"
+  },
+  "dependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.22.0"
+  }
 }
