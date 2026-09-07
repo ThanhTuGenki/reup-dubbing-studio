@@ -1,7 +1,9 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-import request from 'supertest';
+// supertest exposes a callable CommonJS export and esModuleInterop is disabled.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+import request = require('supertest');
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/infra/prisma/prisma.service';
