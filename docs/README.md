@@ -6,18 +6,18 @@ thư mục mới.
 
 ## Nguồn chuẩn cho từng loại
 
-| Cần biết | Đọc | Trạng thái |
-|---|---|---|
-| Vấn đề, người dùng, phạm vi, luồng nghiệp vụ | [`product/design.md`](product/design.md) | `ACCEPTED` (§12 đã bị thay thế) |
-| Stack, cấu trúc monorepo, contract-first, CI gate | [`architecture/application.md`](architecture/application.md) | `ACCEPTED` |
-| Thiết kế các stage của pipeline media | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md) | thiết kế `ACCEPTED`, triển khai `ARCHIVED` |
-| Quyết định kiến trúc đơn lẻ | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR |
-| **Contract giữa web ↔ api ↔ worker** | `contracts/openapi/*.yaml` ở **gốc repo** | không nằm trong `docs/` |
-| Chạy pipeline bằng tay, việc cần người làm | [`operations/manual-checklist.md`](operations/manual-checklist.md) | runbook |
-| Kết quả các lần chạy thủ công | [`operations/acceptance-log.md`](operations/acceptance-log.md) | log, append |
-| Nợ kỹ thuật đã biết | [`operations/known-followups.md`](operations/known-followups.md) | ⚠️ tracker tạm |
-| Bố cục màn hình và route đã duyệt | [`reference/ui-prototype/`](reference/ui-prototype/) | `ARCHIVED` |
-| **Trạng thái công việc** | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1) | **không nhân đôi vào file** |
+| Cần biết                                          | Đọc                                                                   | Trạng thái                                 |
+| ------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
+| Vấn đề, người dùng, phạm vi, luồng nghiệp vụ      | [`product/design.md`](product/design.md)                              | `ACCEPTED` (§12 đã bị thay thế)            |
+| Stack, cấu trúc monorepo, contract-first, CI gate | [`architecture/application.md`](architecture/application.md)          | `ACCEPTED`                                 |
+| Thiết kế các stage của pipeline media             | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)        | thiết kế `ACCEPTED`, triển khai `ARCHIVED` |
+| Quyết định kiến trúc đơn lẻ                       | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR    |
+| **Contract giữa web ↔ api ↔ worker**              | `contracts/openapi/*.yaml` ở **gốc repo**                             | không nằm trong `docs/`                    |
+| Chạy pipeline bằng tay, việc cần người làm        | [`operations/manual-checklist.md`](operations/manual-checklist.md)    | runbook                                    |
+| Kết quả các lần chạy thủ công                     | [`operations/acceptance-log.md`](operations/acceptance-log.md)        | log, append                                |
+| Nợ kỹ thuật đã biết                               | [`operations/known-followups.md`](operations/known-followups.md)      | ⚠️ tracker tạm                             |
+| Bố cục màn hình và route đã duyệt                 | [`reference/ui-prototype/`](reference/ui-prototype/)                  | `ARCHIVED`                                 |
+| **Trạng thái công việc**                          | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1) | **không nhân đôi vào file**                |
 
 ## Bốn quy tắc
 
@@ -45,14 +45,37 @@ mục thành vô nghĩa, hoặc agent mới ghi sang chỗ khác và thành hai 
 
 ## Tài liệu mới đặt ở đâu
 
-| Khi nào | Viết vào |
-|---|---|
-| Đổi hành vi người dùng | `product/` |
-| Quyết định kiến trúc có trade-off dài hạn | `architecture/decisions/YYYY-MM-DD-<slug>.md` |
-| Đổi giao tiếp web ↔ api ↔ worker | `contracts/openapi/` ở gốc repo, **không** phải `docs/` |
-| Đổi cách deploy, vận hành, xử lý lỗi | `operations/` |
-| Tài liệu chỉ để tra, không còn dẫn dắt triển khai | `reference/` + đánh dấu `ARCHIVED` |
+| Khi nào                                           | Viết vào                                                |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| Đổi hành vi người dùng                            | `product/`                                              |
+| Quyết định kiến trúc có trade-off dài hạn         | `architecture/decisions/YYYY-MM-DD-<slug>.md`           |
+| Đổi giao tiếp web ↔ api ↔ worker                  | `contracts/openapi/` ở gốc repo, **không** phải `docs/` |
+| Đổi cách deploy, vận hành, xử lý lỗi              | `operations/`                                           |
+| Tài liệu chỉ để tra, không còn dẫn dắt triển khai | `reference/` + đánh dấu `ARCHIVED`                      |
 
 **Tri thức của chính repo này** — lệnh chạy test, quirk, cách generate contract —
 viết vào `AGENTS.md` ở gốc repo, không vào `docs/`. Đó là file duy nhất agent đọc
 tự động khi mở repo.
+
+## Quality gates
+
+Chạy các gate TypeScript hiện có bằng:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm depcruise
+```
+
+`pnpm lint` dùng flat config chung trong `packages/eslint-config` và enforce
+dependency direction của ADR API module layout. API giữ CommonJS output cho Nest
+CLI nên override cục bộ `verbatimModuleSyntax`; các flag strict còn lại vẫn kế
+thừa từ shared base. `pnpm depcruise` kiểm tra vòng import trong `apps/api` và
+`apps/web`; worker Python có toolchain uv riêng và không thuộc các gate pnpm này.
+
+Commit dùng Conventional Commits (ví dụ `fix: handle health error`); lefthook
+chặn commit sai format, chạy lint-staged trước commit và typecheck trước push.
+
+Khi thật sự cần ngoại lệ, giữ phạm vi nhỏ nhất và ghi lý do ngay trên dòng
+`eslint-disable`/`eslint-disable-next-line`, đồng thời nêu file và lý do trong
+PR. Không dùng disable ở config chung để né một boundary.
