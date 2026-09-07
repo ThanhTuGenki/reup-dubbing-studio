@@ -11,7 +11,7 @@ thư mục mới.
 | Vấn đề, người dùng, phạm vi, luồng nghiệp vụ | [`product/design.md`](product/design.md) | `ACCEPTED` (§12 đã bị thay thế) |
 | Stack, cấu trúc monorepo, contract-first, CI gate | [`architecture/application.md`](architecture/application.md) | `ACCEPTED` |
 | Thiết kế các stage của pipeline media | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md) | thiết kế `ACCEPTED`, triển khai `ARCHIVED` |
-| Quyết định kiến trúc đơn lẻ | [`architecture/decisions/`](architecture/decisions/) | mỗi ADR một file |
+| Quyết định kiến trúc đơn lẻ | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR |
 | **Contract giữa web ↔ api ↔ worker** | `contracts/openapi/*.yaml` ở **gốc repo** | không nằm trong `docs/` |
 | Chạy pipeline bằng tay, việc cần người làm | [`operations/manual-checklist.md`](operations/manual-checklist.md) | runbook |
 | Kết quả các lần chạy thủ công | [`operations/acceptance-log.md`](operations/acceptance-log.md) | log, append |
@@ -27,7 +27,7 @@ cập nhật tại chỗ, nên tên file không mang ngày. Ngày trong tên m�
 nói dối về độ tươi của nó.
 
 **2. Mỗi tài liệu mở đầu bằng khối trạng thái.** Tối thiểu: `Trạng thái`
-(`DRAFT` · `ACCEPTED` · `SUPERSEDED` · `ARCHIVED`), **nguồn chuẩn cho cái gì**, và
+(`DRAFT` · `ACCEPTED` · `SUPERSEDED` · `DEPRECATED` · `ARCHIVED`), **nguồn chuẩn cho cái gì**, và
 **không phải nguồn chuẩn cho cái gì**.
 
 **3. Thay thế thì phải nói ra ở CẢ HAI đầu.** Tài liệu cũ ghi `SUPERSEDED` kèm link
