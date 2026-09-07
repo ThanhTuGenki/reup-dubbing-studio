@@ -28,8 +28,10 @@ chi phí tích hợp. Quyết định này được áp dụng trước các sli
   major URL version; additive compatible changes giữ version hiện tại.
 - Tạo job từ web và mọi mutation từ worker phải có `Idempotency-Key`, với scope
   là logical operation + authenticated caller và retention tối thiểu 24 giờ.
-- Optimistic locking dùng resource `version` và bắt buộc `If-Match`; mismatch là
-  HTTP 409 với `VERSION_CONFLICT`.
+- Optimistic locking dùng resource `version` và bắt buộc `If-Match`. Giá trị wire
+  là strong entity-tag dạng chuỗi thập phân được quote, ví dụ `"7"`; weak tags
+  (`W/"7"`) và bare digits (`7`) đều không hợp lệ. Mismatch là HTTP 409 với
+  `VERSION_CONFLICT`.
 
 ## Lựa chọn đã cân nhắc
 
@@ -39,14 +41,15 @@ chi phí tích hợp. Quyết định này được áp dụng trước các sli
   bỏ sót; cursor ổn định hơn cho worker polling.
 - `expectedVersion` trong JSON: không chọn làm wire mặc định vì locking là
   precondition của request và `If-Match` tương thích HTTP; implementation có thể
-  map field nội bộ nếu cần.
+  map field nội bộ nếu cần. Bare digits không được chọn vì không phải entity-tag
+  hợp lệ.
 
 ## Hệ quả
 
 Consumer có một error contract và catalogue để generate type/client. Server phải
-  sinh UUID v7, giữ timestamp UTC, lưu idempotency result tối thiểu 24 giờ và
-  kiểm tra precondition trước mutation. Endpoint cụ thể và exception mapping
-  thuộc các Issue #12/#14; generation/toolchain thuộc #9 và chưa được thay đổi.
+sinh UUID v7, giữ timestamp UTC, lưu idempotency result tối thiểu 24 giờ và
+kiểm tra precondition trước mutation. Endpoint cụ thể và exception mapping
+thuộc các Issue #12/#14; generation/toolchain thuộc #9 và chưa được thay đổi.
 
 ## Cách kiểm chứng
 

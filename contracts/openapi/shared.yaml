@@ -39,10 +39,12 @@ components:
     UuidV7:
       type: string
       format: uuid
-      description: Server-generated UUID version 7.
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+      description: Server-generated UUID version 7 with RFC 9562 variant bits.
     Timestamp:
       type: string
       format: date-time
+      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?Z$'
       description: ISO 8601 timestamp in UTC; serialized with a trailing Z.
     CursorPage:
       type: object
@@ -87,10 +89,10 @@ components:
       name: If-Match
       in: header
       required: true
-      description: Expected resource version; mismatch produces VERSION_CONFLICT (409).
+      description: Strong entity-tag encoding the expected decimal resource version; mismatch produces VERSION_CONFLICT (409).
       schema:
         type: string
-        pattern: '^[0-9]+$'
+        pattern: '^"[0-9]+"$'
   responses:
     BadRequest:
       description: Request is malformed or fails validation.
