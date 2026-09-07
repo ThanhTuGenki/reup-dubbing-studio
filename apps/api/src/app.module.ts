@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
+import { LoggerModule } from 'nestjs-pino';
 
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
@@ -17,9 +18,12 @@ import { VideosModule } from './modules/videos/videos.module';
 import { VoiceProfilesModule } from './modules/voice-profiles/voice-profiles.module';
 import { WorkflowModule } from './modules/workflow/workflow.module';
 import { WorkersModule } from './modules/workers/workers.module';
+import { RequestContextMiddleware } from './common/context/request-context.middleware';
+import { loggingOptions } from './common/logging';
 
 @Module({
   imports: [
+    LoggerModule.forRoot(loggingOptions()),
     ConfigModule,
     PrismaModule,
     HealthModule,
@@ -39,4 +43,8 @@ import { WorkersModule } from './modules/workers/workers.module';
     ContentModule,
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestContextMiddleware).forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}
