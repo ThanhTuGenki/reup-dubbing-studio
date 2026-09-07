@@ -1,8 +1,23 @@
 [project]
 name = "reup-gpu-worker"
-version = "0.0.0"
+version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "pydantic-settings>=2.6",
+]
+
+[project.scripts]
+reup-batch-worker = "reup_worker.batch_media.__main__:main"
+reup-tts-worker = "reup_worker.interactive_tts.__main__:main"
+
+[dependency-groups]
+batch = []
+tts = []
+dev = [
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "ruff>=0.8",
+]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -10,3 +25,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+files = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: requires external services or models",
+    "gpu: requires a CUDA-capable GPU",
+]
