@@ -37,6 +37,7 @@ components:
   schemas:
     ErrorCode:
       type: string
+      example: VALIDATION_ERROR
       description: Stable machine-readable error code. Add codes to x-error-codes first.
       enum:
         - VALIDATION_ERROR

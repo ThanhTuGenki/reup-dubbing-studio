@@ -3,6 +3,9 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
+    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml",
+    "contract:generate": "node scripts/contracts/generate.mjs",
+    "contract:check": "node scripts/contracts/check.mjs",
     "lint": "pnpm --recursive --if-present lint",
     "typecheck": "pnpm --recursive --if-present typecheck",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs apps/api/src apps/web",
@@ -14,10 +17,13 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@redocly/cli": "^2.51.2",
     "dependency-cruiser": "^16.10.4",
     "eslint-plugin-boundaries": "^5.4.0",
     "lefthook": "^1.13.6",
     "lint-staged": "^15.5.2",
-    "prettier": "^3.9.6"
+    "openapi-typescript": "^7.13.0",
+    "prettier": "^3.9.6",
+    "yaml": "^2.9.0"
   }
 }

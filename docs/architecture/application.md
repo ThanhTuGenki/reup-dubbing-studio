@@ -3,7 +3,7 @@
 - **Ngày tạo:** 2026-09-02
 - **Trạng thái:** `ACCEPTED` (chốt sơ bộ, dùng làm nền cho các vòng phân tích chi tiết)
 - **Nguồn chuẩn cho:** stack kỹ thuật, cấu trúc monorepo, contract-first, CI gate.
-- **Thay thế:** §12 *Tech stack* của [`docs/product/design.md`](../product/design.md).
+- **Thay thế:** §12 _Tech stack_ của [`docs/product/design.md`](../product/design.md).
   Backend đổi FastAPI → NestJS; hàng đợi đổi Redis/RQ → PostgreSQL task queue.
 - **Phạm vi:** Cấu trúc source code, runtime, giao tiếp giữa Control Plane và GPU Worker, lưu trữ, chiến lược concurrency và quy trình phát triển song song
 - **Không thuộc phạm vi tài liệu này:** Database schema chi tiết, API endpoint đầy đủ, thuật toán media, cấu hình production cuối cùng và mã nguồn triển khai
@@ -24,22 +24,22 @@ Kiến trúc phải đáp ứng các đặc điểm chính của Reup Dubbing St
 
 ## 2. Các quyết định đã chốt sơ bộ
 
-| Khu vực | Công nghệ / quyết định |
-|---|---|
-| Frontend | React 19 + TypeScript + Vite |
-| Backend / Control Plane | NestJS + TypeScript + Fastify |
-| API | REST + OpenAPI; SSE cho cập nhật một chiều theo thời gian thực |
-| Phương pháp phát triển | Lean Spec-Driven; Contract-First theo từng vertical slice tại các integration boundary |
-| Database | PostgreSQL + Prisma cho domain data |
-| Job queue ban đầu | PostgreSQL-backed task queue + lease API qua HTTPS |
-| GPU Worker | Python 3.11 + uv + PyTorch/CUDA |
-| Asset Store | Cloudflare R2 qua S3-compatible API |
-| Worker deployment | Hai Docker image: Batch Media Worker và Interactive TTS Worker |
-| Container registry | GitHub Container Registry (GHCR) |
-| VPS deployment | Docker Compose; reverse proxy/TLS bằng Caddy |
-| CI/CD | GitHub Actions |
-| TypeScript package manager | pnpm workspace |
-| Python package manager | uv với lockfile riêng cho worker image |
+| Khu vực                    | Công nghệ / quyết định                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Frontend                   | React 19 + TypeScript + Vite                                                           |
+| Backend / Control Plane    | NestJS + TypeScript + Fastify                                                          |
+| API                        | REST + OpenAPI; SSE cho cập nhật một chiều theo thời gian thực                         |
+| Phương pháp phát triển     | Lean Spec-Driven; Contract-First theo từng vertical slice tại các integration boundary |
+| Database                   | PostgreSQL + Prisma cho domain data                                                    |
+| Job queue ban đầu          | PostgreSQL-backed task queue + lease API qua HTTPS                                     |
+| GPU Worker                 | Python 3.11 + uv + PyTorch/CUDA                                                        |
+| Asset Store                | Cloudflare R2 qua S3-compatible API                                                    |
+| Worker deployment          | Hai Docker image: Batch Media Worker và Interactive TTS Worker                         |
+| Container registry         | GitHub Container Registry (GHCR)                                                       |
+| VPS deployment             | Docker Compose; reverse proxy/TLS bằng Caddy                                           |
+| CI/CD                      | GitHub Actions                                                                         |
+| TypeScript package manager | pnpm workspace                                                                         |
+| Python package manager     | uv với lockfile riêng cho worker image                                                 |
 
 ### 2.1 Các quyết định chưa áp dụng ở giai đoạn đầu
 
@@ -164,13 +164,13 @@ dubbing-studio/
 
 ### 5.2 State boundaries
 
-| Loại state | Nơi sở hữu |
-|---|---|
-| Video, job, task, worker, channel profile | Backend + TanStack Query cache |
-| Playback, segment đang chọn, panel đang mở | Local component/Zustand |
-| Draft câu dịch hoặc cast chưa lưu | Zustand/form state có dirty tracking |
-| Workflow status chuẩn | PostgreSQL; frontend không tự suy diễn để ghi ngược |
-| Progress realtime | SSE event, sau đó reconcile bằng API query |
+| Loại state                                 | Nơi sở hữu                                          |
+| ------------------------------------------ | --------------------------------------------------- |
+| Video, job, task, worker, channel profile  | Backend + TanStack Query cache                      |
+| Playback, segment đang chọn, panel đang mở | Local component/Zustand                             |
+| Draft câu dịch hoặc cast chưa lưu          | Zustand/form state có dirty tracking                |
+| Workflow status chuẩn                      | PostgreSQL; frontend không tự suy diễn để ghi ngược |
+| Progress realtime                          | SSE event, sau đó reconcile bằng API query          |
 
 ### 5.3 Realtime
 
@@ -274,13 +274,13 @@ Không tạo sẵn mọi thư mục con. Chỉ thêm `api`, `model`, `ui` hoặc
 
 ### 5.6 Trách nhiệm từng layer
 
-| Layer | Trách nhiệm | Không được chứa |
-|---|---|---|
-| `app` | Bootstrap, provider, global layout, router và global error boundary | Nghiệp vụ video/job |
-| `routes` | Ghép feature/entity thành màn hình, đọc URL params, route loading/error | Business logic tái sử dụng |
-| `features` | Một hành động người dùng hoặc use case | App shell hoặc generic primitive |
-| `entities` | Hiển thị/query logic tái sử dụng theo domain noun | Workflow điều phối nhiều use case |
-| `shared` | API bootstrap, generic UI, config, formatter, utility | Kiến thức về video, worker, voice hoặc publishing |
+| Layer      | Trách nhiệm                                                             | Không được chứa                                   |
+| ---------- | ----------------------------------------------------------------------- | ------------------------------------------------- |
+| `app`      | Bootstrap, provider, global layout, router và global error boundary     | Nghiệp vụ video/job                               |
+| `routes`   | Ghép feature/entity thành màn hình, đọc URL params, route loading/error | Business logic tái sử dụng                        |
+| `features` | Một hành động người dùng hoặc use case                                  | App shell hoặc generic primitive                  |
+| `entities` | Hiển thị/query logic tái sử dụng theo domain noun                       | Workflow điều phối nhiều use case                 |
+| `shared`   | API bootstrap, generic UI, config, formatter, utility                   | Kiến thức về video, worker, voice hoặc publishing |
 
 Feature dùng động từ/use case như `create-video-job`; entity dùng danh từ nghiệp vụ như `video` hoặc `worker`.
 
@@ -508,7 +508,7 @@ Trước khi release, thay đổi breaking có thể được phối hợp trong
 
 ### 7.5 Automation và CI gate
 
-Workspace cung cấp các command chuẩn, tên cuối cùng sẽ được chốt khi scaffold:
+Workspace cung cấp các command chuẩn:
 
 ```text
 pnpm contract:lint       # kiểm tra OpenAPI/schema hợp lệ
@@ -542,15 +542,15 @@ Không giao cho agent một prompt lớn để tự thiết kế và triển kha
 
 ### 7.7 Nguồn sự thật theo lớp
 
-| Phạm vi | Nguồn sự thật |
-|---|---|
-| Hành vi sản phẩm | Feature spec + acceptance criteria |
-| HTTP/event boundary | OpenAPI hoặc versioned event schema |
-| Domain rule | Domain model/use case test trong NestJS |
-| Persistence | Prisma schema + migration |
-| Runtime workflow state | PostgreSQL |
-| UI server state | Backend API; TanStack Query chỉ là cache |
-| Generated TypeScript | OpenAPI; generated file không sửa tay |
+| Phạm vi                | Nguồn sự thật                            |
+| ---------------------- | ---------------------------------------- |
+| Hành vi sản phẩm       | Feature spec + acceptance criteria       |
+| HTTP/event boundary    | OpenAPI hoặc versioned event schema      |
+| Domain rule            | Domain model/use case test trong NestJS  |
+| Persistence            | Prisma schema + migration                |
+| Runtime workflow state | PostgreSQL                               |
+| UI server state        | Backend API; TanStack Query chỉ là cache |
+| Generated TypeScript   | OpenAPI; generated file không sửa tay    |
 
 ## 8. PostgreSQL và mô hình workflow
 
@@ -687,16 +687,16 @@ Các guardrail đi kèm:
 
 ### 10.2 Concurrency mặc định ban đầu
 
-| Tác vụ | Mức khởi đầu |
-|---|---:|
-| Download/upload R2 | 2–4 task/worker |
-| Metadata/ffprobe/preprocess CPU | 2–4 task/worker, tùy CPU/RAM |
-| VSR/inpainting | 1 task/GPU |
-| OCR/ASR GPU | 1 task/GPU |
-| Demucs GPU | 1 task/GPU |
-| GPU render nếu có | 1 task/GPU |
-| Interactive preview | batch 1, priority cao |
-| Initial TTS | thử batch 1 → 2 → 4 → 8 sau benchmark |
+| Tác vụ                          |                          Mức khởi đầu |
+| ------------------------------- | ------------------------------------: |
+| Download/upload R2              |                       2–4 task/worker |
+| Metadata/ffprobe/preprocess CPU |          2–4 task/worker, tùy CPU/RAM |
+| VSR/inpainting                  |                            1 task/GPU |
+| OCR/ASR GPU                     |                            1 task/GPU |
+| Demucs GPU                      |                            1 task/GPU |
+| GPU render nếu có               |                            1 task/GPU |
+| Interactive preview             |                 batch 1, priority cao |
+| Initial TTS                     | thử batch 1 → 2 → 4 → 8 sau benchmark |
 
 Các số trên là safe default, không phải cấu hình production cuối cùng.
 
@@ -833,15 +833,15 @@ estimated_cost_per_video = allocated_session_cost / completed_video_count
 
 ## 14. Testing strategy sơ bộ
 
-| Lớp | Kiểm tra |
-|---|---|
-| React | component, accessibility, query states, Playwright critical flows |
-| NestJS domain | state transition, authorization, idempotency, lease transaction |
-| API contract | lint schema, generated artifact drift, provider/consumer compatibility và breaking-change check |
-| Python common | protocol, retry, checksum, workspace cleanup, subprocess control |
-| Media task | golden fixture nhỏ; integration test theo tool version |
-| GPU acceptance | benchmark trên đúng GPU/image; peak VRAM và quality gate |
-| End-to-end | fake worker trước, GPU worker thật cho release candidate |
+| Lớp            | Kiểm tra                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------- |
+| React          | component, accessibility, query states, Playwright critical flows                               |
+| NestJS domain  | state transition, authorization, idempotency, lease transaction                                 |
+| API contract   | lint schema, generated artifact drift, provider/consumer compatibility và breaking-change check |
+| Python common  | protocol, retry, checksum, workspace cleanup, subprocess control                                |
+| Media task     | golden fixture nhỏ; integration test theo tool version                                          |
+| GPU acceptance | benchmark trên đúng GPU/image; peak VRAM và quality gate                                        |
+| End-to-end     | fake worker trước, GPU worker thật cho release candidate                                        |
 
 ## 15. Những phần cần phân tích sâu tiếp theo
 
