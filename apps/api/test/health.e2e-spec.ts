@@ -1,8 +1,7 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- supertest is a callable CommonJS export. */
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
-// supertest exposes a callable CommonJS export and esModuleInterop is disabled.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import request = require('supertest');
 
 import { AppModule } from '../src/app.module';
