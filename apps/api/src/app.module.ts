@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './infra/prisma/prisma.module';
+import { ShutdownService } from './infra/process/shutdown.service';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ContentModule } from './modules/content/content.module';
@@ -38,5 +39,6 @@ import { WorkersModule } from './modules/workers/workers.module';
     TranslationModule,
     ContentModule,
   ],
+  providers: [ShutdownService],
 })
 export class AppModule {}
