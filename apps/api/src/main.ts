@@ -10,7 +10,7 @@ async function bootstrap() {
   const config = parseEnv();
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
 
-  app.enableShutdownHooks();
+  app.enableShutdownHooks(['SIGTERM'], { useProcessExit: true });
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(config.PORT, '0.0.0.0');
