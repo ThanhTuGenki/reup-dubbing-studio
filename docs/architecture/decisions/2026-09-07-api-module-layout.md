@@ -3,6 +3,8 @@
 - Trạng thái: `ACCEPTED`
 - Nguồn chuẩn cho: module boundaries, dependency direction và controller layout của NestJS Control Plane scaffold.
 - Không phải nguồn chuẩn cho: endpoint inventory, database schema chi tiết, event bus implementation hay deployment configuration.
+- Thay thế: —
+- Được thay thế bởi: —
 
 ## Bối cảnh
 
@@ -38,6 +40,17 @@ dependency, consumer boundary và vị trí của Translation/Content.
 Module không import ngược lên lớp trên; domain/application code không phụ thuộc
 controller hoặc adapter hạ tầng ngoài qua abstraction phù hợp.
 
+## Lựa chọn đã cân nhắc
+
+- Một module runner riêng cho task `CONTROL_PLANE`/`IO`: không chọn, vì sẽ tách
+  đường lease khỏi `modules/tasks` và tạo thêm boundary chưa cần thiết.
+- Trộn controller web và worker trong cùng một nhánh: không chọn, vì hai consumer
+  có contract và auth boundary khác nhau.
+- Ép mọi module tạo đủ bốn tầng ngay từ scaffold: không chọn, vì tạo thư mục rỗng
+  và không giúp vertical slice đầu tiên rõ hơn.
+- Cho Workflow và Tasks import vòng nhau: không chọn, vì domain event in-process
+  giữ dependency một chiều và vẫn cho phép Workflow nhận `TaskCompleted`.
+
 ## Hệ quả
 
 - Vertical slice có thể thêm đúng các tầng cần thiết mà không tạo thư mục rỗng.
@@ -45,3 +58,12 @@ controller hoặc adapter hạ tầng ngoài qua abstraction phù hợp.
 - Scheduler chạy nhiều instance cần lock phân tán, chưa xử lý.
 - `apps/api/src/modules/**` hiện chỉ là module class rỗng; runner, event bus, SSE
   và endpoint nghiệp vụ được defer tới các issue/slice sau.
+
+## Cách kiểm chứng
+
+- `apps/api` build thành công và test e2e `/health` pass theo bằng chứng trong
+  [PR #51](https://github.com/ThanhTuGenki/reup-dubbing-studio/pull/51).
+- Kiểm tra cấu trúc xác nhận có đủ 14 module rỗng, `prisma validate` pass và
+  `apps/api/src/modules/**` không có file ngoài các module class theo [PR #51](https://github.com/ThanhTuGenki/reup-dubbing-studio/pull/51).
+- Khi thêm vertical slice, kiểm tra controller nằm đúng consumer branch và dependency
+  không đi ngược các lớp trong bảng ở trên.

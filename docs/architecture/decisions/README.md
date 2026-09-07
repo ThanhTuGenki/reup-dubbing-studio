@@ -40,23 +40,6 @@ Vòng đời chuẩn là `DRAFT → ACCEPTED → SUPERSEDED | DEPRECATED`.
 - ADR nên gói trong khoảng một trang; nếu cần viết spec dài, đặt spec ở tài liệu
   phù hợp và để ADR chỉ ghi quyết định, trade-off, hệ quả và cách kiểm chứng.
 
-## Mapping tối thiểu cho ADR #7
-
-[`2026-09-07-api-module-layout.md`](2026-09-07-api-module-layout.md) là ADR đã
-được merge trước khi có template này. Để không viết lại hoặc mở rộng nội dung ADR
-#7 ngoài scope Issue #22, mapping tối thiểu là:
-
-| Template | ADR #7 hiện có |
-|---|---|
-| Bối cảnh | `## Bối cảnh` |
-| Quyết định | `## Quyết định` và `### Hướng dependency` |
-| Lựa chọn đã cân nhắc | Chưa có mục riêng trong ADR legacy |
-| Hệ quả | `## Hệ quả` |
-| Cách kiểm chứng | Bằng chứng test nằm trong PR merge của Issue #7 |
-
-Các ADR mới phải dùng đủ năm mục trong [`_template.md`](_template.md). Mapping này
-không thay đổi nội dung, tiêu đề hoặc liên kết của ADR #7.
-
 ## Tạo ADR mới
 
 1. Copy [`_template.md`](_template.md) thành
