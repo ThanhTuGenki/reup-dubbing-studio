@@ -2,6 +2,11 @@ openapi: 3.1.0
 info:
   title: Reup Dubbing Studio error-code catalogue
   version: 0.0.0
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-UNLICENSED
+servers:
+  - url: https://api.example.invalid
 paths: {}
 x-error-codes:
   VALIDATION_ERROR:

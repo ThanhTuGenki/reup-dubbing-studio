@@ -3,6 +3,11 @@ info:
   title: Reup Dubbing Studio shared wire components
   version: 0.0.0
   description: Shared schemas, parameters, and error responses for both API surfaces.
+  license:
+    name: UNLICENSED
+    identifier: LicenseRef-UNLICENSED
+servers:
+  - url: https://api.example.invalid
 paths: {}
 components:
   schemas:
