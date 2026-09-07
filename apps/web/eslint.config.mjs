@@ -12,10 +12,8 @@ export default [
             { name: '@reup-dubbing-studio/api', message: 'Web must not import API internals.' },
           ],
           patterns: [
-            {
-              group: ['../api/**', '../../api/**', '../../../apps/api/**', 'apps/api/**'],
-              message: 'Web must not import API internals.',
-            },
+            { regex: '^(\\.\\./)+api(/|$)', message: 'Web must not import API internals.' },
+            { regex: '^(\\.\\./)+apps/api(/|$)', message: 'Web must not import API internals.' },
           ],
         },
       ],

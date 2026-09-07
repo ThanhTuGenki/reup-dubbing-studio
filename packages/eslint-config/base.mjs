@@ -6,38 +6,32 @@ const foundation = ['auth', 'storage', 'audit', 'notifications'];
 const core = ['videos', 'workflow', 'tasks', 'workers'];
 const product = ['discovery', 'voice-profiles', 'review', 'publishing', 'translation', 'content'];
 const allModules = [...foundation, ...core, ...product];
-const relativePatterns = (names) => names.flatMap((name) => [`../${name}/**`, `../../${name}/**`]);
-const internalPatterns = ['../*/internal/**', '../../*/internal/**'];
-const moduleImportPatterns = [
-  ...internalPatterns,
-  ...allModules.flatMap((name) => [
-    `../${name}/domain/**`,
-    `../../${name}/domain/**`,
-    `../${name}/application/**`,
-    `../../${name}/application/**`,
-    `../${name}/**/!(index|*.module)`,
-    `../../${name}/**/!(index|*.module)`,
-  ]),
-];
 
-const layerElements = [{ type: 'module', pattern: 'src/modules/*', mode: 'folder' }];
+const layerElements = [
+  { type: 'foundation', pattern: 'src/modules/{auth,storage,audit,notifications}', mode: 'folder' },
+  { type: 'core', pattern: 'src/modules/{videos,workflow,tasks,workers}', mode: 'folder' },
+  {
+    type: 'product',
+    pattern: 'src/modules/{discovery,voice-profiles,review,publishing,translation,content}',
+    mode: 'folder',
+  },
+  { type: 'module', pattern: 'src/modules/*', mode: 'folder' },
+];
 
 const restrictedImports = (patterns, paths = []) => ({
   'no-restricted-imports': [
     'error',
     {
       ...(paths.length > 0 ? { paths } : {}),
-      patterns: [{ group: patterns, message: 'Import through the documented module boundary.' }],
+      ...(patterns.length > 0
+        ? {
+            patterns: [
+              { group: patterns, message: 'Import violates the documented module boundary.' },
+            ],
+          }
+        : {}),
     },
   ],
-});
-
-const layerConfig = (names, forbidden) => ({
-  files: names.flatMap((name) => [
-    `**/src/modules/${name}/**/*.ts`,
-    `**/src/modules/${name}/**/*.tsx`,
-  ]),
-  rules: restrictedImports([...forbidden, ...moduleImportPatterns]),
 });
 
 export default [
@@ -49,7 +43,14 @@ export default [
       parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
     },
     plugins: { '@typescript-eslint': tseslint, boundaries },
-    settings: { 'boundaries/elements': layerElements },
+    settings: {
+      'boundaries/elements-single-match': false,
+      'boundaries/elements': layerElements,
+      'import/resolver': {
+        typescript: { alwaysTryTypes: true, project: './tsconfig.json' },
+        node: { extensions: ['.js', '.jsx', '.ts', '.tsx'] },
+      },
+    },
     rules: {
       // NestJS @Module classes are intentionally empty metadata containers.
       '@typescript-eslint/no-extraneous-class': 'off',
@@ -69,26 +70,21 @@ export default [
       ],
       'boundaries/entry-point': [
         'error',
-        { default: 'disallow', rules: [{ target: 'module', allow: ['index.ts', '*.module.ts'] }] },
+        {
+          default: 'disallow',
+          rules: [
+            { target: ['foundation', 'core', 'product'], allow: ['index.ts', '*.module.ts'] },
+          ],
+        },
       ],
     },
   },
-  layerConfig(foundation, [...relativePatterns(core), ...relativePatterns(product)]),
-  layerConfig(core, relativePatterns(product)),
-  layerConfig(product, []),
   {
     files: allModules.flatMap((name) => [
       `**/src/modules/${name}/domain/**/*.ts`,
       `**/src/modules/${name}/domain/**/*.tsx`,
     ]),
-    rules: restrictedImports(
-      [...relativePatterns(allModules), ...moduleImportPatterns, '@nestjs/*', '@prisma/*'],
-      [
-        { name: '@nestjs/common', message: 'Domain must not depend on NestJS.' },
-        { name: '@prisma/client', message: 'Domain must not depend on Prisma.' },
-        { name: 'fastify', message: 'Domain must not depend on Fastify.' },
-      ],
-    ),
+    rules: restrictedImports(['@nestjs/*', '@prisma/*', 'fastify']),
   },
   {
     files: allModules.flatMap((name) => [
@@ -96,7 +92,7 @@ export default [
       `**/src/modules/${name}/application/**/*.tsx`,
     ]),
     rules: restrictedImports(
-      [...relativePatterns(allModules), ...moduleImportPatterns],
+      [],
       [
         {
           name: '@nestjs/common',

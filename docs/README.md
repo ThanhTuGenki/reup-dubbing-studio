@@ -6,18 +6,18 @@ thư mục mới.
 
 ## Nguồn chuẩn cho từng loại
 
-| Cần biết                                          | Đọc                                                                   | Trạng thái                                 |
-| ------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------ |
-| Vấn đề, người dùng, phạm vi, luồng nghiệp vụ      | [`product/design.md`](product/design.md)                              | `ACCEPTED` (§12 đã bị thay thế)            |
-| Stack, cấu trúc monorepo, contract-first, CI gate | [`architecture/application.md`](architecture/application.md)          | `ACCEPTED`                                 |
-| Thiết kế các stage của pipeline media             | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)        | thiết kế `ACCEPTED`, triển khai `ARCHIVED` |
+| Cần biết                                          | Đọc                                                                    | Trạng thái                                 |
+| ------------------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------ |
+| Vấn đề, người dùng, phạm vi, luồng nghiệp vụ      | [`product/design.md`](product/design.md)                               | `ACCEPTED` (§12 đã bị thay thế)            |
+| Stack, cấu trúc monorepo, contract-first, CI gate | [`architecture/application.md`](architecture/application.md)           | `ACCEPTED`                                 |
+| Thiết kế các stage của pipeline media             | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)         | thiết kế `ACCEPTED`, triển khai `ARCHIVED` |
 | Quyết định kiến trúc đơn lẻ                       | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR    |
-| **Contract giữa web ↔ api ↔ worker**              | `contracts/openapi/*.yaml` ở **gốc repo**                             | không nằm trong `docs/`                    |
-| Chạy pipeline bằng tay, việc cần người làm        | [`operations/manual-checklist.md`](operations/manual-checklist.md)    | runbook                                    |
-| Kết quả các lần chạy thủ công                     | [`operations/acceptance-log.md`](operations/acceptance-log.md)        | log, append                                |
-| Nợ kỹ thuật đã biết                               | [`operations/known-followups.md`](operations/known-followups.md)      | ⚠️ tracker tạm                             |
-| Bố cục màn hình và route đã duyệt                 | [`reference/ui-prototype/`](reference/ui-prototype/)                  | `ARCHIVED`                                 |
-| **Trạng thái công việc**                          | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1) | **không nhân đôi vào file**                |
+| **Contract giữa web ↔ api ↔ worker**              | `contracts/openapi/*.yaml` ở **gốc repo**                              | không nằm trong `docs/`                    |
+| Chạy pipeline bằng tay, việc cần người làm        | [`operations/manual-checklist.md`](operations/manual-checklist.md)     | runbook                                    |
+| Kết quả các lần chạy thủ công                     | [`operations/acceptance-log.md`](operations/acceptance-log.md)         | log, append                                |
+| Nợ kỹ thuật đã biết                               | [`operations/known-followups.md`](operations/known-followups.md)       | ⚠️ tracker tạm                             |
+| Bố cục màn hình và route đã duyệt                 | [`reference/ui-prototype/`](reference/ui-prototype/)                   | `ARCHIVED`                                 |
+| **Trạng thái công việc**                          | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1)  | **không nhân đôi vào file**                |
 
 ## Bốn quy tắc
 
