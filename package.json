@@ -3,8 +3,8 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "lint": "pnpm --filter @reup-dubbing-studio/api lint",
-    "typecheck": "pnpm --filter @reup-dubbing-studio/api typecheck",
+    "lint": "pnpm --recursive --if-present lint",
+    "typecheck": "pnpm --recursive --if-present typecheck",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs apps/api/src apps/web",
     "prepare": "lefthook install"
   },
