@@ -1,0 +1,44 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio error-code catalogue
+  version: 0.0.0
+paths: {}
+x-error-codes:
+  VALIDATION_ERROR:
+    httpStatus: 400
+    description: One or more request fields failed validation.
+  UNAUTHORIZED:
+    httpStatus: 401
+    description: Authentication is required or invalid.
+  FORBIDDEN:
+    httpStatus: 403
+    description: The caller is not allowed to perform this operation.
+  NOT_FOUND:
+    httpStatus: 404
+    description: The requested resource was not found.
+  VERSION_CONFLICT:
+    httpStatus: 409
+    description: The resource changed since the caller last read it.
+  UNPROCESSABLE_ENTITY:
+    httpStatus: 422
+    description: The request is valid JSON but violates a domain invariant.
+  UPSTREAM_UNAVAILABLE:
+    httpStatus: 503
+    description: A required upstream service is unavailable.
+  INTERNAL_ERROR:
+    httpStatus: 500
+    description: An unexpected server error occurred.
+components:
+  schemas:
+    ErrorCode:
+      type: string
+      description: Stable machine-readable error code. Add codes to x-error-codes first.
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - VERSION_CONFLICT
+        - UNPROCESSABLE_ENTITY
+        - UPSTREAM_UNAVAILABLE
+        - INTERNAL_ERROR

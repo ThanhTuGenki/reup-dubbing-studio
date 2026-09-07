@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio shared wire components
+  version: 0.0.0
+  description: Shared schemas, parameters, and error responses for both API surfaces.
+paths: {}
+components:
+  schemas:
+    ProblemDetails:
+      type: object
+      description: RFC 9457 Problem Details with stable machine-readable extensions.
+      required: [type, title, status, detail, instance, code, requestId]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          description: A URI reference identifying the problem type.
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          $ref: ./error-codes.yaml#/components/schemas/ErrorCode
+        requestId:
+          type: string
+          description: Correlation identifier assigned by the server.
+    UuidV7:
+      type: string
+      format: uuid
+      description: Server-generated UUID version 7.
+    Timestamp:
+      type: string
+      format: date-time
+      description: ISO 8601 timestamp in UTC; serialized with a trailing Z.
+    CursorPage:
+      type: object
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items: {}
+        nextCursor:
+          type: [string, 'null']
+          description: Opaque cursor for the next page, or null at the end.
+    ApiVersion:
+      type: string
+      enum: [v1]
+      description: Major URL version; incompatible changes require a new value.
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Unique key per logical mutation; retained for at least 24 hours.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 255
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Expected resource version; mismatch produces VERSION_CONFLICT (409).
+      schema:
+        type: string
+        pattern: '^[0-9]+$'
+  responses:
+    BadRequest:
+      description: Request is malformed or fails validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorized:
+      description: Authentication is required or invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Forbidden:
+      description: Authenticated caller is not allowed to perform this operation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource does not exist or is not visible to the caller.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Conflict:
+      description: Request conflicts with current resource state.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UnprocessableEntity:
+      description: Request is syntactically valid but semantically invalid.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    InternalServerError:
+      description: Unexpected server failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ServiceUnavailable:
+      description: A required service is temporarily unavailable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'

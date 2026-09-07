@@ -7,5 +7,45 @@ info:
     name: UNLICENSED
     identifier: LicenseRef-UNLICENSED
 servers:
-  - url: https://worker-api.example.invalid
+  - url: https://worker-api.example.invalid/worker/v1
 paths: {}
+components:
+  schemas:
+    ProblemDetails:
+      $ref: ./shared.yaml#/components/schemas/ProblemDetails
+    UuidV7:
+      $ref: ./shared.yaml#/components/schemas/UuidV7
+    Timestamp:
+      $ref: ./shared.yaml#/components/schemas/Timestamp
+    CursorPage:
+      $ref: ./shared.yaml#/components/schemas/CursorPage
+    ApiVersion:
+      $ref: ./shared.yaml#/components/schemas/ApiVersion
+    ErrorCode:
+      $ref: ./error-codes.yaml#/components/schemas/ErrorCode
+  parameters:
+    Cursor:
+      $ref: ./shared.yaml#/components/parameters/Cursor
+    Limit:
+      $ref: ./shared.yaml#/components/parameters/Limit
+    IfMatch:
+      $ref: ./shared.yaml#/components/parameters/IfMatch
+    IdempotencyKey:
+      $ref: ./shared.yaml#/components/parameters/IdempotencyKey
+  responses:
+    BadRequest:
+      $ref: ./shared.yaml#/components/responses/BadRequest
+    Unauthorized:
+      $ref: ./shared.yaml#/components/responses/Unauthorized
+    Forbidden:
+      $ref: ./shared.yaml#/components/responses/Forbidden
+    NotFound:
+      $ref: ./shared.yaml#/components/responses/NotFound
+    Conflict:
+      $ref: ./shared.yaml#/components/responses/Conflict
+    UnprocessableEntity:
+      $ref: ./shared.yaml#/components/responses/UnprocessableEntity
+    InternalServerError:
+      $ref: ./shared.yaml#/components/responses/InternalServerError
+    ServiceUnavailable:
+      $ref: ./shared.yaml#/components/responses/ServiceUnavailable
