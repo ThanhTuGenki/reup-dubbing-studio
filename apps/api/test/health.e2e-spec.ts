@@ -10,7 +10,9 @@ describe('GET /health', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = await moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter()).init();
+    app = await moduleRef
+      .createNestApplication<NestFastifyApplication>(new FastifyAdapter())
+      .init();
     await app.getHttpAdapter().getInstance().ready();
   });
 
@@ -18,5 +20,6 @@ describe('GET /health', () => {
     await app.close();
   });
 
-  it('returns a healthy status', () => request(app.getHttpServer()).get('/health').expect(200).expect({ status: 'ok' }));
+  it('returns a healthy status', () =>
+    request(app.getHttpServer()).get('/health').expect(200).expect({ status: 'ok' }));
 });
