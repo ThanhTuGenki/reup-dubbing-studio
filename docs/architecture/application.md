@@ -378,7 +378,12 @@ PublishingModule
 StorageModule
 NotificationsModule
 AuditModule
+TranslationModule
+ContentModule
 ```
+
+Dependency direction and the four-layer module convention are recorded in
+[`2026-09-07-api-module-layout.md`](decisions/2026-09-07-api-module-layout.md).
 
 Không tách các module này thành network microservice trước khi có nhu cầu scale hoặc ownership thực tế.
 
