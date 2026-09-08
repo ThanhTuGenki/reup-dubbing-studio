@@ -12,6 +12,9 @@
     "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "baseUrl": "./",
+    "paths": {
+      "@reup-dubbing-studio/api-contract/*": ["../../packages/api-contract/src/*"]
+    },
     "incremental": true,
     "skipLibCheck": true
   },

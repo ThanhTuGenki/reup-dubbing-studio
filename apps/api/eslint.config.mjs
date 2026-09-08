@@ -7,6 +7,38 @@ export default [
     linterOptions: { reportUnusedDisableDirectives: 'off' },
   },
   {
+    files: ['src/**/domain/**/*.ts', 'src/**/domain/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@nestjs/*', '@prisma/*', 'fastify'],
+              message: 'Domain code must remain framework independent.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/**/application/**/*.ts', 'src/**/application/**/*.tsx'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@nestjs/common',
+              message: 'Application code must remain framework independent.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/**/*.ts'],
     rules: { 'no-console': 'error' },
   },
