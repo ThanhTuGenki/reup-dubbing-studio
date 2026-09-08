@@ -8,19 +8,21 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json apps/api/package.json
 COPY packages/*/package.json packages/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS build
 COPY . .
+RUN pnpm --filter @reup-dubbing-studio/api exec prisma generate
 RUN pnpm --filter @reup-dubbing-studio/api build
-RUN pnpm --filter @reup-dubbing-studio/api deploy --prod /app
+RUN pnpm --filter @reup-dubbing-studio/api deploy --prod --legacy --ignore-scripts /app
+COPY apps/api/prisma /app/prisma
+RUN node /app/node_modules/prisma/build/index.js generate --schema=/app/prisma/schema.prisma
 
 FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build /app ./
 COPY --from=build /workspace/apps/api/dist ./dist
-COPY --from=build /workspace/apps/api/prisma ./prisma
 COPY apps/api/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod 755 /usr/local/bin/docker-entrypoint.sh \
   && addgroup -S app \

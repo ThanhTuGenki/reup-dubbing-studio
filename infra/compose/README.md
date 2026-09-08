@@ -19,6 +19,10 @@ The API is opt-in because normal development runs `pnpm --filter api start:dev`:
 docker compose -f infra/compose/local.yml --profile api up -d --build
 ```
 
+The API profile waits for PostgreSQL and exposes readiness at
+`http://localhost:3000/ready`; the readiness endpoint is supplied by the API
+health lifecycle change in PR #55.
+
 To discard all local database and object data, use the explicitly destructive
 volume reset:
 
