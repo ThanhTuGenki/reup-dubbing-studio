@@ -31,8 +31,7 @@ export default [
           paths: [
             {
               name: '@nestjs/common',
-              allowImportNames: ['Inject', 'Injectable', 'Optional', 'forwardRef'],
-              message: 'Application may use only documented NestJS DI decorators.',
+              message: 'Application code must remain framework independent.',
             },
           ],
         },
