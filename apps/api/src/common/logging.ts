@@ -24,6 +24,20 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
   if (value && typeof value === 'object') {
     if (seen.has(value)) return '[Circular]';
     seen.add(value);
+    if (value instanceof Error) {
+      const copy = Object.create(Object.getPrototypeOf(value)) as Error;
+      for (const key of Object.getOwnPropertyNames(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor) continue;
+        if ('value' in descriptor) {
+          descriptor.value = sensitiveKeyPattern.test(key)
+            ? REDACTED
+            : sanitizeValue(descriptor.value, seen);
+        }
+        Object.defineProperty(copy, key, descriptor);
+      }
+      return copy;
+    }
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
@@ -65,13 +79,27 @@ export function loggingOptions() {
       censor: REDACTED,
     },
     serializers: { req: redactRequest },
+    formatters: {
+      bindings: (bindings: Record<string, unknown>) =>
+        sanitizeLogValue(bindings) as Record<string, unknown>,
+      log: (object: Record<string, unknown>) => sanitizeLogValue(object) as Record<string, unknown>,
+    },
     mixin: () => getRequestContext() ?? {},
+    mixinMergeStrategy: (mergeObject: object, mixinObject: object) =>
+      sanitizeLogValue({ ...mergeObject, ...mixinObject }) as Record<string, unknown>,
     hooks: {
       logMethod(inputArgs: unknown[], method: (...args: unknown[]) => void): void {
         if (inputArgs[0] && typeof inputArgs[0] === 'object') {
           inputArgs[0] = sanitizeLogValue(inputArgs[0]);
         }
         method.apply(this, inputArgs);
+      },
+      streamWrite(line: string): string {
+        try {
+          return `${JSON.stringify(sanitizeLogValue(JSON.parse(line)))}\n`;
+        } catch {
+          return line;
+        }
       },
     },
   };

@@ -88,6 +88,64 @@ describe('structured logging', () => {
     expect(JSON.stringify(record)).not.toContain('COOKIE_SENTINEL');
   });
 
+  it('preserves direct Error diagnostics while redacting sensitive custom properties', () => {
+    const output: string[] = [];
+    const logger = testLogger(output);
+    const error = new Error('DIRECT_ERROR_SENTINEL');
+    error.name = 'DirectError';
+    Object.assign(error, { code: 'E_DIRECT', accessToken: 'ERROR_TOKEN_SENTINEL' });
+
+    logger.error(error);
+
+    const record = JSON.parse(output[0] ?? '{}') as Record<string, unknown>;
+    expect(record).toMatchObject({
+      err: {
+        type: 'Error',
+        message: 'DIRECT_ERROR_SENTINEL',
+        code: 'E_DIRECT',
+      },
+      msg: 'DIRECT_ERROR_SENTINEL',
+    });
+    expect(output[0]).toContain('stack');
+    expect(output[0]).not.toContain('ERROR_TOKEN_SENTINEL');
+  });
+
+  it('preserves nested Error diagnostics and surrounding message', () => {
+    const output: string[] = [];
+    const logger = testLogger(output);
+    const error = new Error('NESTED_ERROR_SENTINEL');
+    Object.assign(error, { code: 'E_NESTED', client_secret: 'ERROR_SECRET_SENTINEL' });
+
+    logger.error({ err: error }, 'upload failed');
+
+    const record = JSON.parse(output[0] ?? '{}') as Record<string, unknown>;
+    expect(record).toMatchObject({
+      err: { type: 'Error', message: 'NESTED_ERROR_SENTINEL', code: 'E_NESTED' },
+      msg: 'upload failed',
+    });
+    expect(output[0]).toContain('stack');
+    expect(output[0]).not.toContain('ERROR_SECRET_SENTINEL');
+  });
+
+  it('redacts child logger bindings while preserving safe bindings and message', () => {
+    const output: string[] = [];
+    const logger = testLogger(output).child({
+      nested: {
+        accessToken: 'CHILD_TOKEN_SENTINEL',
+        safeBinding: 'visible-child-binding',
+      },
+      downloadUrl: 'https://example.invalid/object?X-Amz-Signature=CHILD_URL_SENTINEL',
+    });
+
+    logger.info('child binding log');
+
+    expect(output[0]).not.toContain('CHILD_TOKEN_SENTINEL');
+    expect(output[0]).not.toContain('CHILD_URL_SENTINEL');
+    expect(output[0]).toContain('[Redacted]');
+    expect(output[0]).toContain('visible-child-binding');
+    expect(output[0]).toContain('child binding log');
+  });
+
   it('uses newline-delimited JSON in production', () => {
     const previousEnvironment = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
