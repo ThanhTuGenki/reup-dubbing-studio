@@ -5,11 +5,11 @@ import {
   runWithRequestContext,
   setBusinessContext,
 } from '../src/common/context/request-context';
-import { loggingOptions } from '../src/common/logging';
+import { loggingOptions, redactRequest } from '../src/common/logging';
 
 function testLogger(output: string[]): pino.Logger {
   const options = { ...loggingOptions().pinoHttp };
-  delete options.transport;
+  delete (options as { transport?: unknown }).transport;
   return pino(options, { write: (line: string) => output.push(line) });
 }
 
@@ -28,7 +28,34 @@ describe('structured logging', () => {
     expect(record.msg).toBe('task milestone');
   });
 
-  it('redacts authorization and sensitive key names', () => {
+  it.each([
+    ['accessToken', 'ACCESS_TOKEN_SENTINEL'],
+    ['client_secret', 'CLIENT_SECRET_SENTINEL'],
+    ['APIKEY', 'APIKEY_SENTINEL'],
+    ['password', 'DEEP_PASSWORD_SENTINEL'],
+  ])('redacts %s at arbitrary depth', (key, sentinel) => {
+    const output: string[] = [];
+    const logger = testLogger(output);
+
+    logger.info(
+      {
+        nested: {
+          [key]: sentinel,
+          one: { two: { three: { four: { [key]: sentinel } } } },
+          array: [{ safe: 'visible', [key]: sentinel }],
+        },
+        downloadUrl: 'https://example.invalid/object?X-Amz-Signature=URL_QUERY_SENTINEL',
+      },
+      'request received',
+    );
+
+    expect(output[0]).not.toContain(sentinel);
+    expect(output[0]).not.toContain('URL_QUERY_SENTINEL');
+    expect(output[0]).toContain('[Redacted]');
+    expect(output[0]).toContain('visible');
+  });
+
+  it('redacts credentials on an actual request record', () => {
     const output: string[] = [];
     const logger = testLogger(output);
 
@@ -36,17 +63,29 @@ describe('structured logging', () => {
       {
         req: {
           method: 'GET',
-          url: '/download?X-Amz-Signature=secret123',
-          headers: { authorization: 'Bearer secret123', cookie: 'sid=secret123' },
+          url: '/health',
+          headers: { authorization: 'Bearer AUTHORIZATION_SENTINEL', cookie: 'COOKIE_SENTINEL' },
         },
-        token: 'secret123',
-        password: 'secret123',
       },
       'request received',
     );
 
-    expect(output[0]).not.toContain('secret123');
-    expect(output[0]).toContain('[Redacted]');
+    expect(output[0]).not.toContain('AUTHORIZATION_SENTINEL');
+    expect(output[0]).not.toContain('COOKIE_SENTINEL');
+    expect(output[0]).toMatch(/authorization.*\[Redacted\]/);
+    expect(output[0]).toMatch(/cookie.*\[Redacted\]/);
+  });
+
+  it('redacts credentials from the request serializer used by pino-http', () => {
+    const record = redactRequest({
+      method: 'GET',
+      url: '/health',
+      headers: { authorization: 'Bearer AUTHORIZATION_SENTINEL', cookie: 'COOKIE_SENTINEL' },
+    });
+
+    expect(JSON.stringify(record)).toContain('[Redacted]');
+    expect(JSON.stringify(record)).not.toContain('AUTHORIZATION_SENTINEL');
+    expect(JSON.stringify(record)).not.toContain('COOKIE_SENTINEL');
   });
 
   it('uses newline-delimited JSON in production', () => {
