@@ -45,10 +45,9 @@ for (const contract of contracts) {
   const source = join(contractDir, contract.source);
   const target = join(outputDir, `${contract.name}.ts`);
   execFileSync(
-    'pnpm',
+    process.execPath,
     [
-      'exec',
-      'openapi-typescript',
+      join(root, 'node_modules/openapi-typescript/bin/cli.js'),
       source,
       '--output',
       target,

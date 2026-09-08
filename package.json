@@ -12,7 +12,7 @@
     "prepare": "lefthook install"
   },
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=22.12 <23"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
