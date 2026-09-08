@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
@@ -279,10 +279,6 @@ function resolveSchema(value, source, context = createResolutionContext()) {
 }
 
 function definitionName(target, fragment = '') {
-  const sourceName = target
-    .split(/[\\/]/)
-    .pop()
-    .replace(/[^A-Za-z0-9_-]/g, '_');
-  const fragmentName = fragment.split('/').filter(Boolean).pop() ?? 'root';
-  return `${sourceName}_${fragmentName.replace(/[^A-Za-z0-9_-]/g, '_')}`;
+  const canonicalReference = `${relative(contractDir, target).split(sep).join('/')}#${fragment}`;
+  return `ref_${Buffer.from(canonicalReference, 'utf8').toString('base64url')}`;
 }
