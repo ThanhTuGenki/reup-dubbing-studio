@@ -16,6 +16,11 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
     if (/^https?:\/\/[^?]+\?/.test(value)) return `${value.split('?')[0]}?[Redacted]`;
     return value;
   }
+  if (value instanceof URL) {
+    const url = value.toString();
+    return url.includes('?') ? `${url.split('?')[0]}?[Redacted]` : url;
+  }
+  if (value instanceof Date) return value;
   if (Array.isArray(value)) {
     if (seen.has(value)) return '[Circular]';
     seen.add(value);
@@ -38,6 +43,8 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
       }
       return copy;
     }
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype !== Object.prototype && prototype !== null) return value;
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,

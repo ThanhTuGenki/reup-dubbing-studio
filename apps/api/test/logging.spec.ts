@@ -146,6 +146,29 @@ describe('structured logging', () => {
     expect(output[0]).toContain('child binding log');
   });
 
+  it('preserves typed values while redacting URL query strings', () => {
+    const output: string[] = [];
+    const logger = testLogger(output);
+
+    logger.info(
+      {
+        occurredAt: new Date('2026-09-08T00:00:00.000Z'),
+        endpoint: new URL('https://example.invalid/object?X-Amz-Signature=URL_OBJECT_SENTINEL'),
+        safeNumber: 42,
+      },
+      'typed values',
+    );
+
+    const record = JSON.parse(output[0] ?? '') as Record<string, unknown>;
+    expect(record).toMatchObject({
+      occurredAt: '2026-09-08T00:00:00.000Z',
+      endpoint: 'https://example.invalid/object?[Redacted]',
+      safeNumber: 42,
+      msg: 'typed values',
+    });
+    expect(output[0]).not.toContain('URL_OBJECT_SENTINEL');
+  });
+
   it('uses newline-delimited JSON in production', () => {
     const previousEnvironment = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
