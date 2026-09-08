@@ -13,3 +13,6 @@ export interface OperationSchemaManifest {
   title: string;
   operations: OperationSchemaRecord[];
 }
+
+declare const manifest: OperationSchemaManifest;
+export default manifest;

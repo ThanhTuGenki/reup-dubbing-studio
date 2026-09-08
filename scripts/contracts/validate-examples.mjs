@@ -24,19 +24,19 @@ for (const source of sources) {
   )) {
     for (const [method, operation] of Object.entries(pathItem)) {
       if (!isOperation(method)) continue;
-      const requestSchema = operation.requestBody?.content?.['application/json']?.schema;
-      if (requestSchema && !hasExample(resolveSchema(requestSchema, source, new Set()))) {
-        failures.push(
-          `${source}: ${method.toUpperCase()} ${path} request schema must define example`,
-        );
-      }
+      const requestBody = resolveObjectReference(operation.requestBody, source);
+      checkContentSchemas(
+        requestBody?.content,
+        `${source}: ${method.toUpperCase()} ${path} request`,
+        source,
+      );
       for (const [status, response] of Object.entries(operation.responses ?? {})) {
-        const responseSchema = response.content?.['application/json']?.schema;
-        if (responseSchema && !hasExample(resolveSchema(responseSchema, source, new Set()))) {
-          failures.push(
-            `${source}: ${method.toUpperCase()} ${path} response ${status} schema must define example`,
-          );
-        }
+        const resolvedResponse = resolveObjectReference(response, source);
+        checkContentSchemas(
+          resolvedResponse?.content,
+          `${source}: ${method.toUpperCase()} ${path} response ${status}`,
+          source,
+        );
       }
     }
   }
@@ -53,6 +53,28 @@ console.log(`Schema example validation passed for ${sources.length} OpenAPI entr
 function load(source) {
   if (!documents.has(source)) documents.set(source, YAML.parse(readFileSync(source, 'utf8')));
   return documents.get(source);
+}
+
+function checkContentSchemas(content, label, source) {
+  for (const [mediaType, media] of Object.entries(content ?? {})) {
+    const schema = media?.schema;
+    if (schema && !hasExample(resolveSchema(schema, source, new Set()))) {
+      failures.push(`${label} ${mediaType} schema must define example`);
+    }
+  }
+}
+
+function resolveObjectReference(value, source, seen = new Set()) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !value.$ref) return value;
+  const [targetFile, fragment] = value.$ref.split('#');
+  const target = resolve(targetFile ? join(dirname(source), targetFile) : source);
+  const reference = `${target}#${fragment ?? ''}`;
+  if (seen.has(reference)) return value;
+  let resolved = load(target);
+  for (const part of (fragment ?? '').split('/').filter(Boolean)) {
+    resolved = resolved?.[part.replaceAll('~1', '/').replaceAll('~0', '~')];
+  }
+  return resolveObjectReference(resolved, target, new Set(seen).add(reference));
 }
 
 function resolveSchema(value, source, seen) {
