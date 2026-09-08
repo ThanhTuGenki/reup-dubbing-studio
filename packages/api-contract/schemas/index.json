@@ -1,12 +1,33 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml and worker.openapi.yaml",
   "title": "Reup Dubbing Studio generated operation schemas",
   "type": "object",
   "properties": {
     "operations": {
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "object",
+        "properties": {
+          "contract": {
+            "enum": [
+              "web",
+              "worker"
+            ]
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract",
+          "operationId",
+          "file"
+        ],
+        "additionalProperties": false
       }
     }
   },

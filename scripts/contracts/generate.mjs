@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import YAML from 'yaml';
 
@@ -15,10 +15,28 @@ const contracts = [
   { name: 'worker', source: 'worker.openapi.yaml' },
 ];
 const documents = new Map();
+const operationRecords = [];
+const schemaTypes = `/**
+ * GENERATED FILE — DO NOT EDIT. Source: packages/api-contract/schemas/index.json
+ */
+export interface OperationSchemaRecord {
+  contract: 'web' | 'worker';
+  operationId: string;
+  file: \`${'${'}'web' | 'worker'${'}'}/${'${'}string${'}'}.json\`;
+}
+
+export interface OperationSchemaManifest {
+  $schema: string;
+  $comment: string;
+  title: string;
+  operations: OperationSchemaRecord[];
+}
+`;
 
 mkdirSync(outputDir, { recursive: true });
 rmSync(schemaDir, { recursive: true, force: true });
 mkdirSync(schemaDir, { recursive: true });
+writeFileSync(join(outputDir, 'schemas.ts'), schemaTypes, 'utf8');
 
 for (const contract of contracts) {
   const source = join(contractDir, contract.source);
@@ -44,21 +62,35 @@ for (const contract of contracts) {
   generateOperationSchemas(source, contract.name);
 }
 
-const operations = readdirSync(schemaDir)
-  .filter((file) => file.endsWith('.json') && file !== 'index.json')
-  .map((file) => file.slice(0, -5))
-  .sort();
 writeFileSync(
   join(schemaDir, 'index.json'),
   `${JSON.stringify(
     {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
+      $comment:
+        'GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml and worker.openapi.yaml',
       title: 'Reup Dubbing Studio generated operation schemas',
       type: 'object',
-      properties: { operations: { type: 'array', items: { type: 'string' } } },
+      properties: {
+        operations: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              contract: { enum: ['web', 'worker'] },
+              operationId: { type: 'string' },
+              file: { type: 'string' },
+            },
+            required: ['contract', 'operationId', 'file'],
+            additionalProperties: false,
+          },
+        },
+      },
       required: ['operations'],
       additionalProperties: false,
-      operations,
+      operations: operationRecords.sort((a, b) =>
+        `${a.contract}:${a.operationId}`.localeCompare(`${b.contract}:${b.operationId}`),
+      ),
     },
     null,
     2,
@@ -79,43 +111,151 @@ function generateOperationSchemas(source, contractName) {
         continue;
       if (!operation.operationId)
         throw new Error(`${source}: ${method.toUpperCase()} ${path} is missing operationId`);
+      const resolution = createResolutionContext();
+      const parameters = [...(pathItem.parameters ?? []), ...(operation.parameters ?? [])];
       const schema = {
         $schema: 'https://json-schema.org/draft/2020-12/schema',
+        $comment: `GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/${contractName}.openapi.yaml`,
         $id: `urn:reup-dubbing-studio:${contractName}:operation:${operation.operationId}`,
         title: operation.summary ?? operation.operationId,
         type: 'object',
         properties: {
-          request: resolveSchema(
-            operation.requestBody?.content?.['application/json']?.schema ?? {},
-            source,
-          ),
-          responses: Object.fromEntries(
-            Object.entries(operation.responses ?? {})
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([status, response]) => [
-                status,
-                resolveSchema(response.content?.['application/json']?.schema ?? {}, source),
-              ]),
-          ),
+          request: createRequestSchema(operation, parameters, source, resolution),
+          responses: createResponsesSchema(operation.responses ?? {}, source, resolution),
         },
         required: ['request', 'responses'],
         additionalProperties: false,
       };
-      writeFileSync(
-        join(schemaDir, `${operation.operationId}.json`),
-        `${JSON.stringify(schema, null, 2)}\n`,
-        'utf8',
-      );
+      if (resolution.defs.size > 0) {
+        schema.$defs = Object.fromEntries(
+          [...resolution.defs].map(([reference, value]) => [
+            definitionName(...reference.split('#')),
+            value,
+          ]),
+        );
+      }
+      const contractSchemaDir = join(schemaDir, contractName);
+      mkdirSync(contractSchemaDir, { recursive: true });
+      const schemaFilename = `${safeOperationFilename(operation.operationId)}.json`;
+      const schemaTarget = resolve(contractSchemaDir, schemaFilename);
+      const schemaRoot = `${resolve(contractSchemaDir)}${sep}`;
+      if (!schemaTarget.startsWith(schemaRoot)) {
+        throw new Error(`Unsafe operationId target: ${operation.operationId}`);
+      }
+      writeFileSync(schemaTarget, `${JSON.stringify(schema, null, 2)}\n`, 'utf8');
+      operationRecords.push({
+        contract: contractName,
+        operationId: operation.operationId,
+        file: `${contractName}/${schemaFilename}`,
+      });
     }
   }
 }
 
-function resolveSchema(value, source) {
-  if (Array.isArray(value)) return value.map((item) => resolveSchema(item, source));
+function createResponsesSchema(responses, source, resolution) {
+  const entries = Object.entries(responses)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([status, response]) => [status, responseSchema(response, source, resolution)]);
+  return {
+    type: 'object',
+    properties: Object.fromEntries(entries),
+    required: entries.map(([status]) => status),
+    additionalProperties: false,
+  };
+}
+
+function safeOperationFilename(operationId) {
+  if (/^(?!\.\.?$)[A-Za-z0-9][A-Za-z0-9._-]*$/.test(operationId)) return operationId;
+  return `operation-${Buffer.from(operationId, 'utf8').toString('base64url')}`;
+}
+
+function createRequestSchema(operation, parameters, source, resolution) {
+  const properties = {};
+  const required = [];
+  const resolvedParameters = parameters.map((parameter) =>
+    resolveObjectReference(parameter, source),
+  );
+  for (const location of ['path', 'query', 'header']) {
+    const locationParameters = resolvedParameters.filter((parameter) => parameter.in === location);
+    if (locationParameters.length === 0) continue;
+    const locationProperties = {};
+    const locationRequired = [];
+    for (const parameter of locationParameters) {
+      if (!parameter.name || !parameter.schema) continue;
+      locationProperties[parameter.name] = resolveSchema(parameter.schema, source, resolution);
+      if (parameter.required) locationRequired.push(parameter.name);
+    }
+    const requestKey = location === 'header' ? 'headers' : location;
+    properties[requestKey] = {
+      type: 'object',
+      properties: locationProperties,
+      ...(locationRequired.length > 0 ? { required: locationRequired } : {}),
+      additionalProperties: false,
+    };
+    required.push(requestKey);
+  }
+
+  const requestBody = operation.requestBody
+    ? resolveObjectReference(operation.requestBody, source)
+    : undefined;
+  const bodySchema = selectMediaSchema(requestBody?.content, source, resolution);
+  if (bodySchema !== undefined) {
+    properties.body = bodySchema;
+    if (operation.requestBody.required) required.push('body');
+  }
+
+  return {
+    type: 'object',
+    properties,
+    ...(required.length > 0 ? { required } : {}),
+    additionalProperties: false,
+  };
+}
+
+function responseSchema(response, source, resolution) {
+  const resolvedResponse = resolveObjectReference(response, source);
+  return selectMediaSchema(resolvedResponse?.content, source, resolution) ?? {};
+}
+
+function selectMediaSchema(content, source, resolution) {
+  if (!content || typeof content !== 'object') return undefined;
+  const mediaType =
+    Object.keys(content).find((type) => type === 'application/json') ??
+    Object.keys(content).find((type) => type === 'application/problem+json') ??
+    Object.keys(content)[0];
+  return mediaType && content[mediaType]?.schema
+    ? resolveSchema(content[mediaType].schema, source, resolution)
+    : undefined;
+}
+
+function createResolutionContext() {
+  return { defs: new Map(), stack: new Set() };
+}
+
+function resolveObjectReference(value, source, seen = new Set()) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !value.$ref) return value;
+  const [targetFile, fragment] = value.$ref.split('#');
+  const target = resolve(targetFile ? join(dirname(source), targetFile) : source);
+  const reference = `${target}#${fragment ?? ''}`;
+  if (seen.has(reference)) throw new Error(`Cyclic non-schema OpenAPI reference: ${reference}`);
+  if (!documents.has(target)) documents.set(target, YAML.parse(readFileSync(target, 'utf8')));
+  let resolved = documents.get(target);
+  for (const part of (fragment ?? '').split('/').filter(Boolean)) {
+    resolved = resolved?.[part.replaceAll('~1', '/').replaceAll('~0', '~')];
+  }
+  return resolveObjectReference(resolved, target, new Set(seen).add(reference));
+}
+
+function resolveSchema(value, source, context = createResolutionContext()) {
+  if (Array.isArray(value)) return value.map((item) => resolveSchema(item, source, context));
   if (!value || typeof value !== 'object') return value;
   if (typeof value.$ref === 'string') {
     const [targetFile, fragment] = value.$ref.split('#');
     const target = resolve(targetFile ? join(dirname(source), targetFile) : source);
+    const reference = `${target}#${fragment ?? ''}`;
+    const definition = definitionName(target, fragment);
+    if (context.stack.has(reference)) return { $ref: `#/$defs/${definition}` };
+    if (context.defs.has(reference)) return { $ref: `#/$defs/${definition}` };
     if (!documents.has(target)) documents.set(target, YAML.parse(readFileSync(target, 'utf8')));
     const pointer = (fragment ?? '')
       .split('/')
@@ -123,11 +263,23 @@ function resolveSchema(value, source) {
       .map((part) => part.replaceAll('~1', '/').replaceAll('~0', '~'));
     let resolved = documents.get(target);
     for (const part of pointer) resolved = resolved?.[part];
-    const expanded = resolveSchema(resolved ?? {}, target);
+    context.stack.add(reference);
+    const expanded = resolveSchema(resolved ?? {}, target, context);
+    context.stack.delete(reference);
+    context.defs.set(reference, expanded);
     const siblings = Object.fromEntries(Object.entries(value).filter(([key]) => key !== '$ref'));
-    return { ...expanded, ...resolveSchema(siblings, source) };
+    return { $ref: `#/$defs/${definition}`, ...resolveSchema(siblings, source, context) };
   }
   return Object.fromEntries(
-    Object.entries(value).map(([key, child]) => [key, resolveSchema(child, source)]),
+    Object.entries(value).map(([key, child]) => [key, resolveSchema(child, source, context)]),
   );
+}
+
+function definitionName(target, fragment = '') {
+  const sourceName = target
+    .split(/[\\/]/)
+    .pop()
+    .replace(/[^A-Za-z0-9_-]/g, '_');
+  const fragmentName = fragment.split('/').filter(Boolean).pop() ?? 'root';
+  return `${sourceName}_${fragmentName.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }

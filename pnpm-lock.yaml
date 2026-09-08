@@ -16,6 +16,9 @@ importers:
       '@redocly/cli':
         specifier: ^2.51.2
         version: 2.51.2
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       dependency-cruiser:
         specifier: ^16.10.4
         version: 16.10.4

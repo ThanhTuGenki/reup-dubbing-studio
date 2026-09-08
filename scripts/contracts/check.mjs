@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,6 +10,7 @@ const expectedRoot = join(temporary, 'expected');
 const files = [
   'packages/api-contract/src/web.ts',
   'packages/api-contract/src/worker.ts',
+  'packages/api-contract/src/schemas.ts',
   'packages/api-contract/schemas/index.json',
 ];
 
@@ -29,13 +30,8 @@ try {
   const generatedSchemas = join(expectedRoot, 'packages/api-contract/schemas');
   const committedSchemas = join(root, 'packages/api-contract/schemas');
   const schemaFiles = [
-    ...new Set([
-      ...(existsSync(generatedSchemas) ? readdirSync(generatedSchemas) : []),
-      ...(existsSync(committedSchemas) ? readdirSync(committedSchemas) : []),
-    ]),
-  ]
-    .filter((file) => file.endsWith('.json'))
-    .sort();
+    ...new Set([...listJsonFiles(generatedSchemas), ...listJsonFiles(committedSchemas)]),
+  ].sort();
   for (const file of schemaFiles) {
     const expected = join(committedSchemas, file);
     const generated = join(generatedSchemas, file);
@@ -52,4 +48,15 @@ try {
   } else console.log('Generated contract artifacts are up to date.');
 } finally {
   rmSync(temporary, { recursive: true, force: true });
+}
+
+function listJsonFiles(directory, prefix = '') {
+  if (!existsSync(directory)) return [];
+  return readdirSync(directory)
+    .flatMap((file) => {
+      const relative = join(prefix, file);
+      const fullPath = join(directory, file);
+      return statSync(fullPath).isDirectory() ? listJsonFiles(fullPath, relative) : [relative];
+    })
+    .filter((file) => file.endsWith('.json'));
 }
