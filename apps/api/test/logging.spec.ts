@@ -106,8 +106,32 @@ describe('structured logging', () => {
       },
       msg: 'DIRECT_ERROR_SENTINEL',
     });
-    expect(output[0]).toContain('stack');
+    expect(record.err).toHaveProperty('stack');
+    expect(String((record.err as { stack: string }).stack)).toContain('DirectError');
+    expect(String((record.err as { stack: string }).stack)).toContain('DIRECT_ERROR_SENTINEL');
+    expect(String((record.err as { stack: string }).stack)).toContain('\n');
     expect(output[0]).not.toContain('ERROR_TOKEN_SENTINEL');
+  });
+
+  it('preserves a non-empty direct Error stack in production', () => {
+    const previousEnvironment = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    const output: string[] = [];
+    const logger = testLogger(output);
+    const error = new Error('PRODUCTION_ERROR_SENTINEL');
+    error.name = 'ProductionError';
+
+    logger.error(error);
+    process.env.NODE_ENV = previousEnvironment;
+
+    const record = JSON.parse(output[0] ?? '') as {
+      err: { type: string; message: string; stack: string };
+    };
+    expect(record.err.type).toBe('Error');
+    expect(record.err.message).toBe('PRODUCTION_ERROR_SENTINEL');
+    expect(record.err.stack).toContain('ProductionError');
+    expect(record.err.stack).toContain('PRODUCTION_ERROR_SENTINEL');
+    expect(record.err.stack).toContain('\n');
   });
 
   it('preserves nested Error diagnostics and surrounding message', () => {
@@ -123,7 +147,9 @@ describe('structured logging', () => {
       err: { type: 'Error', message: 'NESTED_ERROR_SENTINEL', code: 'E_NESTED' },
       msg: 'upload failed',
     });
-    expect(output[0]).toContain('stack');
+    const err = record.err as { stack: string };
+    expect(err.stack).toContain('NESTED_ERROR_SENTINEL');
+    expect(err.stack).toContain('\n');
     expect(output[0]).not.toContain('ERROR_SECRET_SENTINEL');
   });
 

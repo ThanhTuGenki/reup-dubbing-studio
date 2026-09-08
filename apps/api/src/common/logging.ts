@@ -30,6 +30,7 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
     if (seen.has(value)) return '[Circular]';
     seen.add(value);
     if (value instanceof Error) {
+      const stack = value.stack;
       const copy = Object.create(Object.getPrototypeOf(value)) as Error;
       for (const key of Object.getOwnPropertyNames(value)) {
         const descriptor = Object.getOwnPropertyDescriptor(value, key);
@@ -38,8 +39,17 @@ function sanitizeValue(value: unknown, seen: WeakSet<object>): unknown {
           descriptor.value = sensitiveKeyPattern.test(key)
             ? REDACTED
             : sanitizeValue(descriptor.value, seen);
+          if (key === 'stack' && stack) descriptor.value = stack;
         }
         Object.defineProperty(copy, key, descriptor);
+      }
+      if (stack) {
+        Object.defineProperty(copy, 'stack', {
+          value: stack,
+          enumerable: false,
+          configurable: true,
+          writable: true,
+        });
       }
       return copy;
     }
@@ -92,8 +102,11 @@ export function loggingOptions() {
       log: (object: Record<string, unknown>) => sanitizeLogValue(object) as Record<string, unknown>,
     },
     mixin: () => getRequestContext() ?? {},
-    mixinMergeStrategy: (mergeObject: object, mixinObject: object) =>
-      sanitizeLogValue({ ...mergeObject, ...mixinObject }) as Record<string, unknown>,
+    mixinMergeStrategy: (mergeObject: object, mixinObject: object) => {
+      const sanitized = sanitizeLogValue(mergeObject);
+      if (sanitized instanceof Error) return Object.assign(sanitized, mixinObject);
+      return sanitizeLogValue({ ...mergeObject, ...mixinObject }) as Record<string, unknown>;
+    },
     hooks: {
       logMethod(inputArgs: unknown[], method: (...args: unknown[]) => void): void {
         if (inputArgs[0] && typeof inputArgs[0] === 'object') {
