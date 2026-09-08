@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.28.0",
   "scripts": {
-    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml",
+    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml && node scripts/contracts/validate-examples.mjs contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml",
     "contract:generate": "node scripts/contracts/generate.mjs",
     "contract:check": "node scripts/contracts/check.mjs",
     "lint": "pnpm --recursive --if-present lint",
