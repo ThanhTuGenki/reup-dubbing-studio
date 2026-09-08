@@ -204,7 +204,7 @@ function createRequestSchema(operation, parameters, source, resolution) {
   const bodySchema = selectMediaSchema(requestBody?.content, source, resolution);
   if (bodySchema !== undefined) {
     properties.body = bodySchema;
-    if (operation.requestBody.required) required.push('body');
+    if (requestBody.required) required.push('body');
   }
 
   return {
