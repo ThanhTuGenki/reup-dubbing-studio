@@ -1,9 +1,15 @@
-import { ArgumentsHost, Catch, type ExceptionFilter, type LoggerService } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  HttpException,
+  type ExceptionFilter,
+  type LoggerService,
+} from '@nestjs/common';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
 
 import { getRequestContext } from './context/request-context';
-import { ConflictError, DomainError, NotFoundError } from './errors';
+import { DomainError } from './errors';
 
 type ProblemDetails = {
   type: string;
@@ -79,6 +85,21 @@ export class ProblemDetailsFilter implements ExceptionFilter {
         title: 'Validation failed',
         detail: 'One or more request fields failed validation.',
         errors: exception.flatten(),
+      };
+    }
+    if (exception instanceof HttpException && exception.getStatus() === 400) {
+      const status = exception.getStatus();
+      const response = exception.getResponse();
+      const messages =
+        typeof response === 'object' && response !== null && 'message' in response
+          ? (response as { message?: unknown }).message
+          : undefined;
+      return {
+        status,
+        code: 'VALIDATION_ERROR',
+        title: 'Validation failed',
+        detail: 'One or more request fields failed validation.',
+        ...(messages ? { errors: messages } : {}),
       };
     }
     if (isPrismaError(exception)) {

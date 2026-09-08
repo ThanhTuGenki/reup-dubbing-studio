@@ -3,8 +3,8 @@ import { DomainError, type ErrorCode } from './domain-error';
 export class ValidationError extends DomainError {
   readonly status = 400;
   constructor(
-    message = 'One or more request fields failed validation.',
     code: ErrorCode = 'VALIDATION_ERROR',
+    message = 'One or more request fields failed validation.',
   ) {
     super(code, message);
   }
@@ -26,7 +26,7 @@ export class ForbiddenError extends DomainError {
 
 export class NotFoundError extends DomainError {
   readonly status = 404;
-  constructor(message = 'The requested resource was not found.', code: ErrorCode = 'NOT_FOUND') {
+  constructor(code: ErrorCode = 'NOT_FOUND', message = 'The requested resource was not found.') {
     super(code, message);
   }
 }
@@ -34,8 +34,8 @@ export class NotFoundError extends DomainError {
 export class ConflictError extends DomainError {
   readonly status = 409;
   constructor(
-    message = 'The request conflicts with the current resource state.',
     code: ErrorCode = 'VERSION_CONFLICT',
+    message = 'The request conflicts with the current resource state.',
   ) {
     super(code, message);
   }
