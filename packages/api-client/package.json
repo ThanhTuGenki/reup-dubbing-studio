@@ -1,5 +1,21 @@
 {
   "name": "@reup-dubbing-studio/api-client",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0",
+    "@reup-dubbing-studio/api-contract": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
 }

@@ -508,7 +508,7 @@ Trước khi release, thay đổi breaking có thể được phối hợp trong
 
 ### 7.5 Automation và CI gate
 
-Workspace cung cấp các command chuẩn, tên cuối cùng sẽ được chốt khi scaffold:
+Workspace cung cấp các command chuẩn:
 
 ```text
 pnpm contract:lint       # kiểm tra OpenAPI/schema hợp lệ

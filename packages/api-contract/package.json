@@ -1,5 +1,15 @@
 {
   "name": "@reup-dubbing-studio/api-contract",
   "private": true,
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "exports": {
+    "./web": "./src/web.ts",
+    "./worker": "./src/worker.ts",
+    "./schemas": {
+      "types": "./src/schemas.ts",
+      "default": "./schemas/index.json"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "types": "./src/web.ts"
 }
