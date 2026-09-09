@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml and worker.openapi.yaml",
-  "title": "Reup Dubbing Studio generated operation schemas",
+  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml, worker.openapi.yaml and shared.yaml",
+  "title": "Reup Dubbing Studio generated contract schemas",
   "type": "object",
   "properties": {
     "operations": {
@@ -29,11 +29,64 @@
         ],
         "additionalProperties": false
       }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "document": {
+            "enum": [
+              "shared"
+            ]
+          },
+          "component": {
+            "type": "string"
+          },
+          "file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "document",
+          "component",
+          "file"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
-    "operations"
+    "operations",
+    "components"
   ],
   "additionalProperties": false,
-  "operations": []
+  "operations": [],
+  "components": [
+    {
+      "document": "shared",
+      "component": "ApiVersion",
+      "file": "shared/ApiVersion.json"
+    },
+    {
+      "document": "shared",
+      "component": "CursorPage",
+      "file": "shared/CursorPage.json"
+    },
+    {
+      "document": "shared",
+      "component": "ProblemDetails",
+      "file": "shared/ProblemDetails.json"
+    },
+    {
+      "document": "shared",
+      "component": "Timestamp",
+      "file": "shared/Timestamp.json"
+    },
+    {
+      "document": "shared",
+      "component": "UuidV7",
+      "file": "shared/UuidV7.json"
+    }
+  ]
 }
