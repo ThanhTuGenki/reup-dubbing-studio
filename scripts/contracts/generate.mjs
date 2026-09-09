@@ -14,8 +14,10 @@ const contracts = [
   { name: 'web', source: 'web.openapi.yaml' },
   { name: 'worker', source: 'worker.openapi.yaml' },
 ];
+const sharedDocuments = [{ name: 'shared', source: 'shared.yaml' }];
 const documents = new Map();
 const operationRecords = [];
+const componentRecords = [];
 const schemaTypes = `/**
  * GENERATED FILE — DO NOT EDIT. Source: packages/api-contract/schemas/index.json
  */
@@ -25,14 +27,23 @@ export interface OperationSchemaRecord {
   file: \`${'${'}'web' | 'worker'${'}'}/${'${'}string${'}'}.json\`;
 }
 
-export interface OperationSchemaManifest {
+export interface ComponentSchemaRecord {
+  document: 'shared';
+  component: string;
+  file: \`shared/${'${'}string${'}'}.json\`;
+}
+
+export interface ContractSchemaManifest {
   $schema: string;
   $comment: string;
   title: string;
   operations: OperationSchemaRecord[];
+  components: ComponentSchemaRecord[];
 }
 
-declare const manifest: OperationSchemaManifest;
+export type OperationSchemaManifest = ContractSchemaManifest;
+
+declare const manifest: ContractSchemaManifest;
 export default manifest;
 `;
 
@@ -64,14 +75,18 @@ for (const contract of contracts) {
   generateOperationSchemas(source, contract.name);
 }
 
+for (const sharedDocument of sharedDocuments) {
+  generateComponentSchemas(join(contractDir, sharedDocument.source), sharedDocument.name);
+}
+
 writeFileSync(
   join(schemaDir, 'index.json'),
   `${JSON.stringify(
     {
       $schema: 'https://json-schema.org/draft/2020-12/schema',
       $comment:
-        'GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml and worker.openapi.yaml',
-      title: 'Reup Dubbing Studio generated operation schemas',
+        'GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/web.openapi.yaml, worker.openapi.yaml and shared.yaml',
+      title: 'Reup Dubbing Studio generated contract schemas',
       type: 'object',
       properties: {
         operations: {
@@ -87,11 +102,27 @@ writeFileSync(
             additionalProperties: false,
           },
         },
+        components: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              document: { enum: ['shared'] },
+              component: { type: 'string' },
+              file: { type: 'string' },
+            },
+            required: ['document', 'component', 'file'],
+            additionalProperties: false,
+          },
+        },
       },
-      required: ['operations'],
+      required: ['operations', 'components'],
       additionalProperties: false,
       operations: operationRecords.sort((a, b) =>
         `${a.contract}:${a.operationId}`.localeCompare(`${b.contract}:${b.operationId}`),
+      ),
+      components: componentRecords.sort((a, b) =>
+        `${a.document}:${a.component}`.localeCompare(`${b.document}:${b.component}`),
       ),
     },
     null,
@@ -138,7 +169,7 @@ function generateOperationSchemas(source, contractName) {
       }
       const contractSchemaDir = join(schemaDir, contractName);
       mkdirSync(contractSchemaDir, { recursive: true });
-      const schemaFilename = `${safeOperationFilename(operation.operationId)}.json`;
+      const schemaFilename = `${safeSchemaFilename(operation.operationId)}.json`;
       const schemaTarget = resolve(contractSchemaDir, schemaFilename);
       const schemaRoot = `${resolve(contractSchemaDir)}${sep}`;
       if (!schemaTarget.startsWith(schemaRoot)) {
@@ -154,6 +185,44 @@ function generateOperationSchemas(source, contractName) {
   }
 }
 
+function generateComponentSchemas(source, documentName) {
+  const document = YAML.parse(readFileSync(source, 'utf8'));
+  documents.set(source, document);
+  const componentSchemaDir = join(schemaDir, documentName);
+  for (const [component, componentSchema] of Object.entries(
+    document.components?.schemas ?? {},
+  ).sort(([a], [b]) => a.localeCompare(b))) {
+    const resolution = createResolutionContext();
+    const schema = {
+      $schema: 'https://json-schema.org/draft/2020-12/schema',
+      $comment: `GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/${documentName}.yaml`,
+      $id: `urn:reup-dubbing-studio:${documentName}:component:${component}`,
+      ...resolveSchema(componentSchema, source, resolution),
+    };
+    if (resolution.defs.size > 0) {
+      schema.$defs = Object.fromEntries(
+        [...resolution.defs].map(([reference, value]) => [
+          definitionName(...reference.split('#')),
+          value,
+        ]),
+      );
+    }
+    mkdirSync(componentSchemaDir, { recursive: true });
+    const schemaFilename = `${safeSchemaFilename(component)}.json`;
+    const schemaTarget = resolve(componentSchemaDir, schemaFilename);
+    const schemaRoot = `${resolve(componentSchemaDir)}${sep}`;
+    if (!schemaTarget.startsWith(schemaRoot)) {
+      throw new Error(`Unsafe component target: ${component}`);
+    }
+    writeFileSync(schemaTarget, `${JSON.stringify(schema, null, 2)}\n`, 'utf8');
+    componentRecords.push({
+      document: documentName,
+      component,
+      file: `${documentName}/${schemaFilename}`,
+    });
+  }
+}
+
 function createResponsesSchema(responses, source, resolution) {
   const entries = Object.entries(responses)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -166,9 +235,9 @@ function createResponsesSchema(responses, source, resolution) {
   };
 }
 
-function safeOperationFilename(operationId) {
-  if (/^(?!\.\.?$)[A-Za-z0-9][A-Za-z0-9._-]*$/.test(operationId)) return operationId;
-  return `operation-${Buffer.from(operationId, 'utf8').toString('base64url')}`;
+function safeSchemaFilename(name) {
+  if (/^(?!\.\.?$)[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) return name;
+  return `schema-${Buffer.from(name, 'utf8').toString('base64url')}`;
 }
 
 function createRequestSchema(operation, parameters, source, resolution) {

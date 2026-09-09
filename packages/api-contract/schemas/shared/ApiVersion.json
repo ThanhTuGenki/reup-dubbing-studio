@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/shared.yaml",
+  "$id": "urn:reup-dubbing-studio:shared:component:ApiVersion",
+  "type": "string",
+  "example": "v1",
+  "enum": [
+    "v1"
+  ],
+  "description": "Major URL version; incompatible changes require a new value."
+}

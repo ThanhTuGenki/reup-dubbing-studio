@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/shared.yaml",
+  "$id": "urn:reup-dubbing-studio:shared:component:UuidV7",
+  "type": "string",
+  "example": "0190f7d2-8f9c-7abc-8def-0123456789ab",
+  "format": "uuid",
+  "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+  "description": "Server-generated UUID version 7 with RFC 9562 variant bits."
+}

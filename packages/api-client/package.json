@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"test/**/*.test.mjs\""
   },
   "exports": {
     ".": {
@@ -16,6 +17,8 @@
     "@reup-dubbing-studio/api-contract": "workspace:*"
   },
   "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
     "typescript": "^5.9.3"
   }
 }

@@ -404,6 +404,7 @@ Không tách các module này thành network microservice trước khi có nhu c
 - REST JSON là contract chính.
 - OpenAPI trong `contracts/openapi` là nguồn contract chuẩn và được thiết kế trước implementation theo từng feature nhỏ.
 - TypeScript type trong `packages/api-contract` và web client trong `packages/api-client` được generate từ OpenAPI.
+- Ngoài type, `pnpm contract:generate` sinh JSON Schema runtime cho shared component vào `packages/api-contract/schemas/shared/`, mỗi `$ref` được inline vào `$defs` nên Ajv load được độc lập. Consumer tra manifest `@reup-dubbing-studio/api-contract/schemas` (mảng `components`) để lấy `file`, rồi load `@reup-dubbing-studio/api-contract/schemas/<file>`; không import đường dẫn nội bộ của package.
 - NestJS HTTP DTO là implementation của contract, không phải nguồn type độc lập; DTO bổ sung runtime validation nhưng phải khớp generated contract.
 - Python Worker dùng Pydantic model/client được generate hoặc adapter được kiểm tra tương thích với `worker.openapi.yaml`.
 - Payload thay đổi không tương thích phải tăng `contract_version`.

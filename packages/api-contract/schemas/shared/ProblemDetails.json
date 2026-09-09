@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "GENERATED FILE — DO NOT EDIT. Source: contracts/openapi/shared.yaml",
+  "$id": "urn:reup-dubbing-studio:shared:component:ProblemDetails",
+  "type": "object",
+  "example": {
+    "type": "about:blank",
+    "title": "Validation failed",
+    "status": 400,
+    "detail": "One or more fields are invalid.",
+    "instance": "/v1/example",
+    "code": "VALIDATION_ERROR",
+    "requestId": "0190f7d2-8f9c-7abc-8def-0123456789ab"
+  },
+  "description": "RFC 9457 Problem Details with stable machine-readable extensions.",
+  "required": [
+    "type",
+    "title",
+    "status",
+    "detail",
+    "instance",
+    "code",
+    "requestId"
+  ],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "A URI reference identifying the problem type."
+    },
+    "title": {
+      "type": "string"
+    },
+    "status": {
+      "type": "integer",
+      "minimum": 400,
+      "maximum": 599
+    },
+    "detail": {
+      "type": "string"
+    },
+    "instance": {
+      "type": "string",
+      "format": "uri-reference"
+    },
+    "code": {
+      "$ref": "#/$defs/ref_ZXJyb3ItY29kZXMueWFtbCMvY29tcG9uZW50cy9zY2hlbWFzL0Vycm9yQ29kZQ"
+    },
+    "requestId": {
+      "type": "string",
+      "description": "Correlation identifier assigned by the server."
+    }
+  },
+  "$defs": {
+    "ref_ZXJyb3ItY29kZXMueWFtbCMvY29tcG9uZW50cy9zY2hlbWFzL0Vycm9yQ29kZQ": {
+      "type": "string",
+      "example": "VALIDATION_ERROR",
+      "description": "Stable machine-readable error code. Add codes to x-error-codes first.",
+      "enum": [
+        "VALIDATION_ERROR",
+        "UNAUTHORIZED",
+        "FORBIDDEN",
+        "NOT_FOUND",
+        "VERSION_CONFLICT",
+        "UNPROCESSABLE_ENTITY",
+        "UPSTREAM_UNAVAILABLE",
+        "INTERNAL_ERROR"
+      ]
+    }
+  }
+}
