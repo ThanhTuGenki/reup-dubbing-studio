@@ -10,7 +10,9 @@ dùng, trạng thái giao diện và gọi Control Plane qua boundary đã thố
 
 Thư mục này không chứa API server, logic điều phối pipeline phía backend, worker
 xử lý media/GPU, credential hạ tầng hoặc dữ liệu domain làm nguồn sự thật. Web
-không gọi trực tiếp database, worker hay kho tài sản.
+không truy cập trực tiếp database hay worker; asset store chỉ được truy cập bằng
+presigned URL có thời hạn do Control Plane cấp, không dùng credential hoặc cơ chế
+truy cập khác.
 
 ## Ranh giới
 
