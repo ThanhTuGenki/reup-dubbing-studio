@@ -1,8 +1,9 @@
 # Reup Dubbing Studio — Kiến trúc ứng dụng và công nghệ
 
 - **Ngày tạo:** 2026-09-02
+- **Cập nhật:** 2026-09-13 — chuyển từ Contract-First có gate duyệt trước implementation sang Just-in-Time Contract theo vertical slice.
 - **Trạng thái:** `ACCEPTED` (chốt sơ bộ, dùng làm nền cho các vòng phân tích chi tiết)
-- **Nguồn chuẩn cho:** stack kỹ thuật, cấu trúc monorepo, contract-first, CI gate.
+- **Nguồn chuẩn cho:** stack kỹ thuật, cấu trúc monorepo, Just-in-Time Contract, CI gate.
 - **Thay thế:** §12 *Tech stack* của [`docs/product/design.md`](../product/design.md).
   Backend đổi FastAPI → NestJS; hàng đợi đổi Redis/RQ → PostgreSQL task queue.
 - **Phạm vi:** Cấu trúc source code, runtime, giao tiếp giữa Control Plane và GPU Worker, lưu trữ, chiến lược concurrency và quy trình phát triển song song
@@ -29,7 +30,7 @@ Kiến trúc phải đáp ứng các đặc điểm chính của Reup Dubbing St
 | Frontend | React 19 + TypeScript + Vite |
 | Backend / Control Plane | NestJS + TypeScript + Fastify |
 | API | REST + OpenAPI; SSE cho cập nhật một chiều theo thời gian thực |
-| Phương pháp phát triển | Lean Spec-Driven; Contract-First theo từng vertical slice tại các integration boundary |
+| Phương pháp phát triển | Vertical Slice Delivery; Just-in-Time Contract tại integration boundary; Code-First cho implementation nội bộ |
 | Database | PostgreSQL + Prisma cho domain data |
 | Job queue ban đầu | PostgreSQL-backed task queue + lease API qua HTTPS |
 | GPU Worker | Python 3.11 + uv + PyTorch/CUDA |
@@ -402,15 +403,19 @@ Không tách các module này thành network microservice trước khi có nhu c
 ### 6.3 API contract
 
 - REST JSON là contract chính.
-- OpenAPI trong `contracts/openapi` là nguồn contract chuẩn và được thiết kế trước implementation theo từng feature nhỏ.
+- OpenAPI trong `contracts/openapi` được tạo **vừa đủ cho vertical slice đang làm**, không được phát triển thành một phase nền móng tách khỏi feature.
+- Trong lúc slice đang triển khai, contract là bản nháp dùng chung và được phép đổi phối hợp cùng Web/API/Worker trong chính pull request của slice. Sau khi integration/E2E pass, OpenAPI trở thành nguồn contract chuẩn của slice đó.
 - TypeScript type trong `packages/api-contract` và web client trong `packages/api-client` được generate từ OpenAPI.
 - Ngoài type, `pnpm contract:generate` sinh JSON Schema runtime cho shared component vào `packages/api-contract/schemas/shared/`, mỗi `$ref` được inline vào `$defs` nên Ajv load được độc lập. Consumer tra manifest `@reup-dubbing-studio/api-contract/schemas` (mảng `components`) để lấy `file`, rồi load `@reup-dubbing-studio/api-contract/schemas/<file>`; không import đường dẫn nội bộ của package.
 - NestJS HTTP DTO là implementation của contract, không phải nguồn type độc lập; DTO bổ sung runtime validation nhưng phải khớp generated contract.
 - Python Worker dùng Pydantic model/client được generate hoặc adapter được kiểm tra tương thích với `worker.openapi.yaml`.
-- Payload thay đổi không tương thích phải tăng `contract_version`.
+- Trước khi slice được release, breaking change được phép nếu Web/API/Worker được cập nhật và kiểm chứng cùng nhau. Chỉ tăng `contract_version` khi contract đã release hoặc có consumer độc lập cần tương thích ngược.
 - Queue payload chỉ chứa ID, object key, metadata và checksum; không chứa binary asset.
 
-## 7. Contract-First và phát triển song song
+## 7. Just-in-Time Contract và phát triển theo vertical slice
+
+Quyết định quy trình này được ghi tại
+[`2026-09-13-just-in-time-contracts.md`](decisions/2026-09-13-just-in-time-contracts.md).
 
 ### 7.1 Cách tiếp cận đã chọn
 
@@ -418,14 +423,17 @@ Tên đầy đủ của cách làm trong dự án là:
 
 ```text
 Lean Spec-Driven Development
-+ Contract-First tại integration boundary
 + Vertical Slice Delivery
++ Just-in-Time Contract tại integration boundary
 + Code-First cho implementation nội bộ
 ```
 
-`Schema-First` có thể được dùng theo nghĩa rộng, nhưng không dùng làm tên chính vì dễ bị nhầm với database schema hoặc GraphQL schema. Dự án không thiết kế toàn bộ hệ thống theo waterfall trước khi viết code.
+Contract vẫn được dùng để Web, API và Worker có thể triển khai song song, nhưng
+**contract không phải một phase phải hoàn thành trước khi bắt đầu feature**. Mỗi
+slice chỉ phác thảo contract tối thiểu, triển khai ngay, kiểm chứng end-to-end rồi
+mới ổn định contract. Không thiết kế toàn bộ schema/API của sản phẩm từ đầu.
 
-Contract-First áp dụng cho:
+Just-in-Time Contract áp dụng cho:
 
 - React ↔ NestJS;
 - NestJS ↔ Python GPU Worker;
@@ -433,7 +441,7 @@ Contract-First áp dụng cho:
 - task payload, callback, webhook và artifact metadata;
 - các interface có nhiều consumer hoặc vượt qua process/language boundary.
 
-Không yêu cầu Contract-First cho:
+Code-First áp dụng cho:
 
 - domain entity, application service và repository nội bộ;
 - Prisma model và database table;
@@ -443,7 +451,9 @@ Không yêu cầu Contract-First cho:
 
 ### 7.2 Đơn vị phát triển
 
-Không viết toàn bộ OpenAPI của sản phẩm ngay từ đầu. Mỗi feature được chia thành một vertical slice đủ nhỏ, ví dụ:
+Đơn vị lập kế hoạch và giao việc là một hành vi người dùng chạy được end-to-end,
+không phải một tầng kỹ thuật như “làm toàn bộ contract”, “làm toàn bộ API” hoặc
+“làm toàn bộ Web”. Ví dụ các slice độc lập:
 
 ```text
 Tạo video job
@@ -453,63 +463,67 @@ Tạo video job
 → tạo publish package
 ```
 
-Trước khi FE, BE và Worker triển khai một slice, team chỉ cần chốt:
+Để bắt đầu một slice, team chỉ cần:
 
 1. mục tiêu người dùng và acceptance criteria;
-2. state transition liên quan;
-3. request, response, error và event contract;
-4. ít nhất một example cho happy path và error quan trọng;
-5. quy tắc compatibility của thay đổi.
+2. phác thảo UI/luồng dữ liệu nếu slice có giao diện;
+3. draft request, response, error hoặc event tối thiểu mà slice thực sự dùng;
+4. ít nhất một example cho happy path và error quan trọng.
 
-Contract của một slice phải nhỏ, review được trong một pull request và không khóa những phần sản phẩm chưa được khám phá.
+Không cần duyệt domain model toàn hệ thống, database schema đầy đủ hoặc protocol
+của những feature chưa làm. Contract của slice phải nằm cùng pull request với
+implementation và test của slice đó.
 
 ### 7.3 Luồng làm việc song song
 
 ```text
-Feature brief + acceptance criteria
+Hành vi người dùng + acceptance criteria
                 │
                 ▼
-       Draft OpenAPI / event schema
-                │
-       Review FE + BE + Worker
+   Phác thảo UI + contract tối thiểu
                 │
                 ▼
-     Generate types, client, examples
+    Generate types/client từ bản draft
                 │
         ┌────────────┼────────────┐
         ▼            ▼            ▼
  FE + mock API   BE implementation   Worker implementation
         └────────────┼────────────┘
                      ▼
-       Contract test + integration test
+       Integration/E2E và sửa contract
                      ▼
-             E2E theo vertical slice
+          Verify và ổn định contract
 ```
 
-- FE dùng response example để chạy mock ngay sau khi contract được duyệt; không chờ database hoặc API implementation.
-- BE thiết kế domain và database phía sau contract, đồng thời triển khai controller/DTO khớp schema.
-- Worker chỉ bắt đầu task liên quan khi internal contract đã duyệt; fake worker được dùng cho integration test trước khi có GPU thật.
-- Khi API thật sẵn sàng, FE đổi từ mock endpoint sang real endpoint mà không thay request/response type.
+- FE có thể dùng response example để chạy mock ngay khi có bản draft; không cần chờ một gate `APPROVED` riêng.
+- BE chỉ thiết kế domain và database cần cho slice, đồng thời triển khai controller/DTO khớp contract hiện tại.
+- Worker được triển khai song song từ bản draft; fake worker chỉ dùng để rút ngắn feedback, không thay acceptance trên worker thật khi feature phụ thuộc GPU.
+- Khi implementation phát hiện contract chưa hợp lý, agent/owner đề xuất thay đổi ngay trong slice và regenerate tất cả consumer liên quan.
+- Một người hoặc agent được chỉ định làm integration owner, chịu trách nhiệm đưa ba luồng về cùng một contract và chạy E2E.
 
 ### 7.4 Vòng đời contract
 
 Mỗi thay đổi contract đi qua các trạng thái:
 
 ```text
-DRAFT → REVIEWED → APPROVED → IMPLEMENTING → VERIFIED
+DRAFT ↔ IMPLEMENTING → VERIFIED → STABLE
 ```
 
-- `DRAFT`: còn được phép đổi nhanh theo khám phá UX/nghiệp vụ.
-- `REVIEWED`: FE, BE và consumer liên quan đã kiểm tra tính khả thi.
-- `APPROVED`: được phép generate client và chia task song song.
-- `IMPLEMENTING`: implementation không tự ý đổi shape ngoài contract.
-- `VERIFIED`: provider, consumer và E2E test đã vượt qua.
+- `DRAFT`: đủ example để generate client/mock và bắt đầu làm song song; được phép đổi nhanh.
+- `IMPLEMENTING`: Web/API/Worker đang cùng kiểm chứng contract; thay đổi phải được cập nhật cho mọi consumer trong slice.
+- `VERIFIED`: provider, consumer và E2E của slice đã pass.
+- `STABLE`: contract đã release hoặc có consumer độc lập; từ đây phải giữ compatibility hoặc tạo version mới.
 
-Trước khi release, thay đổi breaking có thể được phối hợp trong cùng pull request và regenerate tất cả consumer. Sau khi contract đã được deploy hoặc có consumer độc lập, breaking change phải dùng version mới hoặc có giai đoạn backward compatibility.
+Không có bước `APPROVED` chặn implementation. Trước `STABLE`, breaking change có
+thể được phối hợp trong cùng pull request và regenerate tất cả consumer. Sau
+`STABLE`, breaking change phải dùng version mới hoặc có giai đoạn backward
+compatibility.
 
 ### 7.5 Automation và CI gate
 
-Workspace cung cấp các command chuẩn:
+Các command/gate được bổ sung dần cùng slice đầu tiên thật sự sử dụng chúng;
+không tạo một epic tooling riêng phải hoàn thành trước feature. Workspace hướng
+tới các command chuẩn:
 
 ```text
 pnpm contract:lint       # kiểm tra OpenAPI/schema hợp lệ
@@ -524,29 +538,33 @@ Generated artifact được tạo deterministically và không sửa bằng tay.
 
 - OpenAPI không hợp lệ;
 - generated type/client chưa được cập nhật;
-- endpoint implementation lệch request/response đã duyệt;
-- có breaking change ngoài quy tắc versioning;
+- endpoint implementation lệch request/response hiện tại của slice;
+- contract `STABLE` có breaking change ngoài quy tắc versioning;
 - example không còn hợp lệ với schema;
 - FE hoặc BE không còn typecheck sau khi regenerate.
 
 ### 7.6 Cách dùng AI trong quy trình
 
-Con người chịu trách nhiệm chốt mục tiêu, nghiệp vụ, state transition, compatibility và duyệt contract. Coding agent được dùng để:
+Con người chịu trách nhiệm chốt mục tiêu, hành vi người dùng, acceptance criteria
+và các quyết định compatibility của contract `STABLE`. Coding agent được dùng để:
 
-- đề xuất/refine OpenAPI từ acceptance criteria;
+- đề xuất/refine contract tối thiểu từ acceptance criteria;
 - generate client, mock, DTO skeleton và test;
-- triển khai các vertical slice độc lập;
+- triển khai song song Web/API/Worker trong phạm vi một vertical slice;
 - phát hiện drift giữa spec, code và test;
 - cập nhật tài liệu và example cùng pull request.
 
-Không giao cho agent một prompt lớn để tự thiết kế và triển khai toàn bộ hệ thống trong một lần. Contract sai có thể làm nhiều agent sinh ra lượng lớn code sai rất nhanh; vì vậy mỗi slice phải có review gate trước khi fan-out công việc.
+Không giao cho agent một prompt lớn để thiết kế toàn bộ contract của sản phẩm.
+AI làm code nhanh khiến chi phí của một contract sai tăng nhanh theo số consumer;
+vì vậy chỉ fan-out trên bản draft nhỏ, tích hợp sớm và không bắt đầu slice tiếp
+theo trước khi slice hiện tại có đường chạy E2E.
 
 ### 7.7 Nguồn sự thật theo lớp
 
 | Phạm vi | Nguồn sự thật |
 |---|---|
 | Hành vi sản phẩm | Feature spec + acceptance criteria |
-| HTTP/event boundary | OpenAPI hoặc versioned event schema |
+| HTTP/event boundary | Contract draft hiện tại trong lúc làm slice; OpenAPI/event schema sau khi `VERIFIED` |
 | Domain rule | Domain model/use case test trong NestJS |
 | Persistence | Prisma schema + migration |
 | Runtime workflow state | PostgreSQL |
