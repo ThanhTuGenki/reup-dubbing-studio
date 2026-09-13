@@ -25,5 +25,15 @@ phạm vi OpenAPI. `apps` và `workers` triển khai các phía của API; chún
 `packages` có thể dùng artifact được sinh từ OpenAPI, nhưng không sở hữu tài liệu
 OpenAPI gốc.
 
-Mỗi API thực tế phải được bổ sung bởi feature riêng, có producer, consumer,
-version và quy tắc tương thích được xác định trước khi thêm file vào thư mục này.
+Contract OpenAPI thực tế được phát triển theo vòng đời
+`DRAFT ↔ IMPLEMENTING → VERIFIED → STABLE`. Ở trạng thái `DRAFT`, contract chỉ
+cần đủ example tối thiểu để generate client/mock và bắt đầu implementation; chưa
+cần chốt hoàn chỉnh producer, consumer, version hoặc compatibility. Ở trạng thái
+`IMPLEMENTING`, các bên cập nhật contract cùng những consumer trong cùng
+vertical slice và kiểm chứng sớm bằng integration/E2E.
+
+Chỉ đánh dấu `VERIFIED` sau khi provider, consumer và E2E của slice đã pass.
+Contract trở thành `STABLE` khi đã release hoặc có consumer độc lập. Từ
+`VERIFIED`/`STABLE`, đặc biệt sau release hoặc khi xuất hiện consumer độc lập,
+versioning và compatibility phải được quản lý nghiêm ngặt; breaking change trước
+`STABLE` có thể phối hợp trong cùng slice và pull request.
