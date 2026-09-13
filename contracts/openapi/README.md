@@ -34,6 +34,6 @@ vertical slice và kiểm chứng sớm bằng integration/E2E.
 
 Chỉ đánh dấu `VERIFIED` sau khi provider, consumer và E2E của slice đã pass.
 Contract trở thành `STABLE` khi đã release hoặc có consumer độc lập. Từ
-`VERIFIED`/`STABLE`, đặc biệt sau release hoặc khi xuất hiện consumer độc lập,
-versioning và compatibility phải được quản lý nghiêm ngặt; breaking change trước
-`STABLE` có thể phối hợp trong cùng slice và pull request.
+`STABLE`, tức sau release hoặc khi xuất hiện consumer độc lập, versioning và
+compatibility phải được quản lý nghiêm ngặt; breaking change trước `STABLE` có
+thể phối hợp trong cùng slice và pull request.
