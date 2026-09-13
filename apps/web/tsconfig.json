@@ -1,8 +1,0 @@
-{
-  "extends": "../../packages/tsconfig/base.json",
-  "compilerOptions": {
-    "allowJs": true,
-    "checkJs": false
-  },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "eslint.config.mjs"]
-}
