@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio Control Plane API
+  version: 0.1.0
+  description: >-
+    Contract JIT cho hai health endpoint của Control Plane trong
+    API-FOUNDATION-001. Trạng thái hiện tại: DRAFT; contract chỉ trở thành
+    VERIFIED sau khi integration test của slice hoàn tất.
+servers:
+  - url: http://localhost:3000/v1
+    description: Môi trường phát triển cục bộ
+paths:
+  /health/live:
+    get:
+      summary: Kiểm tra liveness của Control Plane
+      operationId: getLiveness
+      responses:
+        '200':
+          description: Tiến trình đang phục vụ HTTP request.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                data:
+                  status: ok
+                meta:
+                  requestId: 0191f3d2-7f5b-7abc-8b2e-123456789abc
+        default:
+          $ref: '#/components/responses/Problem'
+  /health/ready:
+    get:
+      summary: Kiểm tra readiness của Control Plane
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Bootstrap và cấu hình nền tảng hợp lệ để nhận request.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessEnvelope'
+              example:
+                data:
+                  status: ok
+                meta:
+                  requestId: 0191f3d2-7f5b-7abc-8b2e-123456789abd
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  headers:
+    RequestId:
+      description: UUID v7 do API sinh cho request hiện tại.
+      schema:
+        $ref: '#/components/schemas/RequestId'
+  schemas:
+    RequestId:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    HealthStatus:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          const: ok
+    SuccessMeta:
+      type: object
+      additionalProperties: false
+      required:
+        - requestId
+      properties:
+        requestId:
+          $ref: '#/components/schemas/RequestId'
+    SuccessEnvelope:
+      type: object
+      additionalProperties: false
+      required:
+        - data
+        - meta
+      properties:
+        data:
+          $ref: '#/components/schemas/HealthStatus'
+        meta:
+          $ref: '#/components/schemas/SuccessMeta'
+    ProblemDetails:
+      type: object
+      description: RFC 9457 với extension code và requestId.
+      required:
+        - type
+        - title
+        - status
+        - instance
+        - code
+        - requestId
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - ROUTE_NOT_FOUND
+            - RATE_LIMITED
+            - INTERNAL_ERROR
+        requestId:
+          $ref: '#/components/schemas/RequestId'
+  responses:
+    Problem:
+      description: Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
