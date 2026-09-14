@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, StreamableFile } from '@nestjs/common';
 import type { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
 import type { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -15,7 +15,7 @@ export class SuccessEnvelopeInterceptor implements NestInterceptor {
     return next.handle().pipe(
       map((data: unknown) => {
         // Responses without a body, streams, and files must retain their native shape.
-        if (response.statusCode === 204 || isStreamLike(data)) {
+        if (response.statusCode === 204 || data instanceof StreamableFile || isStreamLike(data)) {
           return data;
         }
 

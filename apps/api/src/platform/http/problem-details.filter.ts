@@ -62,7 +62,8 @@ export class ProblemDetailsFilter implements ExceptionFilter {
       code,
       requestId,
     };
-    if (request.url) problem.instance = request.url;
+    const path = safePath(request.url);
+    if (path) problem.instance = path;
 
     // Only expose framework-generated client errors. Never serialize unknown errors.
     if (isKnownHttpError && status < 500) {
@@ -77,6 +78,12 @@ export class ProblemDetailsFilter implements ExceptionFilter {
 
     return problem;
   }
+}
+
+function safePath(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const [path] = url.split(/[?#]/u);
+  return path || undefined;
 }
 
 function codeForStatus(status: number): string {
