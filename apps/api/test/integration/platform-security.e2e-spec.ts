@@ -1,6 +1,9 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 
-import { registerSecurity } from '../../src/platform/security/security.plugin';
+import {
+  createFastifySecurityOptions,
+  registerSecurity,
+} from '../../src/platform/security/security.plugin';
 
 const config = {
   nodeEnv: 'test',
@@ -12,7 +15,7 @@ const config = {
 } as const;
 
 async function createSecurityApp(): Promise<FastifyInstance> {
-  const app = Fastify({ trustProxy: config.trustProxy });
+  const app = Fastify(createFastifySecurityOptions(config));
   await registerSecurity(app, config);
   app.get('/v1/security-probe', async (request) => ({ ip: request.ip }));
   app.get('/v1/health/live', async () => ({ status: 'ok' }));
@@ -68,13 +71,14 @@ describe('platform security integration', () => {
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
   });
 
-  it('does not trust forwarded client addresses when trust proxy is disabled', async () => {
+  it('applies the configured trust-proxy policy to forwarded addresses', async () => {
     const response = await app.inject({
       method: 'GET',
       url: '/v1/security-probe',
       headers: { 'x-forwarded-for': '203.0.113.10' },
     });
 
+    expect(createFastifySecurityOptions(config).trustProxy).toBe(config.trustProxy);
     expect(response.json<{ ip: string }>().ip).not.toBe('203.0.113.10');
   });
 
