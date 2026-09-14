@@ -12,8 +12,8 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "if find src test -type f -name '*.ts' -print -quit 2>/dev/null | grep -q .; then tsc --noEmit; fi",
-    "test": "jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json --runInBand"
+    "test": "jest --config ./jest.config.cjs --runInBand",
+    "test:e2e": "jest --config ./jest.config.cjs --runInBand"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
