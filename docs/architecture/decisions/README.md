@@ -8,10 +8,11 @@
 
 | Ngày       | Slug                                                                 | Trạng thái | Thay thế bởi |
 | ---------- | -------------------------------------------------------------------- | ---------- | ------------ |
-| 2026-09-07 | [`monorepo-tooling`](2026-09-07-monorepo-tooling.md)                 | `ACCEPTED` | —            |
+| 2026-09-07 | [`monorepo-tooling`](2026-09-07-monorepo-tooling.md)                 | `SUPERSEDED` | [`node-24-tooling-baseline`](2026-09-14-node-24-tooling-baseline.md) |
 | 2026-09-07 | [`api-module-layout`](2026-09-07-api-module-layout.md)               | `ACCEPTED` | —            |
 | 2026-09-07 | [`api-wire-conventions`](2026-09-07-api-wire-conventions.md)         | `ACCEPTED` | —            |
 | 2026-09-13 | [`just-in-time-contracts`](2026-09-13-just-in-time-contracts.md)     | `ACCEPTED` | —            |
+| 2026-09-14 | [`node-24-tooling-baseline`](2026-09-14-node-24-tooling-baseline.md) | `ACCEPTED` | —            |
 
 Mỗi ADR mới phải được thêm vào bảng này cùng pull request. ADR được đặt tên
 `YYYY-MM-DD-<slug>.md`; slug ngắn, ổn định và mô tả quyết định, không mô tả công cụ

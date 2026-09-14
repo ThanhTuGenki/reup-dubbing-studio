@@ -1,8 +1,10 @@
 # ADR: Monorepo tooling baseline
 
-- Trạng thái: `ACCEPTED`
-- Nguồn chuẩn cho: tooling baseline của monorepo scaffold.
-- Không phải nguồn chuẩn cho: runtime implementation, endpoint design, hay deployment configuration.
+- Trạng thái: `SUPERSEDED`
+- Nguồn chuẩn cho: baseline tooling lịch sử của monorepo scaffold.
+- Không phải nguồn chuẩn cho: baseline tooling hiện hành, runtime implementation, endpoint design, hay deployment configuration.
+- Thay thế: `—`.
+- Được thay thế bởi: [ADR Node 24 tooling baseline](2026-09-14-node-24-tooling-baseline.md).
 
 ## Bối cảnh
 

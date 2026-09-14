@@ -1,0 +1,17 @@
+{
+  "name": "reup-dubbing-studio",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=24 <25",
+    "pnpm": ">=10.28.0 <11"
+  },
+  "scripts": {
+    "lint": "pnpm --recursive --if-present lint",
+    "typecheck": "pnpm --recursive --if-present typecheck",
+    "test": "pnpm --recursive --if-present test",
+    "test:e2e": "pnpm --recursive --if-present test:e2e",
+    "depcruise": "pnpm --recursive --if-present depcruise",
+    "contract:lint": "pnpm --recursive --if-present contract:lint"
+  }
+}
