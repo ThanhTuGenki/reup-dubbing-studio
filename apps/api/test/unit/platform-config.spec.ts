@@ -16,10 +16,14 @@ describe('runtime configuration', () => {
   it.each([
     ['NODE_ENV', { NODE_ENV: 'staging' }],
     ['PORT', { PORT: '0' }],
+    ['PORT', { PORT: '1.5' }],
     ['LOG_LEVEL', { LOG_LEVEL: 'verbose' }],
     ['RATE_LIMIT_MAX', { RATE_LIMIT_MAX: '-1' }],
+    ['RATE_LIMIT_MAX', { RATE_LIMIT_MAX: '1.5' }],
     ['RATE_LIMIT_WINDOW_MS', { RATE_LIMIT_WINDOW_MS: 'not-a-number' }],
+    ['RATE_LIMIT_WINDOW_MS', { RATE_LIMIT_WINDOW_MS: '1.5' }],
     ['HEALTH_RATE_LIMIT_MAX', { HEALTH_RATE_LIMIT_MAX: '0' }],
+    ['HEALTH_RATE_LIMIT_MAX', { HEALTH_RATE_LIMIT_MAX: '1.5' }],
   ])('rejects invalid %s before the server can listen', (_field, override) => {
     expect(() => parseConfig(validEnvironment(override))).toThrow();
   });
@@ -81,6 +85,13 @@ describe('runtime configuration', () => {
     expect(() => parseConfig(validEnvironment({ TRUST_PROXY: trustProxy }))).toThrow();
   });
 
+  it.each(['not-an-ip-or-cidr', 'https://proxy.example'])(
+    'rejects TRUST_PROXY value that is not an IP address or CIDR: %s',
+    (trustProxy) => {
+      expect(() => parseConfig(validEnvironment({ TRUST_PROXY: trustProxy }))).toThrow();
+    },
+  );
+
   it('disables trust proxy by default when TRUST_PROXY is omitted', () => {
     const environment = validEnvironment();
     delete environment.TRUST_PROXY;
@@ -102,7 +113,7 @@ describe('runtime configuration', () => {
       parseConfig(
         validEnvironment({
           NODE_ENV: 'production',
-          CORS_ORIGINS: `https://studio.example, https://${secret}.test, *`,
+          CORS_ORIGINS: `not-an-origin-${secret}`,
         }),
       );
     } catch (error) {
