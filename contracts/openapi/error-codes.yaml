@@ -25,32 +25,46 @@ components:
         - INTERNAL_ERROR
       properties:
         VALIDATION_ERROR:
-          $ref: '#/components/schemas/ErrorDefinition'
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 400
+            description:
+              type: string
+              const: Request không đạt validation tại HTTP boundary.
         ROUTE_NOT_FOUND:
-          $ref: '#/components/schemas/ErrorDefinition'
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 404
+            description:
+              type: string
+              const: Không có route phù hợp với request.
         RATE_LIMITED:
-          $ref: '#/components/schemas/ErrorDefinition'
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 429
+            description:
+              type: string
+              const: Client vượt giới hạn request của API instance.
         INTERNAL_ERROR:
-          $ref: '#/components/schemas/ErrorDefinition'
-    ErrorDefinition:
-      type: object
-      additionalProperties: false
-      required:
-        - httpStatus
-        - description
-      properties:
-        httpStatus:
-          type: integer
-          minimum: 400
-          maximum: 599
-        description:
-          type: string
-      examples:
-        - httpStatus: 400
-          description: Request không đạt validation tại HTTP boundary.
-        - httpStatus: 404
-          description: Không có route phù hợp với request.
-        - httpStatus: 429
-          description: Client vượt giới hạn request của API instance.
-        - httpStatus: 500
-          description: Lỗi nội bộ không được tiết lộ chi tiết cho client.
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 500
+            description:
+              type: string
+              const: Lỗi nội bộ không được tiết lộ chi tiết cho client.
