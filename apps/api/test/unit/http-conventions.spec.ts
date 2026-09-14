@@ -85,11 +85,12 @@ describe('HTTP conventions', () => {
     it('does not create a body for a 204 response', async () => {
       const interceptor = new SuccessEnvelopeInterceptor();
       const response = responseRecorder();
+      const payload = { status: 'ignored-for-204' };
       const result = await lastValueFrom(
-        interceptor.intercept(executionContext(response, 204), { handle: () => of(undefined) }),
+        interceptor.intercept(executionContext(response, 204), { handle: () => of(payload) }),
       );
 
-      expect(result).toBeUndefined();
+      expect(result).toBe(payload);
       expect(response.body).toBeUndefined();
     });
   });
@@ -127,6 +128,9 @@ describe('HTTP conventions', () => {
       expect(response.statusCode).toBe(500);
       expect(response.contentType).toBe('application/problem+json');
       expect(response.body).toMatchObject({
+        type: expect.any(String),
+        title: expect.any(String),
+        instance: '/v1/test',
         status: 500,
         code: 'INTERNAL_ERROR',
         requestId: '018f0f2a-7b3c-7abc-8def-1234567890ab',
