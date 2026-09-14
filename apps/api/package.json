@@ -12,8 +12,8 @@
     "start:prod": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "if find src test -type f -name '*.ts' -print -quit 2>/dev/null | grep -q .; then tsc --noEmit; fi",
-    "test": "jest --config ./jest.config.cjs --runInBand",
-    "test:e2e": "jest --config ./jest.config.cjs --runInBand"
+    "test": "jest --config ./jest.config.cjs --runInBand --testMatch '**/*.spec.ts' --testPathIgnorePatterns '/\\.e2e-spec\\.ts$/'",
+    "test:e2e": "node -e \"process.argv = ['node', 'jest', '--config', './jest.config.cjs', '--runInBand', '--testMatch', '**/*.e2e-spec.ts', ...process.argv.slice(1).filter((arg) => arg !== '--')]; require(require.resolve('jest').replace('/build/index.js', '/bin/jest.js'));\" --"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
