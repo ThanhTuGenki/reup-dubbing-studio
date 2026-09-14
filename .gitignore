@@ -1,0 +1,18 @@
+node_modules/
+pnpm-debug.log*
+
+# Environment files may contain credentials and must never be committed.
+.env
+.env.*
+!.env.example
+
+# Build and test output.
+dist/
+coverage/
+.turbo/
+.cache/
+
+# Local tooling and editor files.
+.DS_Store
+.idea/
+.vscode/
