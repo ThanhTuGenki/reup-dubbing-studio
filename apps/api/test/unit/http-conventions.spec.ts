@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   NotFoundException,
+  StreamableFile,
   type ArgumentsHost,
   type ExecutionContext,
 } from '@nestjs/common';
@@ -52,14 +53,18 @@ function executionContext(response: ResponseRecorder, statusCode = 200): Executi
   } as unknown as ExecutionContext;
 }
 
-function argumentsHost(response: ResponseRecorder, requestId = '018f0f2a-7b3c-7abc-8def-1234567890ab') {
+function argumentsHost(
+  response: ResponseRecorder,
+  requestId = '018f0f2a-7b3c-7abc-8def-1234567890ab',
+  url = '/v1/test',
+) {
   return {
     switchToHttp: () => ({
       getRequest: () => ({
         id: requestId,
         requestId,
         method: 'GET',
-        url: '/v1/test',
+        url,
       }),
       getResponse: () => response,
     }),
@@ -92,6 +97,17 @@ describe('HTTP conventions', () => {
 
       expect(result).toBe(payload);
       expect(response.body).toBeUndefined();
+    });
+
+    it('does not wrap StreamableFile responses', async () => {
+      const interceptor = new SuccessEnvelopeInterceptor();
+      const response = responseRecorder();
+      const payload = new StreamableFile(Buffer.from('file-content'));
+      const result = await lastValueFrom(
+        interceptor.intercept(executionContext(response), { handle: () => of(payload) }),
+      );
+
+      expect(result).toBe(payload);
     });
   });
 
@@ -136,6 +152,19 @@ describe('HTTP conventions', () => {
         requestId: '018f0f2a-7b3c-7abc-8def-1234567890ab',
       });
       expect(JSON.stringify(response.body)).not.toContain(secret);
+    });
+
+    it('strips query strings from the problem instance path', () => {
+      const filter = new ProblemDetailsFilter();
+      const response = responseRecorder();
+
+      filter.catch(
+        new NotFoundException(),
+        argumentsHost(response, undefined, '/v1/test?token=query-secret#fragment'),
+      );
+
+      expect(response.body).toMatchObject({ instance: '/v1/test' });
+      expect(JSON.stringify(response.body)).not.toContain('query-secret');
     });
   });
 });
