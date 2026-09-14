@@ -81,7 +81,14 @@ describe('runtime configuration', () => {
     expect(() => parseConfig(validEnvironment({ TRUST_PROXY: trustProxy }))).toThrow();
   });
 
-  it('allows an explicit trusted proxy address and disables trust by default', () => {
+  it('disables trust proxy by default when TRUST_PROXY is omitted', () => {
+    const environment = validEnvironment();
+    delete environment.TRUST_PROXY;
+
+    expect(parseConfig(environment)).toMatchObject({ trustProxy: false });
+  });
+
+  it('allows an explicit trusted proxy address', () => {
     expect(parseConfig(validEnvironment({ TRUST_PROXY: '10.0.0.1, 10.0.0.0/24' }))).toMatchObject({
       trustProxy: ['10.0.0.1', '10.0.0.0/24'],
     });
@@ -92,7 +99,12 @@ describe('runtime configuration', () => {
     let errorMessage: string | undefined;
 
     try {
-      parseConfig(validEnvironment({ PORT: 'invalid', CORS_ORIGINS: `https://${secret}.test` }));
+      parseConfig(
+        validEnvironment({
+          NODE_ENV: 'production',
+          CORS_ORIGINS: `https://studio.example, https://${secret}.test, *`,
+        }),
+      );
     } catch (error) {
       errorMessage = String(error);
     }
