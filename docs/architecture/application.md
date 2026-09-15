@@ -364,29 +364,32 @@ Không tối ưu trước cho Vue hoặc Micro Frontend. Route và feature bound
 
 ### 6.1 Hình thức triển khai
 
-Backend bắt đầu dưới dạng modular monolith, một deployable chính nhưng chia module rõ ràng:
+Backend bắt đầu dưới dạng modular monolith với một deployable. `platform` sở hữu
+capability kỹ thuật cross-cutting; business slice chỉ được tạo Just-in-Time khi có
+hành vi thật:
 
 ```text
-AuthModule
-DiscoveryModule
-VideosModule
-WorkflowModule
-TasksModule
-WorkersModule
-VoiceProfilesModule
-ReviewModule
-PublishingModule
-StorageModule
-NotificationsModule
-AuditModule
-TranslationModule
-ContentModule
+apps/api/src/
+├── platform/                       # config, HTTP, logging, security, health
+├── modules/<slice>/                # chỉ tồn tại khi slice có code thật
+│   ├── http/web/                   # inbound adapter nếu có web consumer
+│   ├── http/worker/                # chỉ khi có worker consumer
+│   ├── application/                # use case và outbound port
+│   ├── domain/                     # rule thuần, không framework/I/O
+│   └── infrastructure/             # concrete outbound adapter
+├── app.module.ts                   # composition root
+└── main.ts
 ```
 
-Dependency direction and the four-layer module convention are recorded in
-[`2026-09-07-api-module-layout.md`](decisions/2026-09-07-api-module-layout.md).
+Chỉ tạo layer/port/adapter khi có file và consumer thực tế. Domain/application
+không import NestJS, Fastify, database, queue, object store hoặc worker SDK;
+infrastructure không import HTTP adapter; platform không import business module.
+Composition root là ngoại lệ ghép concrete implementation. Quy tắc đầy đủ nằm tại
+[`2026-09-14-api-hexagonal-slices.md`](decisions/2026-09-14-api-hexagonal-slices.md).
 
-Không tách các module này thành network microservice trước khi có nhu cầu scale hoặc ownership thực tế.
+Không tách slice thành network microservice trước khi có nhu cầu scale hoặc
+ownership thực tế. Control Plane không chạy media, FFmpeg, GPU hoặc tác vụ dài hạn
+trong HTTP request; các việc đó thuộc worker boundary.
 
 ### 6.2 Trách nhiệm
 

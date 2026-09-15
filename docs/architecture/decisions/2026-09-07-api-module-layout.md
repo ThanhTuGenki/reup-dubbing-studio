@@ -1,10 +1,10 @@
 # ADR: API module layout
 
-- Trạng thái: `ACCEPTED`
+- Trạng thái: `SUPERSEDED`
 - Nguồn chuẩn cho: module boundaries, dependency direction và controller layout của NestJS Control Plane scaffold.
 - Không phải nguồn chuẩn cho: endpoint inventory, database schema chi tiết, event bus implementation hay deployment configuration.
 - Thay thế: —
-- Được thay thế bởi: —
+- Được thay thế bởi: [`2026-09-14-api-hexagonal-slices.md`](2026-09-14-api-hexagonal-slices.md)
 
 ## Bối cảnh
 

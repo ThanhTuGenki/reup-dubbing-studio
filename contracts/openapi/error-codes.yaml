@@ -1,0 +1,70 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio Control Plane Error Catalog
+  version: 0.1.0
+  description: >-
+    Catalogue mã lỗi nền tảng được sử dụng bởi API-FOUNDATION-001. Catalogue
+    không mô tả endpoint, worker API hoặc business API.
+paths: {}
+components:
+  schemas:
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - ROUTE_NOT_FOUND
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+    ErrorCodeCatalog:
+      type: object
+      additionalProperties: false
+      required:
+        - VALIDATION_ERROR
+        - ROUTE_NOT_FOUND
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+      properties:
+        VALIDATION_ERROR:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 400
+            description:
+              type: string
+              const: Request không đạt validation tại HTTP boundary.
+        ROUTE_NOT_FOUND:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 404
+            description:
+              type: string
+              const: Không có route phù hợp với request.
+        RATE_LIMITED:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 429
+            description:
+              type: string
+              const: Client vượt giới hạn request của API instance.
+        INTERNAL_ERROR:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus:
+              type: integer
+              const: 500
+            description:
+              type: string
+              const: Lỗi nội bộ không được tiết lộ chi tiết cho client.
