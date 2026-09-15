@@ -1,0 +1,2 @@
+import { Link } from 'react-router-dom';
+export function FeatureUnavailablePage() { return <div className="page"><p className="eyebrow">Khu vực dành trước</p><h1>Tính năng chưa khả dụng</h1><p className="lede">Đường dẫn này đã được dành cho một lát cắt sản phẩm trong tương lai. Hiện tại chưa có dữ liệu hay thao tác nào tại đây.</p><Link className="text-link" to="/">Về trang nền tảng</Link></div>; }

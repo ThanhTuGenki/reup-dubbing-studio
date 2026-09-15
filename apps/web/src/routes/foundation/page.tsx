@@ -1,0 +1,2 @@
+import { ControlPlaneStatus } from '../../features/control-plane-status';
+export function FoundationPage() { return <div className="page"><p className="eyebrow">Web foundation</p><h1>Nền tảng vận hành đã sẵn sàng.</h1><p className="lede">Khung Dashboard cung cấp một điểm vào ổn định cho các lát cắt sản phẩm tiếp theo. Chưa có dữ liệu hoặc thao tác nghiệp vụ trong phạm vi này.</p><ControlPlaneStatus /></div>; }

@@ -1,0 +1,6 @@
+:root {
+  color-scheme: light; --color-canvas: #f5f4ed; --color-surface: #fffefa; --color-ink: #1f2a24; --color-muted: #5b685f;
+  --color-accent: #365f4b; --color-accent-strong: #234735; --color-border: #ccd4ca; --color-danger: #9a342d; --color-focus: #1267a5;
+  --shadow-panel: 0 12px 36px rgb(31 42 36 / 10%); --radius-sm: 8px; --radius-md: 14px; --space-2: 8px; --space-3: 12px;
+  --space-4: 16px; --space-5: 24px; --space-6: 32px; --sidebar-width: 272px; --motion-fast: 180ms;
+}

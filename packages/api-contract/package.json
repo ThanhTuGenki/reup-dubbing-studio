@@ -1,0 +1,27 @@
+{
+  "name": "@reup-dubbing-studio/api-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./generated/*": "./src/generated/*"
+  },
+  "scripts": {
+    "generate": "openapi-ts --file openapi-ts.config.ts",
+    "lint": "eslint src test openapi-ts.config.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hey-api/client-fetch": "^0.13.1"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.87.3",
+    "@reup-dubbing-studio/eslint-config": "workspace:*",
+    "@reup-dubbing-studio/tsconfig": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
