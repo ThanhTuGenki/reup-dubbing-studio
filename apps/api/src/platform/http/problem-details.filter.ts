@@ -66,7 +66,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     if (path) problem.instance = path;
 
     // Only expose framework-generated client errors. Never serialize unknown errors.
-    if (isKnownHttpError && status < 500) {
+    if (isKnownHttpError && status < 500 && status !== HttpStatus.NOT_FOUND) {
       const response = exception.getResponse();
       const detail = typeof response === 'string'
         ? response

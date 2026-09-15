@@ -15,8 +15,8 @@ bằng OpenAPI. Những contract khác (nếu một vertical slice sau này cầ
 
 - Mã runtime, adapter, client sinh mã hoặc logic nghiệp vụ.
 - Schema cơ sở dữ liệu, cấu hình hạ tầng, CI và cấu hình triển khai.
-- File OpenAPI, event schema hoặc business contract cụ thể trong foundation này;
-  các file đó chỉ được thêm bởi feature có yêu cầu và đặc tả tương ứng.
+- Contract ngoài hai health endpoint của API foundation; contract nghiệp vụ chỉ
+  được thêm bởi vertical slice có producer/consumer và đặc tả tương ứng.
 
 ## Ranh giới
 
@@ -25,5 +25,6 @@ bằng OpenAPI. Những contract khác (nếu một vertical slice sau này cầ
 chứa kiểu hoặc client được sinh từ contract khi một feature sau này yêu cầu,
 nhưng không trở thành nguồn chuẩn thay cho tài liệu trong `contracts`.
 
-README này chỉ mô tả vùng sở hữu. Contract thực tế không được đặt ở đây cho đến
-khi có feature xác định rõ producer, consumer và quy tắc tương thích.
+`openapi/web.openapi.yaml` và `openapi/error-codes.yaml` là contract JIT tối thiểu
+của API foundation. Chúng chỉ mô tả health, envelope, Problem Details và mã lỗi
+nền tảng; không phải inventory endpoint của toàn sản phẩm.

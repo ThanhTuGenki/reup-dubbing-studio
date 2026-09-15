@@ -50,4 +50,42 @@ describe('Control Plane health', () => {
       expect(body.meta.requestId).not.toBe(inboundRequestId);
     },
   );
+
+  it('returns a correlated Problem Details response for an unknown route', async () => {
+    const response = await app.inject({ method: 'GET', url: '/v1/unknown?token=query-sentinel' });
+    const body = response.json<{
+      status: number;
+      code: string;
+      instance: string;
+      requestId: string;
+    }>();
+
+    expect(response.statusCode).toBe(404);
+    expect(response.headers['content-type']).toContain('application/problem+json');
+    expect(body).toMatchObject({
+      status: 404,
+      code: 'ROUTE_NOT_FOUND',
+      instance: '/v1/unknown',
+      requestId: response.headers['x-request-id'],
+    });
+    expect(JSON.stringify(body)).not.toContain('query-sentinel');
+    expect(body).not.toHaveProperty('data');
+  });
+
+  it('maps the health limiter response to correlated Problem Details', async () => {
+    const limitedApp = await createApplication({ ...config, healthRateLimitMax: 1 });
+    try {
+      await limitedApp.inject({ method: 'GET', url: '/v1/health/live' });
+      const response = await limitedApp.inject({ method: 'GET', url: '/v1/health/live' });
+      const body = response.json<{ code: string; requestId: string }>();
+
+      expect(response.statusCode).toBe(429);
+      expect(response.headers['content-type']).toContain('application/problem+json');
+      expect(body.code).toBe('RATE_LIMITED');
+      expect(body.requestId).toBe(response.headers['x-request-id']);
+      expect(body).not.toHaveProperty('data');
+    } finally {
+      await limitedApp.close();
+    }
+  });
 });

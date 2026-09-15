@@ -52,7 +52,19 @@ export async function registerSecurity(
     bucket.count += 1;
     buckets.set(key, bucket);
     if (bucket.count > limit) {
-      reply.code(429).send({ statusCode: 429, error: 'Too Many Requests' });
+      const contextRequest = request as FastifyRequest & { requestId?: string };
+      const instance = request.url.split(/[?#]/u, 1)[0] || '/';
+      reply
+        .code(429)
+        .type('application/problem+json')
+        .send({
+          type: 'https://httpstatuses.com/429',
+          title: 'Too Many Requests',
+          status: 429,
+          instance,
+          code: 'RATE_LIMITED',
+          requestId: contextRequest.requestId ?? request.id,
+        });
       return reply;
     }
   });

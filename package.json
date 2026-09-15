@@ -12,9 +12,10 @@
     "test": "pnpm --recursive --if-present test",
     "test:e2e": "pnpm --recursive --if-present test:e2e",
     "depcruise": "pnpm --recursive --if-present depcruise",
-    "contract:lint": "pnpm --recursive --if-present contract:lint"
+    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml"
   },
   "devDependencies": {
+    "@redocly/cli": "^2.53.2",
     "@reup-dubbing-studio/eslint-config": "workspace:*",
     "eslint": "^9.39.1"
   }
