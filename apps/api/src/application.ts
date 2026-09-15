@@ -32,7 +32,7 @@ export async function createApplication(config: AppConfig): Promise<NestFastifyA
   await registerSecurity(fastify, config);
 
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
-    bufferLogs: true,
+    logger: false,
   });
   app.useGlobalPipes(createValidationPipe());
   app.useGlobalInterceptors(new SuccessEnvelopeInterceptor());

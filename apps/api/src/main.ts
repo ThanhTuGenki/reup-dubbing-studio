@@ -1,9 +1,13 @@
 import 'reflect-metadata';
 
+import { existsSync } from 'node:fs';
+import { loadEnvFile } from 'node:process';
+
 import { createApplication } from './application';
 import { parseConfig } from './platform/config/config';
 
 async function bootstrap(): Promise<void> {
+  if (existsSync('.env')) loadEnvFile('.env');
   // Configuration is parsed before the application is created or a port is opened.
   const config = parseConfig(process.env);
   const app = await createApplication(config);
