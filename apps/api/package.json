@@ -16,6 +16,9 @@
     "test:e2e": "node -e \"process.argv = ['node', 'jest', '--config', './jest.config.cjs', '--runInBand', '--testMatch', '**/*.e2e-spec.ts', ...process.argv.slice(1).filter((arg) => arg !== '--')]; require(require.resolve('jest').replace('/build/index.js', '/bin/jest.js'));\" --"
   },
   "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/rate-limit": "^10.3.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-fastify": "^11.0.0",

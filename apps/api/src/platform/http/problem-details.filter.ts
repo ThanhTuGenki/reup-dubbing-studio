@@ -37,7 +37,7 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     const response = context.getResponse<HttpResponse>();
     const status = exception instanceof HttpException
       ? exception.getStatus()
-      : HttpStatus.INTERNAL_SERVER_ERROR;
+      : statusFromAdapterError(exception);
     const problem = this.toProblemDetails(exception, status, request);
 
     response
@@ -78,6 +78,16 @@ export class ProblemDetailsFilter implements ExceptionFilter {
 
     return problem;
   }
+}
+
+function statusFromAdapterError(exception: unknown): number {
+  if (typeof exception !== 'object' || exception === null || !('statusCode' in exception)) {
+    return HttpStatus.INTERNAL_SERVER_ERROR;
+  }
+  const statusCode = (exception as { statusCode?: unknown }).statusCode;
+  return typeof statusCode === 'number' && statusCode >= 400 && statusCode <= 599
+    ? statusCode
+    : HttpStatus.INTERNAL_SERVER_ERROR;
 }
 
 function safePath(url: string | undefined): string | undefined {

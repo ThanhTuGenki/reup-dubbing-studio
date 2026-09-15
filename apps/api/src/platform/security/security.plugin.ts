@@ -1,7 +1,9 @@
+import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
 import type {
   FastifyInstance,
   FastifyRequest,
-  FastifyReply,
   FastifyServerOptions,
 } from 'fastify';
 
@@ -14,8 +16,6 @@ export type SecurityConfig = {
   trustProxy: NonNullable<FastifyServerOptions['trustProxy']>;
 };
 
-type Bucket = { count: number; expiresAt: number };
-
 export function createFastifySecurityOptions(
   config: Pick<SecurityConfig, 'trustProxy'>,
 ): FastifyServerOptions {
@@ -26,68 +26,35 @@ export async function registerSecurity(
   app: FastifyInstance,
   config: SecurityConfig,
 ): Promise<void> {
-  const buckets = new Map<string, Bucket>();
   const allowedOrigins = new Set(config.corsOrigins);
-
-  app.addHook('onRequest', async (request, reply) => {
-    applyCors(request, reply, allowedOrigins);
-
-    if (request.method === 'OPTIONS') {
-      if (request.headers.origin && !allowedOrigins.has(request.headers.origin)) {
-        return;
-      }
-      reply.code(204).send();
-      return reply;
-    }
-
-    const isHealth = request.url.split(/[?#]/u, 1)[0]?.startsWith('/v1/health/') ?? false;
-    const limit = isHealth ? config.healthRateLimitMax : config.rateLimitMax;
-    const key = `${isHealth ? 'health' : 'global'}:${request.ip}`;
-    const now = Date.now();
-    const current = buckets.get(key);
-    const bucket = current && current.expiresAt > now
-      ? current
-      : { count: 0, expiresAt: now + config.rateLimitWindowMs };
-
-    bucket.count += 1;
-    buckets.set(key, bucket);
-    if (bucket.count > limit) {
-      const contextRequest = request as FastifyRequest & { requestId?: string };
-      const instance = request.url.split(/[?#]/u, 1)[0] || '/';
-      reply
-        .code(429)
-        .type('application/problem+json')
-        .send({
-          type: 'https://httpstatuses.com/429',
-          title: 'Too Many Requests',
-          status: 429,
-          instance,
-          code: 'RATE_LIMITED',
-          requestId: contextRequest.requestId ?? request.id,
-        });
-      return reply;
-    }
+  await app.register(helmet);
+  await app.register(cors, {
+    origin(origin, callback) {
+      callback(null, origin === undefined || allowedOrigins.has(origin));
+    },
+  });
+  await app.register(rateLimit, {
+    global: true,
+    hook: 'onRequest',
+    max(request) {
+      return isHealthRequest(request)
+        ? config.healthRateLimitMax
+        : config.rateLimitMax;
+    },
+    timeWindow: config.rateLimitWindowMs,
+    keyGenerator(request) {
+      return `${isHealthRequest(request) ? 'health' : 'global'}:${request.ip}`;
+    },
+    errorResponseBuilder(_request, context) {
+      return Object.assign(new Error('Rate limited'), { statusCode: context.statusCode });
+    },
   });
 
   app.addHook('onSend', async (_request, reply) => {
-    reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('X-Frame-Options', 'SAMEORIGIN');
-    reply.header('Referrer-Policy', 'no-referrer');
+    if (reply.statusCode === 429) reply.type('application/problem+json');
   });
 }
 
-function applyCors(
-  request: FastifyRequest,
-  reply: FastifyReply,
-  allowedOrigins: ReadonlySet<string>,
-): void {
-  const origin = request.headers.origin;
-  if (!origin || !allowedOrigins.has(origin)) return;
-
-  reply.header('Access-Control-Allow-Origin', origin);
-  reply.header('Vary', 'Origin');
-  if (request.method === 'OPTIONS') {
-    reply.header('Access-Control-Allow-Methods', request.headers['access-control-request-method'] ?? 'GET');
-    reply.header('Access-Control-Allow-Headers', request.headers['access-control-request-headers'] ?? 'Content-Type');
-  }
+function isHealthRequest(request: FastifyRequest): boolean {
+  return request.url.split(/[?#]/u, 1)[0]?.startsWith('/v1/health/') ?? false;
 }
