@@ -58,3 +58,22 @@ pnpm contract:lint
 Rate limit hiện lưu trong bộ nhớ của từng API instance. Giới hạn phân tán hoặc
 gateway là công việc hạ tầng riêng. API không chạy FFmpeg, media/GPU hay tác vụ
 dài hạn trong HTTP request.
+
+## Đặt code cho slice sau
+
+```text
+src/
+├── platform/                 # capability kỹ thuật, không chứa business rule
+├── modules/<slice>/          # chỉ tạo khi có hành vi thật
+│   ├── http/web/             # inbound adapter theo consumer
+│   ├── application/          # use case và port
+│   ├── domain/               # rule thuần, không framework/I/O
+│   └── infrastructure/       # outbound adapter
+├── app.module.ts             # composition root
+└── main.ts
+```
+
+Không dựng module/layer/DTO/port rỗng. Xem
+[`api-hexagonal-slices`](../../docs/architecture/decisions/2026-09-14-api-hexagonal-slices.md)
+cho dependency direction và [`web.openapi.yaml`](../../contracts/openapi/web.openapi.yaml)
+cho contract health hiện có.

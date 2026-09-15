@@ -11,12 +11,13 @@
     "typecheck": "pnpm --recursive --if-present typecheck",
     "test": "pnpm --recursive --if-present test",
     "test:e2e": "pnpm --recursive --if-present test:e2e",
-    "depcruise": "pnpm --recursive --if-present depcruise",
+    "depcruise": "depcruise --config .dependency-cruiser.cjs apps/api/src",
     "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml"
   },
   "devDependencies": {
     "@redocly/cli": "^2.53.2",
     "@reup-dubbing-studio/eslint-config": "workspace:*",
+    "dependency-cruiser": "^17.4.3",
     "eslint": "^9.39.1"
   }
 }

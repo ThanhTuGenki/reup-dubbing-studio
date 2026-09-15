@@ -1,5 +1,13 @@
-import Fastify, { type FastifyInstance } from 'fastify';
+import { Writable } from 'node:stream';
 
+import Fastify, { type FastifyInstance } from 'fastify';
+import pino from 'pino';
+
+import { createLoggerOptions } from '../../src/platform/observability/logger';
+import {
+  registerRequestContext,
+  registerRequestLogging,
+} from '../../src/platform/observability/observability.plugin';
 import {
   createFastifySecurityOptions,
   registerSecurity,
@@ -98,5 +106,43 @@ describe('platform security integration', () => {
 
     expect(first.statusCode).toBe(200);
     expect(second.statusCode).toBe(429);
+  });
+
+  it('redacts credentials and the complete query string from observable request logs', async () => {
+    const chunks: string[] = [];
+    const destination = new Writable({
+      write(chunk, _encoding, callback) {
+        chunks.push(String(chunk));
+        callback();
+      },
+    });
+    const loggedApp = Fastify({
+      trustProxy: config.trustProxy,
+      loggerInstance: pino(createLoggerOptions('test', 'info'), destination),
+    });
+    const observableApp = loggedApp as unknown as FastifyInstance;
+    registerRequestContext(observableApp);
+    registerRequestLogging(observableApp);
+    await registerSecurity(observableApp, config);
+    loggedApp.get('/v1/security-log-probe', async () => ({ status: 'ok' }));
+
+    try {
+      await loggedApp.inject({
+        method: 'GET',
+        url: '/v1/security-log-probe?token=query-sentinel',
+        headers: {
+          authorization: 'Bearer authorization-sentinel',
+          cookie: 'session=cookie-sentinel',
+        },
+      });
+    } finally {
+      await loggedApp.close();
+    }
+
+    const output = chunks.join('');
+    expect(output).toContain('[Redacted]');
+    expect(output).not.toContain('authorization-sentinel');
+    expect(output).not.toContain('cookie-sentinel');
+    expect(output).not.toContain('query-sentinel');
   });
 });
