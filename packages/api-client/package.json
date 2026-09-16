@@ -1,0 +1,24 @@
+{
+  "name": "@reup-dubbing-studio/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@reup-dubbing-studio/api-contract": "workspace:*"
+  },
+  "devDependencies": {
+    "@reup-dubbing-studio/eslint-config": "workspace:*",
+    "@reup-dubbing-studio/tsconfig": "workspace:*",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

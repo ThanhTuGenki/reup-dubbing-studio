@@ -33,6 +33,30 @@ module.exports = {
       from: { pathNot: '^apps/api/src/modules(?:/|$)' },
       to: { path: '^apps/api/src/modules/[^/]+/.+' },
     },
+    {
+      name: 'web-does-not-import-api-source',
+      severity: 'error',
+      from: { path: '^apps/web(?:/|$)' },
+      to: { path: '^apps/api(?:/|$)' },
+    },
+    {
+      name: 'web-layers-point-inward',
+      severity: 'error',
+      from: { path: '^apps/web/src/(?:shared|entities|features)(?:/|$)' },
+      to: { path: '^apps/web/src/(?:app|routes)(?:/|$)' },
+    },
+    {
+      name: 'web-shared-is-independent',
+      severity: 'error',
+      from: { path: '^apps/web/src/shared(?:/|$)' },
+      to: { path: '^apps/web/src/(?:features|entities)(?:/|$)' },
+    },
+    {
+      name: 'web-routes-use-feature-public-api',
+      severity: 'error',
+      from: { path: '^apps/web/src/(?:app|routes)(?:/|$)' },
+      to: { path: '^apps/web/src/features/[^/]+/(?:api|model|ui)(?:/|$)' },
+    },
   ],
   options: {
     doNotFollow: { path: 'node_modules' },

@@ -11,8 +11,15 @@
     "typecheck": "pnpm --recursive --if-present typecheck",
     "test": "pnpm --recursive --if-present test",
     "test:e2e": "pnpm --recursive --if-present test:e2e",
-    "depcruise": "depcruise --config .dependency-cruiser.cjs apps/api/src",
-    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml"
+    "depcruise": "depcruise --config .dependency-cruiser.cjs apps/api/src apps/web/src",
+    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml",
+    "contract:generate": "pnpm --filter @reup-dubbing-studio/api-contract generate",
+    "contract:check": "pnpm contract:generate && git diff --exit-code -- packages/api-contract/src/generated",
+    "test:contract": "pnpm --filter @reup-dubbing-studio/api-contract test && pnpm --filter @reup-dubbing-studio/api-client test",
+    "web:dev": "pnpm --filter @reup-dubbing-studio/web dev",
+    "web:build": "pnpm --filter @reup-dubbing-studio/web build",
+    "web:test": "pnpm --filter @reup-dubbing-studio/web test",
+    "web:test:e2e": "pnpm --filter @reup-dubbing-studio/web test:e2e"
   },
   "devDependencies": {
     "@redocly/cli": "^2.53.2",
