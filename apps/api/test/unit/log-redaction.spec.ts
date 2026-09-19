@@ -43,6 +43,15 @@ describe('structured log redaction', () => {
     expect(JSON.stringify(output)).not.toContain('also-secret');
   });
 
+  it('redacts presigned URL fields completely', () => {
+    const presignedUrl = 'https://bucket.example.test/private/object.mp4?X-Amz-Signature=signature-sentinel';
+    const output = redactLog({ presignedUrl, nested: { signedUrl: presignedUrl } });
+
+    expect(output).toEqual({ presignedUrl: REDACTED, nested: { signedUrl: REDACTED } });
+    expect(JSON.stringify(output)).not.toContain('private/object.mp4');
+    expect(JSON.stringify(output)).not.toContain('signature-sentinel');
+  });
+
   it('does not mutate the original log object while redacting it', () => {
     const input = { authorization: 'authorization-sentinel', message: 'safe' };
 

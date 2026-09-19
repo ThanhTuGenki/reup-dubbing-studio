@@ -1,5 +1,6 @@
 const REDACTED = '[Redacted]';
 const SENSITIVE_KEYS = /^(?:authorization|cookie|set-cookie|token|accessToken|refreshToken|secret|apiKey|password)$/iu;
+const PRESIGNED_URL_KEYS = /^(?:presignedUrl|signedUrl)$/iu;
 const URL_KEYS = /^(?:url|href|uri)$/iu;
 const QUERY_KEYS = /^(?:query|queryString|search)$/iu;
 
@@ -24,7 +25,7 @@ function redactValue(value: unknown, seen: WeakMap<object, unknown>): unknown {
   const clone: Record<string, unknown> = {};
   seen.set(value, clone);
   for (const [key, child] of Object.entries(value)) {
-    if (SENSITIVE_KEYS.test(key) || QUERY_KEYS.test(key)) {
+    if (SENSITIVE_KEYS.test(key) || PRESIGNED_URL_KEYS.test(key) || QUERY_KEYS.test(key)) {
       clone[key] = REDACTED;
     } else if (URL_KEYS.test(key) && typeof child === 'string') {
       clone[key] = redactUrl(child);

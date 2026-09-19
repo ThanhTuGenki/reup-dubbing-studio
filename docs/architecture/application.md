@@ -810,6 +810,11 @@ Nguyên tắc:
 - Lifecycle/retention cho intermediate asset là `TBD`.
 - MP4 thành phẩm và `.srt` dùng cùng basename theo đặc tả sản phẩm.
 
+Flow cấp grant, upload/download trực tiếp, commit verification, TTL và security
+boundary được chốt tại
+[`presigned-asset-flow.md`](presigned-asset-flow.md). Endpoint, purpose, MIME và
+size limit vẫn được thêm Just-in-Time theo vertical slice đầu tiên sử dụng asset.
+
 ## 12. Deployment topology
 
 ### 12.1 VPS

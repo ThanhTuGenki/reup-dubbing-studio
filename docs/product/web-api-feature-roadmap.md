@@ -32,7 +32,7 @@
 - [x] Chuẩn hóa pagination, filter, empty/loading/error state và query-key factory.
 - [x] Thiết lập SSE client dùng chung cho progress/status và cơ chế refetch sau
   reconnect.
-- [ ] Chốt quy ước upload/download asset bằng presigned URL.
+- [x] Chốt quy ước upload/download asset bằng presigned URL.
 
 ## 1. Cài đặt hệ thống
 
