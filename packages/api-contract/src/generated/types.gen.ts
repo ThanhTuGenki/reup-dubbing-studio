@@ -4,6 +4,279 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type UuidV7 = string;
+
+export type ProfileStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+
+export type ProfileReadiness = 'READY' | 'NEEDS_CONFIGURATION';
+
+export type ProfileReadinessIssue = 'DEFAULT_VOICE_REQUIRED' | 'DEFAULT_VOICE_NOT_READY' | 'OUTPUT_REQUIRED' | 'MASK_REQUIRED' | 'MASK_REFERENCE_ASSET_REQUIRED' | 'CAST_REQUIRED' | 'CAST_VOICE_NOT_READY' | 'PARENT_CHANNEL_NOT_ACTIVE';
+
+export type VoiceMode = 'SINGLE' | 'DUAL' | 'MULTI_AUTO';
+
+export type TimingPolicy = 'PRESERVE_SEGMENT' | 'FIT_SEGMENT' | 'ALLOW_DRIFT';
+
+export type PipelineConfig = {
+    targetLanguage: string;
+    defaultVoiceProfileId: UuidV7 | null;
+    voiceMode: VoiceMode;
+    subtitleLanguage: string;
+    subtitleFilenameRule: string;
+    subtitleMaxLineLength: number | null;
+    ttsSpeed: number;
+    timingPolicy: TimingPolicy;
+    output16x9Enabled: boolean;
+    output9x16Enabled: boolean;
+};
+
+export type PipelinePatch = {
+    targetLanguage?: string;
+    defaultVoiceProfileId?: UuidV7 | null;
+    voiceMode?: VoiceMode;
+    subtitleLanguage?: string;
+    subtitleFilenameRule?: string;
+    subtitleMaxLineLength?: number | null;
+    ttsSpeed?: number;
+    timingPolicy?: TimingPolicy;
+    output16x9Enabled?: boolean;
+    output9x16Enabled?: boolean;
+};
+
+export type ContentConfig = {
+    voiceRules: {
+        [key: string]: unknown;
+    };
+    ctaTemplate: string | null;
+    metadataTemplate: {
+        [key: string]: unknown;
+    };
+    baseKeywords: Array<string>;
+};
+
+export type ContentPatch = {
+    voiceRules?: {
+        [key: string]: unknown;
+    };
+    ctaTemplate?: string | null;
+    metadataTemplate?: {
+        [key: string]: unknown;
+    };
+    baseKeywords?: Array<string>;
+};
+
+export type PublishingDestinationInput = {
+    platform: 'YOUTUBE' | 'FACEBOOK';
+    externalId?: string | null;
+    displayName: string;
+    isRequired: boolean;
+    isActive: boolean;
+    platformConfig: {
+        [key: string]: unknown;
+    };
+};
+
+export type PublishingDestination = PublishingDestinationInput & {
+    id: UuidV7;
+    version: number;
+};
+
+export type ProfileAsset = {
+    linkId: UuidV7;
+    assetId: UuidV7;
+    role: 'INTRO' | 'OUTRO' | 'LOGO' | 'WATERMARK' | 'MASK_REFERENCE_FRAME';
+    fileName: string;
+    contentType: string | null;
+    byteSize: string | null;
+    width: number | null;
+    height: number | null;
+    revision: number;
+};
+
+export type ChannelProfile = {
+    id: UuidV7;
+    name: string;
+    status: ProfileStatus;
+    pipeline: PipelineConfig;
+    content: ContentConfig;
+    destinations: Array<PublishingDestination>;
+    assets: Array<ProfileAsset>;
+    readiness: ProfileReadiness;
+    readinessIssues: Array<ProfileReadinessIssue>;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CreateChannelProfile = {
+    name: string;
+    pipeline: PipelineConfig;
+    content: ContentConfig;
+    destinations: Array<PublishingDestinationInput>;
+};
+
+export type UpdateChannelProfile = {
+    name?: string;
+    status?: 'DRAFT' | 'ACTIVE';
+    pipeline?: PipelinePatch;
+    content?: ContentPatch;
+    destinations?: Array<PublishingDestinationInput>;
+};
+
+export type SeriesOverrides = {
+    targetLanguage: string | null;
+    defaultVoiceProfileId: UuidV7 | null;
+    voiceMode: VoiceMode | null;
+    subtitleLanguage: string | null;
+    subtitleFilenameRule: string | null;
+    subtitleMaxLineLength: number | null;
+    ttsSpeed: number | null;
+    timingPolicy: TimingPolicy | null;
+    output16x9Enabled: boolean | null;
+    output9x16Enabled: boolean | null;
+};
+
+export type SeriesOverridesPatch = {
+    targetLanguage?: string | null;
+    defaultVoiceProfileId?: UuidV7 | null;
+    voiceMode?: VoiceMode | null;
+    subtitleLanguage?: string | null;
+    subtitleFilenameRule?: string | null;
+    subtitleMaxLineLength?: number | null;
+    ttsSpeed?: number | null;
+    timingPolicy?: TimingPolicy | null;
+    output16x9Enabled?: boolean | null;
+    output9x16Enabled?: boolean | null;
+};
+
+export type SubtitleMask = {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+};
+
+export type InheritanceMap = {
+    targetLanguage: 'CHANNEL' | 'SERIES';
+    defaultVoiceProfileId: 'CHANNEL' | 'SERIES';
+    voiceMode: 'CHANNEL' | 'SERIES';
+    subtitleLanguage: 'CHANNEL' | 'SERIES';
+    subtitleFilenameRule: 'CHANNEL' | 'SERIES';
+    subtitleMaxLineLength: 'CHANNEL' | 'SERIES';
+    ttsSpeed: 'CHANNEL' | 'SERIES';
+    timingPolicy: 'CHANNEL' | 'SERIES';
+    output16x9Enabled: 'CHANNEL' | 'SERIES';
+    output9x16Enabled: 'CHANNEL' | 'SERIES';
+};
+
+export type SeriesProfile = {
+    id: UuidV7;
+    channelProfileId: UuidV7;
+    name: string;
+    status: ProfileStatus;
+    overrides: SeriesOverrides;
+    effectiveConfig: PipelineConfig;
+    inheritance: InheritanceMap;
+    mask: SubtitleMask | null;
+    assets: Array<ProfileAsset>;
+    readiness: ProfileReadiness;
+    readinessIssues: Array<ProfileReadinessIssue>;
+    version: number;
+    parentVersion: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CreateSeriesProfile = {
+    channelProfileId: UuidV7;
+    name: string;
+    overrides?: SeriesOverridesPatch;
+    mask?: SubtitleMask | null;
+};
+
+export type UpdateSeriesProfile = {
+    name?: string;
+    status?: 'DRAFT' | 'ACTIVE';
+    overrides?: SeriesOverridesPatch;
+    mask?: SubtitleMask | null;
+};
+
+export type ChannelProfilePage = {
+    items: Array<ChannelProfile>;
+    nextCursor: string | null;
+};
+
+export type SeriesProfilePage = {
+    items: Array<SeriesProfile>;
+    nextCursor: string | null;
+};
+
+export type ProfileAssetUploadRequest = {
+    role: 'INTRO' | 'OUTRO' | 'LOGO' | 'WATERMARK' | 'MASK_REFERENCE_FRAME';
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+    checksumSha256?: string;
+    width?: number;
+    height?: number;
+};
+
+export type UploadGrant = {
+    assetId: UuidV7;
+    method: 'PUT';
+    url: string;
+    headers: {
+        [key: string]: string;
+    };
+    expiresAt: string;
+    maxByteSize: number;
+};
+
+export type CommittedAsset = {
+    asset: ProfileAsset;
+    profileVersion: number;
+    parentVersion?: number;
+};
+
+export type ProfileVersion = {
+    profileVersion: number;
+    parentVersion?: number;
+};
+
+export type ChannelProfileEnvelope = {
+    data: ChannelProfile;
+    meta: SuccessMeta;
+};
+
+export type SeriesProfileEnvelope = {
+    data: SeriesProfile;
+    meta: SuccessMeta;
+};
+
+export type ChannelProfileListEnvelope = {
+    data: ChannelProfilePage;
+    meta: SuccessMeta;
+};
+
+export type SeriesProfileListEnvelope = {
+    data: SeriesProfilePage;
+    meta: SuccessMeta;
+};
+
+export type UploadGrantEnvelope = {
+    data: UploadGrant;
+    meta: SuccessMeta;
+};
+
+export type CommittedAssetEnvelope = {
+    data: CommittedAsset;
+    meta: SuccessMeta;
+};
+
+export type ProfileVersionEnvelope = {
+    data: ProfileVersion;
+    meta: SuccessMeta;
+};
+
 export type RequestId = string;
 
 export type HealthStatus = {
@@ -139,9 +412,36 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED';
     requestId: RequestId;
 };
+
+export type ChannelProfileId = UuidV7;
+
+export type SeriesProfileId = UuidV7;
+
+export type AssetId = UuidV7;
+
+export type LinkId = UuidV7;
+
+export type ChannelIfMatch = string;
+
+/**
+ * Strong effective ETag gồm version Series và parent Channel.
+ */
+export type SeriesIfMatch = string;
+
+export type Cursor = string;
+
+export type Limit = number;
+
+export type ProfileQuery = string;
+
+export type ProfileStatusFilter = ProfileStatus;
+
+export type ProfileReadinessFilter = ProfileReadiness;
+
+export type ChannelProfileFilter = UuidV7;
 
 /**
  * Strong ETag nhận từ lần đọc Settings gần nhất.
@@ -149,6 +449,690 @@ export type ProblemDetails = {
 export type IfMatch = string;
 
 export type IdempotencyKey = string;
+
+export type ListChannelProfilesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        query?: string;
+        status?: ProfileStatus;
+        readiness?: ProfileReadiness;
+    };
+    url: '/channel-profiles';
+};
+
+export type ListChannelProfilesErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListChannelProfilesError = ListChannelProfilesErrors[keyof ListChannelProfilesErrors];
+
+export type ListChannelProfilesResponses = {
+    /**
+     * Trang Channel Profile.
+     */
+    200: ChannelProfileListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListChannelProfilesResponse = ListChannelProfilesResponses[keyof ListChannelProfilesResponses];
+
+export type CreateChannelProfileData = {
+    body: CreateChannelProfile;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/channel-profiles';
+};
+
+export type CreateChannelProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateChannelProfileError = CreateChannelProfileErrors[keyof CreateChannelProfileErrors];
+
+export type CreateChannelProfileResponses = {
+    /**
+     * Channel Profile đã tạo.
+     */
+    201: ChannelProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateChannelProfileResponse = CreateChannelProfileResponses[keyof CreateChannelProfileResponses];
+
+export type GetChannelProfileData = {
+    body?: never;
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}';
+};
+
+export type GetChannelProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetChannelProfileError = GetChannelProfileErrors[keyof GetChannelProfileErrors];
+
+export type GetChannelProfileResponses = {
+    /**
+     * Channel Profile hiện tại.
+     */
+    200: ChannelProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetChannelProfileResponse = GetChannelProfileResponses[keyof GetChannelProfileResponses];
+
+export type UpdateChannelProfileData = {
+    body: UpdateChannelProfile;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}';
+};
+
+export type UpdateChannelProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateChannelProfileError = UpdateChannelProfileErrors[keyof UpdateChannelProfileErrors];
+
+export type UpdateChannelProfileResponses = {
+    /**
+     * Channel Profile sau cập nhật.
+     */
+    200: ChannelProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateChannelProfileResponse = UpdateChannelProfileResponses[keyof UpdateChannelProfileResponses];
+
+export type ArchiveChannelProfileData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/archive';
+};
+
+export type ArchiveChannelProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveChannelProfileError = ArchiveChannelProfileErrors[keyof ArchiveChannelProfileErrors];
+
+export type ArchiveChannelProfileResponses = {
+    /**
+     * Channel Profile đã archive.
+     */
+    200: ChannelProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveChannelProfileResponse = ArchiveChannelProfileResponses[keyof ArchiveChannelProfileResponses];
+
+export type RestoreChannelProfileData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/restore';
+};
+
+export type RestoreChannelProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreChannelProfileError = RestoreChannelProfileErrors[keyof RestoreChannelProfileErrors];
+
+export type RestoreChannelProfileResponses = {
+    /**
+     * Channel Profile đã restore.
+     */
+    200: ChannelProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreChannelProfileResponse = RestoreChannelProfileResponses[keyof RestoreChannelProfileResponses];
+
+export type RequestChannelProfileAssetUploadData = {
+    body: ProfileAssetUploadRequest;
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/assets/uploads';
+};
+
+export type RequestChannelProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestChannelProfileAssetUploadError = RequestChannelProfileAssetUploadErrors[keyof RequestChannelProfileAssetUploadErrors];
+
+export type RequestChannelProfileAssetUploadResponses = {
+    /**
+     * Presigned PUT grant mười phút.
+     */
+    201: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestChannelProfileAssetUploadResponse = RequestChannelProfileAssetUploadResponses[keyof RequestChannelProfileAssetUploadResponses];
+
+export type CommitChannelProfileAssetUploadData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/commit';
+};
+
+export type CommitChannelProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitChannelProfileAssetUploadError = CommitChannelProfileAssetUploadErrors[keyof CommitChannelProfileAssetUploadErrors];
+
+export type CommitChannelProfileAssetUploadResponses = {
+    /**
+     * Asset đã AVAILABLE và trở thành revision hiện tại.
+     */
+    200: CommittedAssetEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitChannelProfileAssetUploadResponse = CommitChannelProfileAssetUploadResponses[keyof CommitChannelProfileAssetUploadResponses];
+
+export type RefreshChannelProfileAssetUploadData = {
+    body?: never;
+    path: {
+        channelProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/grant';
+};
+
+export type RefreshChannelProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshChannelProfileAssetUploadError = RefreshChannelProfileAssetUploadErrors[keyof RefreshChannelProfileAssetUploadErrors];
+
+export type RefreshChannelProfileAssetUploadResponses = {
+    /**
+     * Presigned PUT grant mới cho cùng asset.
+     */
+    200: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshChannelProfileAssetUploadResponse = RefreshChannelProfileAssetUploadResponses[keyof RefreshChannelProfileAssetUploadResponses];
+
+export type DetachChannelProfileAssetData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+        linkId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/assets/{linkId}';
+};
+
+export type DetachChannelProfileAssetErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachChannelProfileAssetError = DetachChannelProfileAssetErrors[keyof DetachChannelProfileAssetErrors];
+
+export type DetachChannelProfileAssetResponses = {
+    /**
+     * Link đã được gỡ.
+     */
+    200: ProfileVersionEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachChannelProfileAssetResponse = DetachChannelProfileAssetResponses[keyof DetachChannelProfileAssetResponses];
+
+export type ListSeriesProfilesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        query?: string;
+        status?: ProfileStatus;
+        readiness?: ProfileReadiness;
+        channelProfileId?: UuidV7;
+    };
+    url: '/series-profiles';
+};
+
+export type ListSeriesProfilesErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListSeriesProfilesError = ListSeriesProfilesErrors[keyof ListSeriesProfilesErrors];
+
+export type ListSeriesProfilesResponses = {
+    /**
+     * Trang Series Profile.
+     */
+    200: SeriesProfileListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListSeriesProfilesResponse = ListSeriesProfilesResponses[keyof ListSeriesProfilesResponses];
+
+export type CreateSeriesProfileData = {
+    body: CreateSeriesProfile;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/series-profiles';
+};
+
+export type CreateSeriesProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateSeriesProfileError = CreateSeriesProfileErrors[keyof CreateSeriesProfileErrors];
+
+export type CreateSeriesProfileResponses = {
+    /**
+     * Series Profile đã tạo.
+     */
+    201: SeriesProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateSeriesProfileResponse = CreateSeriesProfileResponses[keyof CreateSeriesProfileResponses];
+
+export type GetSeriesProfileData = {
+    body?: never;
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}';
+};
+
+export type GetSeriesProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSeriesProfileError = GetSeriesProfileErrors[keyof GetSeriesProfileErrors];
+
+export type GetSeriesProfileResponses = {
+    /**
+     * Series Profile hiện tại.
+     */
+    200: SeriesProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSeriesProfileResponse = GetSeriesProfileResponses[keyof GetSeriesProfileResponses];
+
+export type UpdateSeriesProfileData = {
+    body: UpdateSeriesProfile;
+    headers: {
+        /**
+         * Strong effective ETag gồm version Series và parent Channel.
+         */
+        'If-Match': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}';
+};
+
+export type UpdateSeriesProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSeriesProfileError = UpdateSeriesProfileErrors[keyof UpdateSeriesProfileErrors];
+
+export type UpdateSeriesProfileResponses = {
+    /**
+     * Series Profile sau cập nhật.
+     */
+    200: SeriesProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSeriesProfileResponse = UpdateSeriesProfileResponses[keyof UpdateSeriesProfileResponses];
+
+export type ArchiveSeriesProfileData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong effective ETag gồm version Series và parent Channel.
+         */
+        'If-Match': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/archive';
+};
+
+export type ArchiveSeriesProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveSeriesProfileError = ArchiveSeriesProfileErrors[keyof ArchiveSeriesProfileErrors];
+
+export type ArchiveSeriesProfileResponses = {
+    /**
+     * Series Profile đã archive.
+     */
+    200: SeriesProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveSeriesProfileResponse = ArchiveSeriesProfileResponses[keyof ArchiveSeriesProfileResponses];
+
+export type RestoreSeriesProfileData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong effective ETag gồm version Series và parent Channel.
+         */
+        'If-Match': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/restore';
+};
+
+export type RestoreSeriesProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreSeriesProfileError = RestoreSeriesProfileErrors[keyof RestoreSeriesProfileErrors];
+
+export type RestoreSeriesProfileResponses = {
+    /**
+     * Series Profile đã restore.
+     */
+    200: SeriesProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreSeriesProfileResponse = RestoreSeriesProfileResponses[keyof RestoreSeriesProfileResponses];
+
+export type RequestSeriesProfileAssetUploadData = {
+    body: ProfileAssetUploadRequest;
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/assets/uploads';
+};
+
+export type RequestSeriesProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestSeriesProfileAssetUploadError = RequestSeriesProfileAssetUploadErrors[keyof RequestSeriesProfileAssetUploadErrors];
+
+export type RequestSeriesProfileAssetUploadResponses = {
+    /**
+     * Presigned PUT grant mười phút.
+     */
+    201: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestSeriesProfileAssetUploadResponse = RequestSeriesProfileAssetUploadResponses[keyof RequestSeriesProfileAssetUploadResponses];
+
+export type CommitSeriesProfileAssetUploadData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong effective ETag gồm version Series và parent Channel.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/commit';
+};
+
+export type CommitSeriesProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitSeriesProfileAssetUploadError = CommitSeriesProfileAssetUploadErrors[keyof CommitSeriesProfileAssetUploadErrors];
+
+export type CommitSeriesProfileAssetUploadResponses = {
+    /**
+     * Asset đã AVAILABLE và trở thành revision hiện tại.
+     */
+    200: CommittedAssetEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitSeriesProfileAssetUploadResponse = CommitSeriesProfileAssetUploadResponses[keyof CommitSeriesProfileAssetUploadResponses];
+
+export type RefreshSeriesProfileAssetUploadData = {
+    body?: never;
+    path: {
+        seriesProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant';
+};
+
+export type RefreshSeriesProfileAssetUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshSeriesProfileAssetUploadError = RefreshSeriesProfileAssetUploadErrors[keyof RefreshSeriesProfileAssetUploadErrors];
+
+export type RefreshSeriesProfileAssetUploadResponses = {
+    /**
+     * Presigned PUT grant mới cho cùng asset.
+     */
+    200: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshSeriesProfileAssetUploadResponse = RefreshSeriesProfileAssetUploadResponses[keyof RefreshSeriesProfileAssetUploadResponses];
+
+export type DetachSeriesProfileAssetData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong effective ETag gồm version Series và parent Channel.
+         */
+        'If-Match': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+        linkId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/assets/{linkId}';
+};
+
+export type DetachSeriesProfileAssetErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachSeriesProfileAssetError = DetachSeriesProfileAssetErrors[keyof DetachSeriesProfileAssetErrors];
+
+export type DetachSeriesProfileAssetResponses = {
+    /**
+     * Link đã được gỡ.
+     */
+    200: ProfileVersionEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachSeriesProfileAssetResponse = DetachSeriesProfileAssetResponses[keyof DetachSeriesProfileAssetResponses];
 
 export type GetSettingsData = {
     body?: never;
