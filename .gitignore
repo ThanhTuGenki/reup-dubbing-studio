@@ -19,3 +19,6 @@ blob-report/
 .DS_Store
 .idea/
 .vscode/
+
+# Local OpenDesign export. Keep the durable agent context in AGENTS.md instead.
+Project-As-Complete-Opendesign-Design-System/

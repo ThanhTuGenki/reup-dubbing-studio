@@ -1,6 +1,121 @@
 :root {
-  color-scheme: light; --color-canvas: #f5f4ed; --color-surface: #fffefa; --color-ink: #1f2a24; --color-muted: #5b685f;
-  --color-accent: #365f4b; --color-accent-strong: #234735; --color-border: #ccd4ca; --color-danger: #9a342d; --color-focus: #1267a5;
-  --shadow-panel: 0 12px 36px rgb(31 42 36 / 10%); --radius-sm: 8px; --radius-md: 14px; --space-2: 8px; --space-3: 12px;
-  --space-4: 16px; --space-5: 24px; --space-6: 32px; --sidebar-width: 272px; --motion-fast: 180ms;
+  color-scheme: light;
+
+  /* OpenDesign source tokens. Names that collide with shadcn semantics use
+     a brand prefix; the adapter values below are what components consume. */
+  --canvas: #f5f8f4;
+  --surface: #ffffff;
+  --surface-warm: #f2f7f2;
+  --panel-subtle: #edf4ee;
+  --fg: #1f2d22;
+  --muted-fg: #647168;
+  --meta: var(--muted-fg);
+  --brand-accent: #4f8a59;
+  --brand-accent-strong: #397246;
+  --brand-accent-soft: #ddede0;
+  --brand-accent-on: #ffffff;
+  --brand-accent-active: color-mix(in oklch, var(--brand-accent-strong) 88%, var(--fg));
+  --warning: #8a5d00;
+  --danger: #b42318;
+  --disabled-bg: #e8ede9;
+  --disabled-fg: #7b877e;
+
+  /* shadcn semantic adapter. */
+  --background: var(--canvas);
+  --foreground: var(--fg);
+  --card: var(--surface);
+  --card-foreground: var(--fg);
+  --popover: var(--surface);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand-accent-strong);
+  --primary-foreground: var(--brand-accent-on);
+  --secondary: var(--panel-subtle);
+  --secondary-foreground: var(--fg);
+  --muted: var(--panel-subtle);
+  --muted-foreground: var(--muted-fg);
+  --accent: var(--brand-accent-soft);
+  --accent-foreground: var(--brand-accent-strong);
+  --destructive: var(--danger);
+  --border: #d9e4da;
+  --input: var(--border);
+  --ring: var(--brand-accent-strong);
+  --sidebar: var(--surface-warm);
+  --sidebar-foreground: var(--fg);
+  --sidebar-primary: var(--brand-accent-strong);
+  --sidebar-primary-foreground: var(--brand-accent-on);
+  --sidebar-accent: var(--brand-accent-soft);
+  --sidebar-accent-foreground: var(--brand-accent-strong);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand-accent-strong);
+
+  --chart-1: var(--brand-accent-strong);
+  --chart-2: var(--brand-accent);
+  --chart-3: #a9d4b4;
+  --chart-4: #0369a1;
+  --chart-5: #7c3aed;
+
+  --border-soft: color-mix(in oklch, var(--border) 72%, transparent);
+  --success: var(--brand-accent-strong);
+  --warn-bg: color-mix(in oklch, var(--warning) 10%, var(--surface));
+  --warn-border: color-mix(in oklch, var(--warning) 30%, var(--border));
+  --danger-bg: color-mix(in oklch, var(--danger) 8%, var(--surface));
+  --danger-border: color-mix(in oklch, var(--danger) 28%, var(--border));
+  --success-bg: color-mix(in oklch, var(--success) 10%, var(--surface));
+  --success-border: color-mix(in oklch, var(--success) 30%, var(--border));
+
+  --status-gpu-fg: #7c3aed;
+  --status-gpu-bg: #ede9fe;
+  --status-gpu-border: #c4b5fd;
+  --status-wait-fg: #6b7280;
+  --status-wait-bg: #f3f4f6;
+  --status-wait-border: #d1d5db;
+  --status-download-fg: #0369a1;
+  --status-download-bg: #e0f2fe;
+  --status-download-border: #7dd3fc;
+
+  --font-display: "Inter Variable", "Inter", "SF Pro Display", system-ui, sans-serif;
+  --font-body: "Inter Variable", "Inter", "SF Pro Display", system-ui, sans-serif;
+  --font-code: "Berkeley Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --weight-regular: 400;
+  --weight-ui: 510;
+  --weight-strong: 590;
+  --font-features: "cv01", "ss03";
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-control: 6px;
+  --radius-card: 12px;
+  --radius-pill: 9999px;
+  --radius: var(--radius-card);
+  --card-shadow: 0 1px 2px rgb(31 45 34 / 4%), 0 6px 18px rgb(31 45 34 / 2.5%);
+  --elev-raised: rgb(31 45 34 / 10%) 0 12px 32px, 0 0 0 1px rgb(31 45 34 / 6%);
+  --focus-ring: 0 0 0 2px var(--surface), 0 0 0 4px var(--brand-accent-strong);
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --sidebar-w: 248px;
+  --sidebar-w-collapsed: 80px;
+  --topbar-h: 64px;
+  --content-max: 1600px;
+  --control-h: 44px;
+  --control-h-sm: 36px;
+
+  /* Compatibility aliases for the web-foundation styles. */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--fg);
+  --color-muted: var(--muted-fg);
+  --color-accent: var(--brand-accent-strong);
+  --color-accent-strong: var(--brand-accent-active);
+  --color-border: var(--border);
+  --color-danger: var(--danger);
+  --color-focus: var(--brand-accent-strong);
+  --shadow-panel: var(--card-shadow);
+  --sidebar-width: var(--sidebar-w);
 }

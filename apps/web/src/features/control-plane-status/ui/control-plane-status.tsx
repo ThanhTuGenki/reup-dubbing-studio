@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
 import { ControlPlaneError } from '../../../shared/api/control-plane';
 import { RuntimeConfigError } from '../../../shared/config/runtime-config';
-import { Button } from '../../../shared/ui/button';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { readinessQuery } from '../api/readiness-query';
 import type { ConnectionStatus } from '../model/connection-status';

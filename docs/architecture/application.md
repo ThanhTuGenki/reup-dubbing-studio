@@ -104,7 +104,6 @@ dubbing-studio/
 │   └── api/                         # NestJS Control Plane
 │
 ├── packages/
-│   ├── ui/                          # Design tokens và component dùng chung
 │   ├── api-contract/                # TypeScript types sinh từ OpenAPI
 │   ├── api-client/                  # HTTP client dùng generated contract
 │   ├── eslint-config/               # Quy tắc dùng chung cho TypeScript
@@ -145,7 +144,9 @@ dubbing-studio/
 - `packages/api-contract` chứa type được generate và có thể được dùng bởi cả adapter HTTP của NestJS lẫn React.
 - `packages/api-client` dùng generated contract để cung cấp typed HTTP client; không định nghĩa lại request/response interface.
 - Python không import TypeScript package; worker giao tiếp bằng HTTP và JSON contract có version.
-- `packages/ui` không chứa domain logic.
+- Primitive giao diện nằm trong `apps/web/src/components/ui` và được sinh từ
+  registry shadcn để app sở hữu source. Không duy trì một bộ primitive tự viết
+  song song hoặc package UI riêng trong giai đoạn single-web-app hiện tại.
 - Batch Media và Interactive TTS dùng chung phần agent/protocol nhưng có entrypoint và Docker image độc lập.
 - Mọi tool AI/media được pin theo worker image digest; không cài dependency động khi worker đang chạy production.
 
@@ -159,8 +160,15 @@ dubbing-studio/
 - TanStack Query cho server state, cache và invalidation.
 - Zustand chỉ cho UI/editor state phức tạp trong Library/Review Studio.
 - React Hook Form + Zod cho form và validation phía client.
-- Tailwind CSS kết hợp CSS variables/design tokens từ UI prototype.
-- Radix UI hoặc shadcn primitives cho accessibility; giao diện phải được restyle theo prototype, không dùng theme mặc định.
+- OpenDesign là visual contract độc lập công nghệ; không copy nguyên prototype
+  HTML vào production.
+- React web dùng shadcn component source làm mặc định. Chỉ dùng Radix trực tiếp
+  khi registry shadcn không có primitive/behavior phù hợp.
+- Consumer import từ `@/components/ui/*`; import Radix/Base UI bên trong source
+  do shadcn registry sinh không được xem là consumer bypass shadcn.
+- Tailwind CSS variables/theme ánh xạ token màu, typography, spacing, radius,
+  elevation, motion và layout từ OpenDesign; không dùng theme mặc định của
+  shadcn.
 - Vitest + Testing Library; Playwright cho critical user flows.
 
 ### 5.2 State boundaries
