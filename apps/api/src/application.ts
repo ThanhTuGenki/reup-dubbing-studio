@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import pino, { type DestinationStream } from 'pino';
 import {
   FastifyAdapter,
   type NestFastifyApplication,
@@ -19,10 +20,17 @@ import {
   registerSecurity,
 } from './platform/security/security.plugin';
 
-export async function createApplication(config: AppConfig): Promise<NestFastifyApplication> {
+type ApplicationOptions = { loggerDestination?: DestinationStream };
+
+export async function createApplication(
+  config: AppConfig,
+  options: ApplicationOptions = {},
+): Promise<NestFastifyApplication> {
   const adapter = new FastifyAdapter({
     ...createFastifySecurityOptions(config),
-    logger: createLoggerOptions(config.nodeEnv, config.logLevel),
+    ...(options.loggerDestination
+      ? { loggerInstance: pino(createLoggerOptions(config.nodeEnv, config.logLevel), options.loggerDestination) }
+      : { logger: createLoggerOptions(config.nodeEnv, config.logLevel) }),
   });
   const fastify = adapter.getInstance();
 

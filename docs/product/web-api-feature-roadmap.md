@@ -36,11 +36,11 @@
 
 ## 1. Cài đặt hệ thống
 
-- [ ] **Hoàn tất feature Cài đặt.**
+- [x] **Hoàn tất feature Cài đặt.**
   - [x] Phân tích các nhóm cấu hình và chốt contract/schema cần dùng.
   - [x] API đọc/cập nhật cấu hình, credential mã hóa và kiểm tra kết nối phù hợp.
   - [x] Web xây màn hình form theo từng nhóm, validation và trạng thái lưu/test.
-  - [ ] Integration test bảo đảm secret không bị trả ngược hoặc ghi log.
+  - [x] Integration test bảo đảm secret không bị trả ngược hoặc ghi log.
 
 ## 2. Hồ sơ kênh và series
 
