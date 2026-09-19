@@ -45,6 +45,21 @@ thể phối hợp trong cùng slice và pull request.
 - `error-codes.yaml` chỉ catalog `VALIDATION_ERROR`, `ROUTE_NOT_FOUND`,
   `RATE_LIMITED` và `INTERNAL_ERROR`.
 
-Hai file đang ở giai đoạn `IMPLEMENTING` cho đến khi integration test và contract
-lint cùng pass; sau đó được coi là `VERIFIED`. Không mở rộng chúng sang worker,
-business API hay generated client trong feature này.
+Contract health hiện ở giai đoạn `VERIFIED`: provider integration, contract lint,
+generated client và consumer test đã pass. Không mở rộng contract này sang
+worker hoặc business API ngoài vertical slice tương ứng.
+
+## Lệnh kiểm chứng
+
+- `pnpm contract:generate`: sinh lại typed SDK vào
+  `packages/api-contract/src/generated`; thư mục output luôn được dọn trước để
+  không giữ artifact của operation đã xóa.
+- `pnpm contract:check`: lint OpenAPI, generate lại và thất bại nếu artifact đã
+  commit bị drift.
+- `pnpm test:contract`: chạy test public boundary của contract và API client.
+- `pnpm contract:verify`: chạy toàn bộ ba gate trên theo đúng thứ tự.
+
+Web test không chép lại wire type. Fixture typed dùng chung nằm tại
+`apps/web/src/test/fixtures`, còn MSW handler chỉ ghép fixture đó với transport.
+Khi schema hoặc path đổi, typecheck buộc fixture và test consumer cập nhật cùng
+contract.

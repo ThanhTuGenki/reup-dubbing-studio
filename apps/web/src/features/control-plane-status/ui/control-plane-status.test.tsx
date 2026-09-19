@@ -2,7 +2,14 @@ import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { READY_REQUEST_ID, server } from '../../../test/msw/server';
+import {
+  CONTROL_PLANE_BASE_URL,
+  createProblemDetails,
+  readyEnvelope,
+  READINESS_PATH,
+  READY_REQUEST_ID,
+} from '../../../test/fixtures/control-plane';
+import { server } from '../../../test/msw/server';
 import { renderApp } from '../../../test/test-utils';
 import { ControlPlaneStatus } from './control-plane-status';
 
@@ -15,7 +22,12 @@ describe('ControlPlaneStatus', () => {
   });
   it('shows a safe error and manually retries', async () => {
     let attempts = 0;
-    server.use(http.get('http://localhost:3000/v1/health/ready', () => { attempts += 1; return attempts === 1 ? HttpResponse.json({ type: 'about:blank', title: 'raw secret', status: 503, instance: '/', code: 'INTERNAL_ERROR', requestId: READY_REQUEST_ID }, { status: 503 }) : HttpResponse.json({ data: { status: 'ok' }, meta: { requestId: READY_REQUEST_ID } }); }));
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}${READINESS_PATH}`, () => {
+      attempts += 1;
+      return attempts === 1
+        ? HttpResponse.json(createProblemDetails({ title: 'raw secret' }), { status: 503 })
+        : HttpResponse.json(readyEnvelope);
+    }));
     renderApp(<ControlPlaneStatus />);
     expect(await screen.findByText('Cần kiểm tra')).toBeInTheDocument();
     expect(screen.queryByText('raw secret')).not.toBeInTheDocument();

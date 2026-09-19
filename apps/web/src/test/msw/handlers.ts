@@ -1,10 +1,20 @@
 import { http, HttpResponse } from 'msw';
 
-export const READY_REQUEST_ID = '0191f3d2-7f5b-7abc-8b2e-123456789abd';
+import {
+  CONTROL_PLANE_BASE_URL,
+  liveEnvelope,
+  LIVENESS_PATH,
+  readyEnvelope,
+  READINESS_PATH,
+} from '../fixtures/control-plane';
 
 export const handlers = [
-  http.get('http://localhost:3000/v1/health/ready', () => HttpResponse.json(
-    { data: { status: 'ok' }, meta: { requestId: READY_REQUEST_ID } },
-    { headers: { 'X-Request-Id': READY_REQUEST_ID } },
+  http.get(`${CONTROL_PLANE_BASE_URL}${LIVENESS_PATH}`, () => HttpResponse.json(
+    liveEnvelope,
+    { headers: { 'X-Request-Id': liveEnvelope.meta.requestId } },
+  )),
+  http.get(`${CONTROL_PLANE_BASE_URL}${READINESS_PATH}`, () => HttpResponse.json(
+    readyEnvelope,
+    { headers: { 'X-Request-Id': readyEnvelope.meta.requestId } },
   )),
 ];

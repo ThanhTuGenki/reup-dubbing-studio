@@ -2,6 +2,7 @@ import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import {
   createClient,
+  getLiveness,
   getReadiness,
   type ProblemDetails,
   type SuccessEnvelope,
@@ -9,8 +10,9 @@ import {
 import clientPackage from '../package.json';
 
 describe('Control Plane client public API', () => {
-  it('publishes only the generated health client boundary', () => {
+  it('publishes the complete generated health client boundary', () => {
     expect(createClient).toBeTypeOf('function');
+    expect(getLiveness).toBeTypeOf('function');
     expect(getReadiness).toBeTypeOf('function');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');
     expectTypeOf<ProblemDetails>().toHaveProperty('requestId');

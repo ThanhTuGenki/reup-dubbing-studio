@@ -4,8 +4,8 @@ info:
   version: 0.1.0
   description: >-
     Contract JIT cho hai health endpoint của Control Plane trong
-    API-FOUNDATION-001. Trạng thái hiện tại: DRAFT; contract chỉ trở thành
-    VERIFIED sau khi integration test của slice hoàn tất.
+    API-FOUNDATION-001. Trạng thái hiện tại: VERIFIED; provider integration,
+    generated client và consumer test của slice đã được kiểm chứng.
 servers:
   - url: http://localhost:3000/v1
     description: Môi trường phát triển cục bộ
