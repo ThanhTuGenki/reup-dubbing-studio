@@ -86,6 +86,7 @@ và trả `readinessIssues: string[]` bằng code ổn định. MVP dùng ít nh
 - `MASK_REFERENCE_ASSET_REQUIRED`
 - `CAST_REQUIRED`
 - `CAST_VOICE_NOT_READY`
+- `PARENT_CHANNEL_NOT_ACTIVE`
 
 Channel cần ngôn ngữ, pipeline settings hợp lệ, ít nhất một output và voice sẵn
 sàng trước khi `ACTIVE`. Series thừa hưởng readiness của parent; `DUAL` hoặc
@@ -263,7 +264,7 @@ Job cũ không đọc profile mutable để retry hoặc render lại.
 
 ## 6. REST contract đề xuất
 
-OpenAPI được thêm cùng implementation ở checkbox API kế tiếp. Resource shape theo
+OpenAPI và implementation nằm trong Profile API slice. Resource shape theo
 convention chung: camelCase, problem details, cursor pagination, ETag,
 `If-Match` và `Idempotency-Key` cho create/mutation retryable.
 
@@ -282,14 +283,23 @@ PATCH  /v1/series-profiles/{seriesProfileId}
 POST   /v1/series-profiles/{seriesProfileId}/archive
 POST   /v1/series-profiles/{seriesProfileId}/restore
 
-POST   /v1/channel-profiles/{channelProfileId}/assets
+POST   /v1/channel-profiles/{channelProfileId}/assets/uploads
+POST   /v1/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/grant
+POST   /v1/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/commit
 DELETE /v1/channel-profiles/{channelProfileId}/assets/{linkId}
-POST   /v1/series-profiles/{seriesProfileId}/assets
+POST   /v1/series-profiles/{seriesProfileId}/assets/uploads
+POST   /v1/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant
+POST   /v1/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/commit
 DELETE /v1/series-profiles/{seriesProfileId}/assets/{linkId}
 
 GET    /v1/series-profiles/{seriesProfileId}/cast
 PUT    /v1/series-profiles/{seriesProfileId}/cast
 ```
+
+Hai cast endpoint tiếp tục deferred tới Voice Library/Studio; Profile API hiện
+không tạo cast giả khi chưa có voice workflow. Upload grant không persist URL;
+route `/grant` chỉ cấp lại URL cho đúng asset còn `PENDING`. Commit yêu cầu cả
+`Idempotency-Key` và `If-Match`, HEAD object store trước khi chuyển `AVAILABLE`.
 
 List filters tối thiểu: `status`, `readiness`, `query`; Series thêm
 `channelProfileId`. Mặc định loại `ARCHIVED`. Archive Channel bị từ chối nếu còn

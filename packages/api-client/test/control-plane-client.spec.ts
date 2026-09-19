@@ -8,6 +8,10 @@ import {
   updateSettings,
   testContentAgentConnection,
   testStorageConnection,
+  listChannelProfiles,
+  createChannelProfile,
+  listSeriesProfiles,
+  createSeriesProfile,
   type Settings,
   type ProblemDetails,
   type SuccessEnvelope,
@@ -23,6 +27,10 @@ describe('Control Plane client public API', () => {
     expect(updateSettings).toBeTypeOf('function');
     expect(testContentAgentConnection).toBeTypeOf('function');
     expect(testStorageConnection).toBeTypeOf('function');
+    expect(listChannelProfiles).toBeTypeOf('function');
+    expect(createChannelProfile).toBeTypeOf('function');
+    expect(listSeriesProfiles).toBeTypeOf('function');
+    expect(createSeriesProfile).toBeTypeOf('function');
     expectTypeOf<Settings>().toHaveProperty('retention');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');
     expectTypeOf<ProblemDetails>().toHaveProperty('requestId');

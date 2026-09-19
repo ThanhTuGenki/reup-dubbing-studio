@@ -3,13 +3,352 @@ info:
   title: Reup Dubbing Studio Control Plane API
   version: 0.1.0
   description: >-
-    Contract JIT cho hai health endpoint của Control Plane trong
-    API-FOUNDATION-001. Trạng thái hiện tại: VERIFIED; provider integration,
-    generated client và consumer test của slice đã được kiểm chứng.
+    Contract JIT cho Web Dashboard và Control Plane. Các slice Health, Settings
+    và Channel/Series Profile đã có provider integration, generated client và
+    consumer test tương ứng.
 servers:
   - url: http://localhost:3000/v1
     description: Môi trường phát triển cục bộ
 paths:
+  /channel-profiles:
+    get:
+      summary: Liệt kê Channel Profile
+      operationId: listChannelProfiles
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ProfileQuery'
+        - $ref: '#/components/parameters/ProfileStatusFilter'
+        - $ref: '#/components/parameters/ProfileReadinessFilter'
+      responses:
+        '200':
+          description: Trang Channel Profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileListEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Tạo Channel Profile ở trạng thái draft
+      operationId: createChannelProfile
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateChannelProfile' }
+      responses:
+        '201':
+          description: Channel Profile đã tạo.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}:
+    parameters:
+      - $ref: '#/components/parameters/ChannelProfileId'
+    get:
+      summary: Đọc Channel Profile
+      operationId: getChannelProfile
+      responses:
+        '200':
+          description: Channel Profile hiện tại.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    patch:
+      summary: Cập nhật Channel Profile
+      operationId: updateChannelProfile
+      parameters:
+        - $ref: '#/components/parameters/ChannelIfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateChannelProfile' }
+      responses:
+        '200':
+          description: Channel Profile sau cập nhật.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/archive:
+    post:
+      summary: Archive Channel Profile
+      operationId: archiveChannelProfile
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/ChannelIfMatch'
+      responses:
+        '200':
+          description: Channel Profile đã archive.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/restore:
+    post:
+      summary: Restore Channel Profile về draft
+      operationId: restoreChannelProfile
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/ChannelIfMatch'
+      responses:
+        '200':
+          description: Channel Profile đã restore.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/assets/uploads:
+    post:
+      summary: Xin presigned upload cho asset của Channel Profile
+      operationId: requestChannelProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileAssetUploadRequest' }
+      responses:
+        '201':
+          description: Presigned PUT grant mười phút.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/assets/uploads/{assetId}/commit:
+    post:
+      summary: Verify và attach asset vào Channel Profile
+      operationId: commitChannelProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/ChannelIfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Asset đã AVAILABLE và trở thành revision hiện tại.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommittedAssetEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/assets/uploads/{assetId}/grant:
+    post:
+      summary: Cấp lại presigned URL cho asset Channel còn pending
+      operationId: refreshChannelProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Presigned PUT grant mới cho cùng asset.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/assets/{linkId}:
+    delete:
+      summary: Gỡ asset hiện tại khỏi Channel Profile
+      operationId: detachChannelProfileAsset
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/LinkId'
+        - $ref: '#/components/parameters/ChannelIfMatch'
+      responses:
+        '200':
+          description: Link đã được gỡ.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileVersionEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles:
+    get:
+      summary: Liệt kê Series Profile
+      operationId: listSeriesProfiles
+      parameters:
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/ProfileQuery'
+        - $ref: '#/components/parameters/ProfileStatusFilter'
+        - $ref: '#/components/parameters/ProfileReadinessFilter'
+        - $ref: '#/components/parameters/ChannelProfileFilter'
+      responses:
+        '200':
+          description: Trang Series Profile.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileListEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Tạo Series Profile ở trạng thái draft
+      operationId: createSeriesProfile
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateSeriesProfile' }
+      responses:
+        '201':
+          description: Series Profile đã tạo.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}:
+    parameters:
+      - $ref: '#/components/parameters/SeriesProfileId'
+    get:
+      summary: Đọc Series Profile cùng effective config
+      operationId: getSeriesProfile
+      responses:
+        '200':
+          description: Series Profile hiện tại.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    patch:
+      summary: Cập nhật override hoặc mask của Series Profile
+      operationId: updateSeriesProfile
+      parameters:
+        - $ref: '#/components/parameters/SeriesIfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSeriesProfile' }
+      responses:
+        '200':
+          description: Series Profile sau cập nhật.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/archive:
+    post:
+      summary: Archive Series Profile
+      operationId: archiveSeriesProfile
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/SeriesIfMatch'
+      responses:
+        '200':
+          description: Series Profile đã archive.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/restore:
+    post:
+      summary: Restore Series Profile về draft
+      operationId: restoreSeriesProfile
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/SeriesIfMatch'
+      responses:
+        '200':
+          description: Series Profile đã restore.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/assets/uploads:
+    post:
+      summary: Xin presigned upload cho mask reference frame
+      operationId: requestSeriesProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileAssetUploadRequest' }
+      responses:
+        '201':
+          description: Presigned PUT grant mười phút.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/assets/uploads/{assetId}/commit:
+    post:
+      summary: Verify và attach mask reference frame
+      operationId: commitSeriesProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/SeriesIfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Asset đã AVAILABLE và trở thành revision hiện tại.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommittedAssetEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant:
+    post:
+      summary: Cấp lại presigned URL cho mask reference còn pending
+      operationId: refreshSeriesProfileAssetUpload
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/AssetId'
+      responses:
+        '200':
+          description: Presigned PUT grant mới cho cùng asset.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/assets/{linkId}:
+    delete:
+      summary: Gỡ mask reference frame hiện tại
+      operationId: detachSeriesProfileAsset
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/LinkId'
+        - $ref: '#/components/parameters/SeriesIfMatch'
+      responses:
+        '200':
+          description: Link đã được gỡ.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesProfileEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProfileVersionEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
   /settings:
     get:
       summary: Đọc cấu hình hệ thống của workspace
@@ -136,6 +475,61 @@ paths:
           $ref: '#/components/responses/Problem'
 components:
   parameters:
+    ChannelProfileId:
+      name: channelProfileId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    SeriesProfileId:
+      name: seriesProfileId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    LinkId:
+      name: linkId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    ChannelIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    SeriesIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong effective ETag gồm version Series và parent Channel.
+      schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+    ProfileQuery:
+      name: query
+      in: query
+      schema: { type: string, maxLength: 120 }
+    ProfileStatusFilter:
+      name: status
+      in: query
+      schema: { $ref: '#/components/schemas/ProfileStatus' }
+    ProfileReadinessFilter:
+      name: readiness
+      in: query
+      schema: { $ref: '#/components/schemas/ProfileReadiness' }
+    ChannelProfileFilter:
+      name: channelProfileId
+      in: query
+      schema: { $ref: '#/components/schemas/UuidV7' }
     IfMatch:
       name: If-Match
       in: header
@@ -161,7 +555,381 @@ components:
       schema:
         type: string
         pattern: '^"[1-9][0-9]*"$'
+    ChannelProfileEtag:
+      description: Strong ETag của Channel Profile.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    SeriesProfileEtag:
+      description: Strong ETag của effective Series, gồm version Series và parent.
+      schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
   schemas:
+    UuidV7:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    ProfileStatus:
+      type: string
+      enum: [DRAFT, ACTIVE, ARCHIVED]
+    ProfileReadiness:
+      type: string
+      enum: [READY, NEEDS_CONFIGURATION]
+    ProfileReadinessIssue:
+      type: string
+      enum:
+        - DEFAULT_VOICE_REQUIRED
+        - DEFAULT_VOICE_NOT_READY
+        - OUTPUT_REQUIRED
+        - MASK_REQUIRED
+        - MASK_REFERENCE_ASSET_REQUIRED
+        - CAST_REQUIRED
+        - CAST_VOICE_NOT_READY
+        - PARENT_CHANNEL_NOT_ACTIVE
+    VoiceMode:
+      type: string
+      enum: [SINGLE, DUAL, MULTI_AUTO]
+    TimingPolicy:
+      type: string
+      enum: [PRESERVE_SEGMENT, FIT_SEGMENT, ALLOW_DRIFT]
+    PipelineConfig:
+      type: object
+      additionalProperties: false
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      properties:
+        targetLanguage: { type: string, maxLength: 35 }
+        defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        voiceMode: { $ref: '#/components/schemas/VoiceMode' }
+        subtitleLanguage: { type: string, maxLength: 35 }
+        subtitleFilenameRule: { type: string, maxLength: 200 }
+        subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
+        ttsSpeed: { type: number, minimum: 0.5, maximum: 2 }
+        timingPolicy: { $ref: '#/components/schemas/TimingPolicy' }
+        output16x9Enabled: { type: boolean }
+        output9x16Enabled: { type: boolean }
+    PipelinePatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        targetLanguage: { type: string, maxLength: 35 }
+        defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        voiceMode: { $ref: '#/components/schemas/VoiceMode' }
+        subtitleLanguage: { type: string, maxLength: 35 }
+        subtitleFilenameRule: { type: string, maxLength: 200 }
+        subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
+        ttsSpeed: { type: number, minimum: 0.5, maximum: 2 }
+        timingPolicy: { $ref: '#/components/schemas/TimingPolicy' }
+        output16x9Enabled: { type: boolean }
+        output9x16Enabled: { type: boolean }
+    ContentConfig:
+      type: object
+      additionalProperties: false
+      required: [voiceRules, ctaTemplate, metadataTemplate, baseKeywords]
+      properties:
+        voiceRules: { type: object, additionalProperties: true }
+        ctaTemplate: { type: [string, 'null'], maxLength: 4000 }
+        metadataTemplate: { type: object, additionalProperties: true }
+        baseKeywords:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+    ContentPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        voiceRules: { type: object, additionalProperties: true }
+        ctaTemplate: { type: [string, 'null'], maxLength: 4000 }
+        metadataTemplate: { type: object, additionalProperties: true }
+        baseKeywords:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+    PublishingDestinationInput:
+      type: object
+      additionalProperties: false
+      required: [platform, displayName, isRequired, isActive, platformConfig]
+      properties:
+        platform: { type: string, enum: [YOUTUBE, FACEBOOK] }
+        externalId: { type: [string, 'null'], maxLength: 200 }
+        displayName: { type: string, minLength: 1, maxLength: 200 }
+        isRequired: { type: boolean }
+        isActive: { type: boolean }
+        platformConfig: { type: object, additionalProperties: true }
+    PublishingDestination:
+      allOf:
+        - $ref: '#/components/schemas/PublishingDestinationInput'
+        - type: object
+          required: [id, externalId, version]
+          properties:
+            id: { $ref: '#/components/schemas/UuidV7' }
+            version: { type: integer, minimum: 1 }
+    ProfileAsset:
+      type: object
+      additionalProperties: false
+      required: [linkId, assetId, role, fileName, contentType, byteSize, width, height, revision]
+      properties:
+        linkId: { $ref: '#/components/schemas/UuidV7' }
+        assetId: { $ref: '#/components/schemas/UuidV7' }
+        role: { type: string, enum: [INTRO, OUTRO, LOGO, WATERMARK, MASK_REFERENCE_FRAME] }
+        fileName: { type: string }
+        contentType: { type: [string, 'null'] }
+        byteSize: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        width: { type: [integer, 'null'], minimum: 1 }
+        height: { type: [integer, 'null'], minimum: 1 }
+        revision: { type: integer, minimum: 1 }
+    ChannelProfile:
+      type: object
+      additionalProperties: false
+      required: [id, name, status, pipeline, content, destinations, assets, readiness, readinessIssues, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProfileStatus' }
+        pipeline: { $ref: '#/components/schemas/PipelineConfig' }
+        content: { $ref: '#/components/schemas/ContentConfig' }
+        destinations:
+          type: array
+          items: { $ref: '#/components/schemas/PublishingDestination' }
+        assets:
+          type: array
+          items: { $ref: '#/components/schemas/ProfileAsset' }
+        readiness: { $ref: '#/components/schemas/ProfileReadiness' }
+        readinessIssues:
+          type: array
+          items: { $ref: '#/components/schemas/ProfileReadinessIssue' }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateChannelProfile:
+      type: object
+      additionalProperties: false
+      required: [name, pipeline, content, destinations]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        pipeline: { $ref: '#/components/schemas/PipelineConfig' }
+        content: { $ref: '#/components/schemas/ContentConfig' }
+        destinations:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/PublishingDestinationInput' }
+    UpdateChannelProfile:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        status: { type: string, enum: [DRAFT, ACTIVE] }
+        pipeline: { $ref: '#/components/schemas/PipelinePatch' }
+        content: { $ref: '#/components/schemas/ContentPatch' }
+        destinations:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/PublishingDestinationInput' }
+    SeriesOverrides:
+      type: object
+      additionalProperties: false
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      properties:
+        targetLanguage: { type: [string, 'null'], maxLength: 35 }
+        defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        voiceMode: { oneOf: [{ $ref: '#/components/schemas/VoiceMode' }, { type: 'null' }] }
+        subtitleLanguage: { type: [string, 'null'], maxLength: 35 }
+        subtitleFilenameRule: { type: [string, 'null'], maxLength: 200 }
+        subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
+        ttsSpeed: { type: [number, 'null'], minimum: 0.5, maximum: 2 }
+        timingPolicy: { oneOf: [{ $ref: '#/components/schemas/TimingPolicy' }, { type: 'null' }] }
+        output16x9Enabled: { type: [boolean, 'null'] }
+        output9x16Enabled: { type: [boolean, 'null'] }
+    SeriesOverridesPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        targetLanguage: { type: [string, 'null'], maxLength: 35 }
+        defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        voiceMode: { oneOf: [{ $ref: '#/components/schemas/VoiceMode' }, { type: 'null' }] }
+        subtitleLanguage: { type: [string, 'null'], maxLength: 35 }
+        subtitleFilenameRule: { type: [string, 'null'], maxLength: 200 }
+        subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
+        ttsSpeed: { type: [number, 'null'], minimum: 0.5, maximum: 2 }
+        timingPolicy: { oneOf: [{ $ref: '#/components/schemas/TimingPolicy' }, { type: 'null' }] }
+        output16x9Enabled: { type: [boolean, 'null'] }
+        output9x16Enabled: { type: [boolean, 'null'] }
+    SubtitleMask:
+      type: object
+      additionalProperties: false
+      required: [x, y, width, height]
+      properties:
+        x: { type: number, minimum: 0, maximum: 1 }
+        y: { type: number, minimum: 0, maximum: 1 }
+        width: { type: number, exclusiveMinimum: 0, maximum: 1 }
+        height: { type: number, exclusiveMinimum: 0, maximum: 1 }
+    InheritanceMap:
+      type: object
+      additionalProperties: false
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      properties:
+        targetLanguage: { type: string, enum: [CHANNEL, SERIES] }
+        defaultVoiceProfileId: { type: string, enum: [CHANNEL, SERIES] }
+        voiceMode: { type: string, enum: [CHANNEL, SERIES] }
+        subtitleLanguage: { type: string, enum: [CHANNEL, SERIES] }
+        subtitleFilenameRule: { type: string, enum: [CHANNEL, SERIES] }
+        subtitleMaxLineLength: { type: string, enum: [CHANNEL, SERIES] }
+        ttsSpeed: { type: string, enum: [CHANNEL, SERIES] }
+        timingPolicy: { type: string, enum: [CHANNEL, SERIES] }
+        output16x9Enabled: { type: string, enum: [CHANNEL, SERIES] }
+        output9x16Enabled: { type: string, enum: [CHANNEL, SERIES] }
+    SeriesProfile:
+      type: object
+      additionalProperties: false
+      required: [id, channelProfileId, name, status, overrides, effectiveConfig, inheritance, mask, assets, readiness, readinessIssues, version, parentVersion, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        name: { type: string }
+        status: { $ref: '#/components/schemas/ProfileStatus' }
+        overrides: { $ref: '#/components/schemas/SeriesOverrides' }
+        effectiveConfig: { $ref: '#/components/schemas/PipelineConfig' }
+        inheritance: { $ref: '#/components/schemas/InheritanceMap' }
+        mask:
+          oneOf:
+            - $ref: '#/components/schemas/SubtitleMask'
+            - type: 'null'
+        assets:
+          type: array
+          items: { $ref: '#/components/schemas/ProfileAsset' }
+        readiness: { $ref: '#/components/schemas/ProfileReadiness' }
+        readinessIssues:
+          type: array
+          items: { $ref: '#/components/schemas/ProfileReadinessIssue' }
+        version: { type: integer, minimum: 1 }
+        parentVersion: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateSeriesProfile:
+      type: object
+      additionalProperties: false
+      required: [channelProfileId, name]
+      properties:
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        overrides: { $ref: '#/components/schemas/SeriesOverridesPatch' }
+        mask:
+          oneOf:
+            - $ref: '#/components/schemas/SubtitleMask'
+            - type: 'null'
+    UpdateSeriesProfile:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        status: { type: string, enum: [DRAFT, ACTIVE] }
+        overrides: { $ref: '#/components/schemas/SeriesOverridesPatch' }
+        mask:
+          oneOf:
+            - $ref: '#/components/schemas/SubtitleMask'
+            - type: 'null'
+    ChannelProfilePage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ChannelProfile' } }
+        nextCursor: { type: [string, 'null'] }
+    SeriesProfilePage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/SeriesProfile' } }
+        nextCursor: { type: [string, 'null'] }
+    ProfileAssetUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [role, fileName, contentType, byteSize]
+      properties:
+        role: { type: string, enum: [INTRO, OUTRO, LOGO, WATERMARK, MASK_REFERENCE_FRAME] }
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        contentType: { type: string, minLength: 1, maxLength: 100 }
+        byteSize: { type: integer, format: int64, minimum: 1, maximum: 2147483648 }
+        checksumSha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        width: { type: integer, minimum: 1, maximum: 16384 }
+        height: { type: integer, minimum: 1, maximum: 16384 }
+    UploadGrant:
+      type: object
+      additionalProperties: false
+      required: [assetId, method, url, headers, expiresAt, maxByteSize]
+      properties:
+        assetId: { $ref: '#/components/schemas/UuidV7' }
+        method: { type: string, const: PUT }
+        url: { type: string, format: uri }
+        headers: { type: object, additionalProperties: { type: string } }
+        expiresAt: { type: string, format: date-time }
+        maxByteSize: { type: integer, format: int64 }
+    CommittedAsset:
+      type: object
+      additionalProperties: false
+      required: [asset, profileVersion]
+      properties:
+        asset: { $ref: '#/components/schemas/ProfileAsset' }
+        profileVersion: { type: integer, minimum: 1 }
+        parentVersion: { type: integer, minimum: 1 }
+    ProfileVersion:
+      type: object
+      additionalProperties: false
+      required: [profileVersion]
+      properties:
+        profileVersion: { type: integer, minimum: 1 }
+        parentVersion: { type: integer, minimum: 1 }
+    ChannelProfileEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/ChannelProfile' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    SeriesProfileEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/SeriesProfile' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    ChannelProfileListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/ChannelProfilePage' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    SeriesProfileListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/SeriesProfilePage' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    UploadGrantEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/UploadGrant' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    CommittedAssetEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/CommittedAsset' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    ProfileVersionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/ProfileVersion' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     RequestId:
       type: string
       format: uuid
@@ -401,6 +1169,18 @@ components:
             - SETTINGS_VALIDATION_FAILED
             - CONNECTION_TEST_FAILED
             - VERSION_CONFLICT
+            - PROFILE_NAME_CONFLICT
+            - PROFILE_NOT_FOUND
+            - PROFILE_ARCHIVED
+            - PROFILE_NOT_READY
+            - PROFILE_HAS_ACTIVE_SERIES
+            - PROFILE_PARENT_ARCHIVED
+            - PROFILE_VERSION_CONFLICT
+            - PROFILE_ASSET_NOT_AVAILABLE
+            - PROFILE_ASSET_ROLE_INVALID
+            - PROFILE_MASK_INVALID
+            - PROFILE_VOICE_NOT_READY
+            - PROFILE_VALIDATION_FAILED
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

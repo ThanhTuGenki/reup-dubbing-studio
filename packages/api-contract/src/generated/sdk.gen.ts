@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
+import type { ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -17,6 +17,230 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      * used to access values that aren't defined as part of the SDK function.
      */
     meta?: Record<string, unknown>;
+};
+
+/**
+ * Liệt kê Channel Profile
+ */
+export const listChannelProfiles = <ThrowOnError extends boolean = false>(options?: Options<ListChannelProfilesData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListChannelProfilesResponses, ListChannelProfilesErrors, ThrowOnError>({
+        url: '/channel-profiles',
+        ...options
+    });
+};
+
+/**
+ * Tạo Channel Profile ở trạng thái draft
+ */
+export const createChannelProfile = <ThrowOnError extends boolean = false>(options: Options<CreateChannelProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateChannelProfileResponses, CreateChannelProfileErrors, ThrowOnError>({
+        url: '/channel-profiles',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc Channel Profile
+ */
+export const getChannelProfile = <ThrowOnError extends boolean = false>(options: Options<GetChannelProfileData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetChannelProfileResponses, GetChannelProfileErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật Channel Profile
+ */
+export const updateChannelProfile = <ThrowOnError extends boolean = false>(options: Options<UpdateChannelProfileData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdateChannelProfileResponses, UpdateChannelProfileErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Archive Channel Profile
+ */
+export const archiveChannelProfile = <ThrowOnError extends boolean = false>(options: Options<ArchiveChannelProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<ArchiveChannelProfileResponses, ArchiveChannelProfileErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/archive',
+        ...options
+    });
+};
+
+/**
+ * Restore Channel Profile về draft
+ */
+export const restoreChannelProfile = <ThrowOnError extends boolean = false>(options: Options<RestoreChannelProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<RestoreChannelProfileResponses, RestoreChannelProfileErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/restore',
+        ...options
+    });
+};
+
+/**
+ * Xin presigned upload cho asset của Channel Profile
+ */
+export const requestChannelProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<RequestChannelProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RequestChannelProfileAssetUploadResponses, RequestChannelProfileAssetUploadErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/assets/uploads',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Verify và attach asset vào Channel Profile
+ */
+export const commitChannelProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<CommitChannelProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<CommitChannelProfileAssetUploadResponses, CommitChannelProfileAssetUploadErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/commit',
+        ...options
+    });
+};
+
+/**
+ * Cấp lại presigned URL cho asset Channel còn pending
+ */
+export const refreshChannelProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<RefreshChannelProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RefreshChannelProfileAssetUploadResponses, RefreshChannelProfileAssetUploadErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/grant',
+        ...options
+    });
+};
+
+/**
+ * Gỡ asset hiện tại khỏi Channel Profile
+ */
+export const detachChannelProfileAsset = <ThrowOnError extends boolean = false>(options: Options<DetachChannelProfileAssetData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DetachChannelProfileAssetResponses, DetachChannelProfileAssetErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/assets/{linkId}',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê Series Profile
+ */
+export const listSeriesProfiles = <ThrowOnError extends boolean = false>(options?: Options<ListSeriesProfilesData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListSeriesProfilesResponses, ListSeriesProfilesErrors, ThrowOnError>({
+        url: '/series-profiles',
+        ...options
+    });
+};
+
+/**
+ * Tạo Series Profile ở trạng thái draft
+ */
+export const createSeriesProfile = <ThrowOnError extends boolean = false>(options: Options<CreateSeriesProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateSeriesProfileResponses, CreateSeriesProfileErrors, ThrowOnError>({
+        url: '/series-profiles',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc Series Profile cùng effective config
+ */
+export const getSeriesProfile = <ThrowOnError extends boolean = false>(options: Options<GetSeriesProfileData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetSeriesProfileResponses, GetSeriesProfileErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật override hoặc mask của Series Profile
+ */
+export const updateSeriesProfile = <ThrowOnError extends boolean = false>(options: Options<UpdateSeriesProfileData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdateSeriesProfileResponses, UpdateSeriesProfileErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Archive Series Profile
+ */
+export const archiveSeriesProfile = <ThrowOnError extends boolean = false>(options: Options<ArchiveSeriesProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<ArchiveSeriesProfileResponses, ArchiveSeriesProfileErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/archive',
+        ...options
+    });
+};
+
+/**
+ * Restore Series Profile về draft
+ */
+export const restoreSeriesProfile = <ThrowOnError extends boolean = false>(options: Options<RestoreSeriesProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<RestoreSeriesProfileResponses, RestoreSeriesProfileErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/restore',
+        ...options
+    });
+};
+
+/**
+ * Xin presigned upload cho mask reference frame
+ */
+export const requestSeriesProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<RequestSeriesProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RequestSeriesProfileAssetUploadResponses, RequestSeriesProfileAssetUploadErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/assets/uploads',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Verify và attach mask reference frame
+ */
+export const commitSeriesProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<CommitSeriesProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<CommitSeriesProfileAssetUploadResponses, CommitSeriesProfileAssetUploadErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/commit',
+        ...options
+    });
+};
+
+/**
+ * Cấp lại presigned URL cho mask reference còn pending
+ */
+export const refreshSeriesProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<RefreshSeriesProfileAssetUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RefreshSeriesProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant',
+        ...options
+    });
+};
+
+/**
+ * Gỡ mask reference frame hiện tại
+ */
+export const detachSeriesProfileAsset = <ThrowOnError extends boolean = false>(options: Options<DetachSeriesProfileAssetData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DetachSeriesProfileAssetResponses, DetachSeriesProfileAssetErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/assets/{linkId}',
+        ...options
+    });
 };
 
 /**

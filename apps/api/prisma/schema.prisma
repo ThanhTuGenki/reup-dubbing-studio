@@ -21,6 +21,61 @@ enum SystemCredentialKind {
   OBJECT_STORAGE_KEYPAIR
 }
 
+enum ProfileStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum VoiceMode {
+  SINGLE
+  DUAL
+  MULTI_AUTO
+}
+
+enum TimingPolicy {
+  PRESERVE_SEGMENT
+  FIT_SEGMENT
+  ALLOW_DRIFT
+}
+
+enum PublishingPlatform {
+  YOUTUBE
+  FACEBOOK
+}
+
+enum VoiceProfileStatus {
+  DRAFT
+  READY
+  BLOCKED_LICENSE
+  ARCHIVED
+}
+
+enum AssetStorageBackend {
+  LOCAL
+  R2
+  S3
+}
+
+enum AssetStatus {
+  PENDING
+  AVAILABLE
+  DELETING
+  DELETED
+  FAILED
+}
+
+enum ChannelProfileAssetRole {
+  INTRO
+  OUTRO
+  LOGO
+  WATERMARK
+}
+
+enum SeriesProfileAssetRole {
+  MASK_REFERENCE_FRAME
+}
+
 model SystemCredential {
   id               String               @id @db.Uuid
   kind             SystemCredentialKind @unique
@@ -62,14 +117,175 @@ model SystemSetting {
 }
 
 model IdempotencyRecord {
-  id             String   @id @db.Uuid
-  scope          String
-  key            String
-  requestHash    String   @map("request_hash")
-  responseBody   Json     @map("response_body")
-  responseEtag   String   @map("response_etag")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id           String   @id @db.Uuid
+  scope        String
+  key          String
+  requestHash  String   @map("request_hash")
+  responseBody Json     @map("response_body")
+  responseEtag String   @map("response_etag")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@unique([scope, key])
   @@map("idempotency_records")
+}
+
+model VoiceProfile {
+  id                   String             @id @db.Uuid
+  name                 String
+  language             String
+  status               VoiceProfileStatus @default(DRAFT)
+  commercialUseAllowed Boolean            @default(false) @map("commercial_use_allowed")
+  version              Int                @default(1)
+  createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  channelDefaults ChannelProfile[] @relation("ChannelDefaultVoice")
+  seriesOverrides SeriesProfile[]  @relation("SeriesOverrideVoice")
+
+  @@map("voice_profiles")
+}
+
+model ChannelProfile {
+  id                      String        @id @db.Uuid
+  name                    String
+  normalizedName          String        @map("normalized_name")
+  status                  ProfileStatus @default(DRAFT)
+  targetLanguage          String        @map("target_language")
+  defaultVoiceProfileId   String?       @map("default_voice_profile_id") @db.Uuid
+  defaultVoiceMode        VoiceMode     @default(SINGLE) @map("default_voice_mode")
+  subtitleLanguage        String        @map("subtitle_language")
+  subtitleFilenameRule    String        @map("subtitle_filename_rule")
+  subtitleMaxLineLength   Int?          @map("subtitle_max_line_length")
+  ttsSpeed                Decimal       @default(1) @map("tts_speed") @db.Decimal(5, 3)
+  timingPolicy            TimingPolicy  @default(FIT_SEGMENT) @map("timing_policy")
+  output16x9Enabled       Boolean       @default(true) @map("output_16x9_enabled")
+  output9x16Enabled       Boolean       @default(false) @map("output_9x16_enabled")
+  contentVoiceRules       Json          @default("{}") @map("content_voice_rules")
+  contentCtaTemplate      String?       @map("content_cta_template")
+  contentMetadataTemplate Json          @default("{}") @map("content_metadata_template")
+  contentBaseKeywords     String[]      @default([]) @map("content_base_keywords")
+  version                 Int           @default(1)
+  createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  defaultVoice VoiceProfile?           @relation("ChannelDefaultVoice", fields: [defaultVoiceProfileId], references: [id], onDelete: Restrict)
+  destinations PublishingDestination[]
+  series       SeriesProfile[]
+  assets       ChannelProfileAsset[]
+
+  @@index([status, createdAt, id])
+  @@map("channel_profiles")
+}
+
+model PublishingDestination {
+  id               String             @id @db.Uuid
+  channelProfileId String             @map("channel_profile_id") @db.Uuid
+  platform         PublishingPlatform
+  externalId       String?            @map("external_id")
+  displayName      String             @map("display_name")
+  normalizedName   String             @map("normalized_name")
+  isRequired       Boolean            @default(false) @map("is_required")
+  isActive         Boolean            @default(true) @map("is_active")
+  platformConfig   Json               @default("{}") @map("platform_config")
+  version          Int                @default(1)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  channelProfile ChannelProfile @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+
+  @@index([channelProfileId])
+  @@map("publishing_destinations")
+}
+
+model SeriesProfile {
+  id                            String        @id @db.Uuid
+  channelProfileId              String        @map("channel_profile_id") @db.Uuid
+  name                          String
+  normalizedName                String        @map("normalized_name")
+  status                        ProfileStatus @default(DRAFT)
+  targetLanguageOverride        String?       @map("target_language_override")
+  defaultVoiceProfileOverrideId String?       @map("default_voice_profile_override_id") @db.Uuid
+  voiceModeOverride             VoiceMode?    @map("voice_mode_override")
+  subtitleLanguageOverride      String?       @map("subtitle_language_override")
+  subtitleFilenameRuleOverride  String?       @map("subtitle_filename_rule_override")
+  subtitleMaxLineLengthOverride Int?          @map("subtitle_max_line_length_override")
+  ttsSpeedOverride              Decimal?      @map("tts_speed_override") @db.Decimal(5, 3)
+  timingPolicyOverride          TimingPolicy? @map("timing_policy_override")
+  output16x9Override            Boolean?      @map("output_16x9_override")
+  output9x16Override            Boolean?      @map("output_9x16_override")
+  maskX                         Decimal?      @map("mask_x") @db.Decimal(9, 8)
+  maskY                         Decimal?      @map("mask_y") @db.Decimal(9, 8)
+  maskWidth                     Decimal?      @map("mask_width") @db.Decimal(9, 8)
+  maskHeight                    Decimal?      @map("mask_height") @db.Decimal(9, 8)
+  version                       Int           @default(1)
+  createdAt                     DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                     DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  channelProfile       ChannelProfile       @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  defaultVoiceOverride VoiceProfile?        @relation("SeriesOverrideVoice", fields: [defaultVoiceProfileOverrideId], references: [id], onDelete: Restrict)
+  assets               SeriesProfileAsset[]
+
+  @@index([channelProfileId, status, createdAt, id])
+  @@map("series_profiles")
+}
+
+model Asset {
+  id             String              @id @db.Uuid
+  storageBackend AssetStorageBackend @map("storage_backend")
+  bucket         String?
+  objectKey      String              @map("object_key")
+  fileName       String              @map("file_name")
+  status         AssetStatus         @default(PENDING)
+  checksumSha256 String?             @map("checksum_sha256")
+  byteSize       BigInt?             @map("byte_size")
+  contentType    String?             @map("content_type")
+  width          Int?
+  height         Int?
+  uploadedAt     DateTime?           @map("uploaded_at") @db.Timestamptz(6)
+  verifiedAt     DateTime?           @map("verified_at") @db.Timestamptz(6)
+  metadata       Json                @default("{}")
+  version        Int                 @default(1)
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  channelLinks ChannelProfileAsset[]
+  seriesLinks  SeriesProfileAsset[]
+
+  @@unique([storageBackend, bucket, objectKey])
+  @@index([status, createdAt])
+  @@map("assets")
+}
+
+model ChannelProfileAsset {
+  id               String                  @id @db.Uuid
+  channelProfileId String                  @map("channel_profile_id") @db.Uuid
+  assetId          String                  @map("asset_id") @db.Uuid
+  role             ChannelProfileAssetRole
+  revision         Int
+  isCurrent        Boolean                 @default(true) @map("is_current")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  channelProfile ChannelProfile @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  asset          Asset          @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([channelProfileId, role, revision])
+  @@index([assetId])
+  @@map("channel_profile_assets")
+}
+
+model SeriesProfileAsset {
+  id              String                 @id @db.Uuid
+  seriesProfileId String                 @map("series_profile_id") @db.Uuid
+  assetId         String                 @map("asset_id") @db.Uuid
+  role            SeriesProfileAssetRole
+  revision        Int
+  isCurrent       Boolean                @default(true) @map("is_current")
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  seriesProfile SeriesProfile @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+  asset         Asset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([seriesProfileId, role, revision])
+  @@index([assetId])
+  @@map("series_profile_assets")
 }
