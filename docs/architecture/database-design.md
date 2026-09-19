@@ -11,6 +11,7 @@
 - **Tài liệu liên quan:**
   [`product/design.md`](../product/design.md),
   [`application.md`](application.md),
+  [`channel-series-profiles.md`](channel-series-profiles.md),
   [`douyin-discovery.md`](douyin-discovery.md),
   [`api-wire-conventions`](decisions/2026-09-07-api-wire-conventions.md),
   [`api-hexagonal-slices`](decisions/2026-09-14-api-hexagonal-slices.md).
@@ -164,11 +165,12 @@ nhóm Discovery với `videos`, assets và workflow.
 
 | Bảng | Mức | Trách nhiệm |
 | --- | --- | --- |
-| `channel_profiles` | `CORE` | Default dub/output/content/retention của một kênh |
+| `channel_profiles` | `CORE` | Default dub/output/content của một kênh; retention thuộc System Settings |
 | `publishing_destinations` | `CORE` | YouTube channel/Facebook Page đích, không chứa token trực tiếp |
 | `publishing_credentials` | `HOLD` | OAuth token mã hóa khi automated publishing được đưa vào scope |
 | `series_profiles` | `CORE` | Mask, voice mode và override theo bộ |
 | `channel_profile_assets` | `CORE` | Intro/outro/logo/watermark |
+| `series_profile_assets` | `CORE` | Reference frame phục vụ mask editor |
 | `voice_profiles` | `CORE` | Voice identity và license gate |
 | `voice_profile_assets` | `CORE` | Reference audio/text, prepared voice prompt |
 | `cast_sheets` | `CORE` | Cast aggregate theo series |
@@ -325,12 +327,17 @@ audit index có chủ đích; không dùng cặp này làm FK nghiệp vụ.
 
 ## 7. Profiles, destinations, voices và cast
 
+Schema và contract Profile đã được chốt tại
+[`channel-series-profiles.md`](channel-series-profiles.md). Phần 7 dưới đây chỉ là
+inventory ban đầu và bị tài liệu đó thay thế nếu có khác biệt, đặc biệt về
+inheritance, lifecycle, retention ownership, mask, asset link và actor.
+
 ### 7.1 `channel_profiles` (`CORE`)
 
 ```text
 id                         uuid v7 PK
 name                       text
-status                     ACTIVE | ARCHIVED
+status                     DRAFT | ACTIVE | ARCHIVED
 target_language            text              -- BCP 47, ví dụ vi
 default_voice_profile_id   uuid nullable FK
 subtitle_language          text
@@ -340,12 +347,9 @@ tts_speed                  numeric(5,3)
 timing_policy              text
 output_16x9_enabled        boolean
 output_9x16_enabled        boolean
-retain_heavy_days          integer
-retain_text_days           integer nullable
 content_voice_rules        jsonb
 content_cta_template       text nullable
 content_base_keywords      text[]
-created_by                 uuid FK users
 created_at                 timestamptz
 updated_at                 timestamptz
 version                    integer
@@ -401,16 +405,15 @@ mask_x                numeric nullable
 mask_y                numeric nullable
 mask_width            numeric nullable
 mask_height           numeric nullable
-mask_coordinate_space NORMALIZED_0_1 | PIXELS
-status                ACTIVE | ARCHIVED
-created_by            uuid FK users
+status                DRAFT | ACTIVE | ARCHIVED
 created_at            timestamptz
 updated_at            timestamptz
 version               integer
 ```
 
 Mask của MVP là một rectangle cố định theo series. Giá trị dùng tọa độ normalized
-`0..1`; polygon/keyframe không thuộc schema hiện tại.
+`0..1`; không lưu coordinate space, pixel, polygon hoặc keyframe. Series lưu các
+field override nullable như tài liệu Profile, không copy cấu hình của Channel.
 
 ### 7.4 `voice_profiles` (`CORE`)
 
@@ -520,6 +523,13 @@ channel_profile_assets
   channel_profile_id  uuid FK
   asset_id            uuid FK
   role                INTRO | OUTRO | LOGO | WATERMARK
+  revision            integer
+  is_current          boolean
+
+series_profile_assets
+  series_profile_id   uuid FK
+  asset_id            uuid FK
+  role                MASK_REFERENCE_FRAME
   revision            integer
   is_current          boolean
 
@@ -1301,7 +1311,7 @@ strategy riêng. Không tạo một “initial schema” chứa mọi bảng tr�
 | Gate | Quyết định | Ngày chốt | Hệ quả schema |
 | --- | --- | --- | --- |
 | `DB-01` | Hệ thống `single-workspace` | 2026-09-19 | Không tạo `workspaces`, `workspace_members` hoặc `workspace_id` trên mọi aggregate |
-| `DB-02` | MVP không có login | 2026-09-19 | Seed một owner/operator; hoãn `auth_identities`, `user_sessions` |
+| `DB-02` | MVP không có login | 2026-09-19 | Mutation audit dùng actor `SYSTEM`; không bắt profile slice phụ thuộc user giả; hoãn `auth_identities`, `user_sessions` |
 | `DB-03` | Mask là rectangle cố định theo series | 2026-09-19 | Dùng bốn tọa độ normalized; không tạo polygon/keyframe tables |
 | `DB-04` | Không rollback toàn bộ cast sheet | 2026-09-19 | Mutable entries + audit + job snapshot; không tạo `cast_sheet_revisions` |
 | `DB-05` | TTS hybrid: initial chạy batch nhỏ, Studio re-gen chạy từng segment | 2026-09-19 | Tạo `task_segment_inputs`; batch policy nằm trong configuration snapshot, output vẫn tách theo segment |
@@ -1318,6 +1328,8 @@ strategy riêng. Không tạo một “initial schema” chứa mọi bảng tr�
 | `DB-16` | Cho phép asset dùng chung qua registry và typed links | 2026-09-19 | Một `assets` registry; không dùng polymorphic owner hoặc nhân bản binary |
 | `DB-17` | OAuth publishing credential mã hóa trong PostgreSQL nếu tính năng được bổ sung | 2026-09-19 | Giữ `publishing_credentials` ở `HOLD`; khi triển khai dùng AEAD ciphertext và master key ngoài DB |
 | `DB-18` | Single workspace chỉ có một owner/operator trong MVP | 2026-09-19 | Không tạo role/RBAC hoặc API quản trị user ở schema đầu |
+| `DB-19` | Channel chứa defaults đầy đủ, Series chỉ lưu nullable overrides | 2026-09-19 | API resolve effective config; job snapshot kết quả, không copy inheritance vào Series |
+| `DB-20` | Retention thuộc System Settings | 2026-09-19 | Không tạo retention field trong profile; per-profile override để `HOLD` |
 
 ### 19.2 Việc còn phải kiểm chứng kỹ thuật
 
