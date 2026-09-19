@@ -10,6 +10,88 @@ servers:
   - url: http://localhost:3000/v1
     description: Môi trường phát triển cục bộ
 paths:
+  /settings:
+    get:
+      summary: Đọc cấu hình hệ thống của workspace
+      operationId: getSettings
+      responses:
+        '200':
+          description: Cấu hình hiện tại; secret chỉ xuất hiện dưới dạng metadata an toàn.
+          headers:
+            ETag:
+              $ref: '#/components/headers/SettingsEtag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      summary: Cập nhật nguyên tử một hoặc nhiều nhóm cấu hình
+      operationId: updateSettings
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsPatch'
+      responses:
+        '200':
+          description: Cấu hình sau cập nhật.
+          headers:
+            ETag:
+              $ref: '#/components/headers/SettingsEtag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /settings/tests/content-agent:
+    post:
+      summary: Kiểm tra credential và model Content Agent
+      operationId: testContentAgentConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentAgentTestRequest'
+      responses:
+        '200':
+          description: Kết nối thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /settings/tests/storage:
+    post:
+      summary: Kiểm tra quyền write/read/delete trên Cloudflare R2
+      operationId: testStorageConnection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StorageTestRequest'
+      responses:
+        '200':
+          description: Kết nối và probe object thành công.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
   /health/live:
     get:
       summary: Kiểm tra liveness của Control Plane
@@ -53,11 +135,32 @@ paths:
         default:
           $ref: '#/components/responses/Problem'
 components:
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag nhận từ lần đọc Settings gần nhất.
+      schema:
+        type: string
+        pattern: '^"[1-9][0-9]*"$'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
   headers:
     RequestId:
       description: UUID v7 do API sinh cho request hiện tại.
       schema:
         $ref: '#/components/schemas/RequestId'
+    SettingsEtag:
+      description: Strong ETag biểu diễn version hiện tại.
+      schema:
+        type: string
+        pattern: '^"[1-9][0-9]*"$'
   schemas:
     RequestId:
       type: string
@@ -91,6 +194,177 @@ components:
           $ref: '#/components/schemas/HealthStatus'
         meta:
           $ref: '#/components/schemas/SuccessMeta'
+    CredentialState:
+      type: object
+      additionalProperties: false
+      required: [configured, hint, rotatedAt]
+      properties:
+        configured: { type: boolean }
+        hint: { type: [string, 'null'], maxLength: 4 }
+        rotatedAt: { type: [string, 'null'], format: date-time }
+    Settings:
+      type: object
+      additionalProperties: false
+      required: [version, contentAgent, storage, retention]
+      properties:
+        version: { type: integer, minimum: 1 }
+        contentAgent:
+          type: object
+          additionalProperties: false
+          required: [provider, model, credential]
+          properties:
+            provider: { type: string, enum: [ANTHROPIC, OPENAI] }
+            model: { type: string, maxLength: 128 }
+            credential: { $ref: '#/components/schemas/CredentialState' }
+        storage:
+          type: object
+          additionalProperties: false
+          required: [backend, accountId, bucket, credential]
+          properties:
+            backend: { type: string, const: R2 }
+            accountId: { type: string, maxLength: 64 }
+            bucket: { type: string, maxLength: 63 }
+            credential: { $ref: '#/components/schemas/CredentialState' }
+        retention:
+          $ref: '#/components/schemas/RetentionPolicy'
+    SettingsEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/Settings' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    RetentionPolicy:
+      type: object
+      additionalProperties: false
+      required: [rawVideoDays, intermediateDays, taskLogDays, finalOutputDays]
+      properties:
+        rawVideoDays: { type: integer, minimum: 1, maximum: 365 }
+        intermediateDays: { type: integer, minimum: 1, maximum: 90 }
+        taskLogDays: { type: integer, minimum: 1, maximum: 365 }
+        finalOutputDays: { type: integer, minimum: 1, maximum: 3650 }
+    ContentSecretCommand:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [action, value]
+          properties:
+            action: { type: string, const: REPLACE }
+            value: { type: string, minLength: 1, maxLength: 4096 }
+        - type: object
+          additionalProperties: false
+          required: [action]
+          properties:
+            action: { type: string, const: CLEAR }
+    StorageSecretValue:
+      type: object
+      additionalProperties: false
+      required: [accessKeyId, secretAccessKey]
+      properties:
+        accessKeyId: { type: string, minLength: 1, maxLength: 256 }
+        secretAccessKey: { type: string, minLength: 1, maxLength: 4096 }
+    StorageSecretCommand:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [action, value]
+          properties:
+            action: { type: string, const: REPLACE }
+            value: { $ref: '#/components/schemas/StorageSecretValue' }
+        - type: object
+          additionalProperties: false
+          required: [action]
+          properties:
+            action: { type: string, const: CLEAR }
+    SettingsPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        contentAgent:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            provider: { type: string, enum: [ANTHROPIC, OPENAI] }
+            model: { type: string, minLength: 1, maxLength: 128, pattern: '^[A-Za-z0-9._:/-]+$' }
+            credential: { $ref: '#/components/schemas/ContentSecretCommand' }
+        storage:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            backend: { type: string, const: R2 }
+            accountId: { type: string, pattern: '^[a-fA-F0-9]{32}$' }
+            bucket: { type: string, minLength: 3, maxLength: 63 }
+            credential: { $ref: '#/components/schemas/StorageSecretCommand' }
+        retention:
+          type: object
+          additionalProperties: false
+          minProperties: 1
+          properties:
+            rawVideoDays: { type: integer, minimum: 1, maximum: 365 }
+            intermediateDays: { type: integer, minimum: 1, maximum: 90 }
+            taskLogDays: { type: integer, minimum: 1, maximum: 365 }
+            finalOutputDays: { type: integer, minimum: 1, maximum: 3650 }
+    TestCredential:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [source]
+          properties:
+            source: { type: string, const: STORED }
+        - type: object
+          additionalProperties: false
+          required: [source, value]
+          properties:
+            source: { type: string, const: PROVIDED }
+            value: { type: string, minLength: 1, maxLength: 4096 }
+    StorageTestCredential:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [source]
+          properties:
+            source: { type: string, const: STORED }
+        - type: object
+          additionalProperties: false
+          required: [source, value]
+          properties:
+            source: { type: string, const: PROVIDED }
+            value: { $ref: '#/components/schemas/StorageSecretValue' }
+    ContentAgentTestRequest:
+      type: object
+      additionalProperties: false
+      required: [provider, model, credential]
+      properties:
+        provider: { type: string, enum: [ANTHROPIC, OPENAI] }
+        model: { type: string, minLength: 1, maxLength: 128 }
+        credential: { $ref: '#/components/schemas/TestCredential' }
+    StorageTestRequest:
+      type: object
+      additionalProperties: false
+      required: [accountId, bucket, credential]
+      properties:
+        accountId: { type: string, pattern: '^[a-fA-F0-9]{32}$' }
+        bucket: { type: string, minLength: 3, maxLength: 63 }
+        credential: { $ref: '#/components/schemas/StorageTestCredential' }
+    ConnectionTestResult:
+      type: object
+      additionalProperties: false
+      required: [status, latencyMs, checkedAt, message]
+      properties:
+        status: { type: string, const: CONNECTED }
+        latencyMs: { type: integer, minimum: 0 }
+        checkedAt: { type: string, format: date-time }
+        message: { type: string }
+    ConnectionTestEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/ConnectionTestResult' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     ProblemDetails:
       type: object
       description: RFC 9457 với extension code và requestId.
@@ -123,6 +397,10 @@ components:
             - ROUTE_NOT_FOUND
             - RATE_LIMITED
             - INTERNAL_ERROR
+            - SETTINGS_NOT_CONFIGURED
+            - SETTINGS_VALIDATION_FAILED
+            - CONNECTION_TEST_FAILED
+            - VERSION_CONFLICT
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

@@ -31,7 +31,7 @@ export async function createApplication(config: AppConfig): Promise<NestFastifyA
   registerRequestLogging(fastify);
   await registerSecurity(fastify, config);
 
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, adapter, {
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule.register(config), adapter, {
     logger: false,
   });
   app.useGlobalPipes(createValidationPipe());

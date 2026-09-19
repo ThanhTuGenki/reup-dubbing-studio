@@ -8,6 +8,8 @@ const validEnvironment = (overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv 
   RATE_LIMIT_MAX: '100',
   RATE_LIMIT_WINDOW_MS: '60000',
   HEALTH_RATE_LIMIT_MAX: '10',
+  DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/test',
+  SETTINGS_ENCRYPTION_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
   TRUST_PROXY: 'false',
   ...overrides,
 });
@@ -28,7 +30,7 @@ describe('runtime configuration', () => {
     expect(() => parseConfig(validEnvironment(override))).toThrow();
   });
 
-  it.each(['NODE_ENV', 'PORT', 'LOG_LEVEL', 'CORS_ORIGINS', 'RATE_LIMIT_MAX', 'RATE_LIMIT_WINDOW_MS', 'HEALTH_RATE_LIMIT_MAX'])(
+  it.each(['NODE_ENV', 'PORT', 'LOG_LEVEL', 'CORS_ORIGINS', 'RATE_LIMIT_MAX', 'RATE_LIMIT_WINDOW_MS', 'HEALTH_RATE_LIMIT_MAX', 'DATABASE_URL', 'SETTINGS_ENCRYPTION_KEY'])(
     'rejects a missing required %s', (field) => {
       const environment = validEnvironment();
       delete environment[field];
@@ -42,6 +44,13 @@ describe('runtime configuration', () => {
       corsOrigins: ['http://localhost:5173'], rateLimitMax: 25,
       rateLimitWindowMs: 60000, healthRateLimitMax: 10, trustProxy: false,
     });
+  });
+
+  it.each([
+    ['DATABASE_URL', { DATABASE_URL: 'https://example.test/database' }],
+    ['SETTINGS_ENCRYPTION_KEY', { SETTINGS_ENCRYPTION_KEY: 'too-short' }],
+  ])('rejects invalid secret-backed %s', (_field, override) => {
+    expect(() => parseConfig(validEnvironment(override))).toThrow();
   });
 
   it('only permits the Vite origin in local development', () => {

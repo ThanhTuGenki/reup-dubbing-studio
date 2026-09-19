@@ -31,7 +31,7 @@ module.exports = {
       name: 'outside-code-does-not-deep-import-modules',
       severity: 'error',
       from: { pathNot: '^apps/api/src/modules(?:/|$)' },
-      to: { path: '^apps/api/src/modules/[^/]+/.+' },
+      to: { path: '^apps/api/src/modules/[^/]+/(?!index\\.ts$).+' },
     },
     {
       name: 'web-does-not-import-api-source',

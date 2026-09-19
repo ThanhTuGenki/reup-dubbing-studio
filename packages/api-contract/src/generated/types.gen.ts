@@ -19,6 +19,117 @@ export type SuccessEnvelope = {
     meta: SuccessMeta;
 };
 
+export type CredentialState = {
+    configured: boolean;
+    hint: string | null;
+    rotatedAt: string | null;
+};
+
+export type Settings = {
+    version: number;
+    contentAgent: {
+        provider: 'ANTHROPIC' | 'OPENAI';
+        model: string;
+        credential: CredentialState;
+    };
+    storage: {
+        backend: 'R2';
+        accountId: string;
+        bucket: string;
+        credential: CredentialState;
+    };
+    retention: RetentionPolicy;
+};
+
+export type SettingsEnvelope = {
+    data: Settings;
+    meta: SuccessMeta;
+};
+
+export type RetentionPolicy = {
+    rawVideoDays: number;
+    intermediateDays: number;
+    taskLogDays: number;
+    finalOutputDays: number;
+};
+
+export type ContentSecretCommand = {
+    action: 'REPLACE';
+    value: string;
+} | {
+    action: 'CLEAR';
+};
+
+export type StorageSecretValue = {
+    accessKeyId: string;
+    secretAccessKey: string;
+};
+
+export type StorageSecretCommand = {
+    action: 'REPLACE';
+    value: StorageSecretValue;
+} | {
+    action: 'CLEAR';
+};
+
+export type SettingsPatch = {
+    contentAgent?: {
+        provider?: 'ANTHROPIC' | 'OPENAI';
+        model?: string;
+        credential?: ContentSecretCommand;
+    };
+    storage?: {
+        backend?: 'R2';
+        accountId?: string;
+        bucket?: string;
+        credential?: StorageSecretCommand;
+    };
+    retention?: {
+        rawVideoDays?: number;
+        intermediateDays?: number;
+        taskLogDays?: number;
+        finalOutputDays?: number;
+    };
+};
+
+export type TestCredential = {
+    source: 'STORED';
+} | {
+    source: 'PROVIDED';
+    value: string;
+};
+
+export type StorageTestCredential = {
+    source: 'STORED';
+} | {
+    source: 'PROVIDED';
+    value: StorageSecretValue;
+};
+
+export type ContentAgentTestRequest = {
+    provider: 'ANTHROPIC' | 'OPENAI';
+    model: string;
+    credential: TestCredential;
+};
+
+export type StorageTestRequest = {
+    accountId: string;
+    bucket: string;
+    credential: StorageTestCredential;
+};
+
+export type ConnectionTestResult = {
+    status: 'CONNECTED';
+    latencyMs: number;
+    checkedAt: string;
+    message: string;
+};
+
+export type ConnectionTestEnvelope = {
+    data: ConnectionTestResult;
+    meta: SuccessMeta;
+};
+
 /**
  * RFC 9457 với extension code và requestId.
  */
@@ -28,9 +139,139 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT';
     requestId: RequestId;
 };
+
+/**
+ * Strong ETag nhận từ lần đọc Settings gần nhất.
+ */
+export type IfMatch = string;
+
+export type IdempotencyKey = string;
+
+export type GetSettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/settings';
+};
+
+export type GetSettingsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSettingsError = GetSettingsErrors[keyof GetSettingsErrors];
+
+export type GetSettingsResponses = {
+    /**
+     * Cấu hình hiện tại; secret chỉ xuất hiện dưới dạng metadata an toàn.
+     */
+    200: SettingsEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSettingsResponse = GetSettingsResponses[keyof GetSettingsResponses];
+
+export type UpdateSettingsData = {
+    body: SettingsPatch;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc Settings gần nhất.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/settings';
+};
+
+export type UpdateSettingsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSettingsError = UpdateSettingsErrors[keyof UpdateSettingsErrors];
+
+export type UpdateSettingsResponses = {
+    /**
+     * Cấu hình sau cập nhật.
+     */
+    200: SettingsEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSettingsResponse = UpdateSettingsResponses[keyof UpdateSettingsResponses];
+
+export type TestContentAgentConnectionData = {
+    body: ContentAgentTestRequest;
+    path?: never;
+    query?: never;
+    url: '/settings/tests/content-agent';
+};
+
+export type TestContentAgentConnectionErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type TestContentAgentConnectionError = TestContentAgentConnectionErrors[keyof TestContentAgentConnectionErrors];
+
+export type TestContentAgentConnectionResponses = {
+    /**
+     * Kết nối thành công.
+     */
+    200: ConnectionTestEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type TestContentAgentConnectionResponse = TestContentAgentConnectionResponses[keyof TestContentAgentConnectionResponses];
+
+export type TestStorageConnectionData = {
+    body: StorageTestRequest;
+    path?: never;
+    query?: never;
+    url: '/settings/tests/storage';
+};
+
+export type TestStorageConnectionErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type TestStorageConnectionError = TestStorageConnectionErrors[keyof TestStorageConnectionErrors];
+
+export type TestStorageConnectionResponses = {
+    /**
+     * Kết nối và probe object thành công.
+     */
+    200: ConnectionTestEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type TestStorageConnectionResponse = TestStorageConnectionResponses[keyof TestStorageConnectionResponses];
 
 export type GetLivenessData = {
     body?: never;

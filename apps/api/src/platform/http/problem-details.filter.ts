@@ -4,6 +4,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import type { ArgumentsHost, ExceptionFilter } from '@nestjs/common';
+import { ProblemDetailsException } from './problem-details.exception';
 
 type HttpRequest = {
   requestId?: string;
@@ -54,7 +55,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
   ): ProblemDetails {
     const requestId = request.requestId ?? request.id ?? '';
     const isKnownHttpError = exception instanceof HttpException;
-    const code = codeForStatus(status);
+    const code = exception instanceof ProblemDetailsException
+      ? exception.problemCode
+      : codeForStatus(status);
     const problem: ProblemDetails = {
       type: `https://httpstatuses.com/${status}`,
       title: titleForStatus(status),
@@ -66,7 +69,9 @@ export class ProblemDetailsFilter implements ExceptionFilter {
     if (path) problem.instance = path;
 
     // Only expose framework-generated client errors. Never serialize unknown errors.
-    if (isKnownHttpError && status < 500 && status !== HttpStatus.NOT_FOUND) {
+    if (exception instanceof ProblemDetailsException) {
+      problem.detail = exception.safeDetail;
+    } else if (isKnownHttpError && status < 500 && status !== HttpStatus.NOT_FOUND) {
       const response = exception.getResponse();
       const detail = typeof response === 'string'
         ? response

@@ -15,6 +15,10 @@ components:
         - ROUTE_NOT_FOUND
         - RATE_LIMITED
         - INTERNAL_ERROR
+        - SETTINGS_NOT_CONFIGURED
+        - SETTINGS_VALIDATION_FAILED
+        - CONNECTION_TEST_FAILED
+        - VERSION_CONFLICT
     ErrorCodeCatalog:
       type: object
       additionalProperties: false
@@ -23,6 +27,10 @@ components:
         - ROUTE_NOT_FOUND
         - RATE_LIMITED
         - INTERNAL_ERROR
+        - SETTINGS_NOT_CONFIGURED
+        - SETTINGS_VALIDATION_FAILED
+        - CONNECTION_TEST_FAILED
+        - VERSION_CONFLICT
       properties:
         VALIDATION_ERROR:
           type: object
@@ -68,3 +76,31 @@ components:
             description:
               type: string
               const: Lỗi nội bộ không được tiết lộ chi tiết cho client.
+        SETTINGS_NOT_CONFIGURED:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus: { type: integer, const: 409 }
+            description: { type: string, const: Credential được yêu cầu chưa được cấu hình. }
+        SETTINGS_VALIDATION_FAILED:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus: { type: integer, const: 422 }
+            description: { type: string, const: Cấu hình vi phạm rule của aggregate Settings. }
+        CONNECTION_TEST_FAILED:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus: { type: integer, const: 502 }
+            description: { type: string, const: Không thể xác minh kết nối provider bằng cấu hình đã cấp. }
+        VERSION_CONFLICT:
+          type: object
+          additionalProperties: false
+          required: [httpStatus, description]
+          properties:
+            httpStatus: { type: integer, const: 409 }
+            description: { type: string, const: ETag không còn khớp version hiện tại. }

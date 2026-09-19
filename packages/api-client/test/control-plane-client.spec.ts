@@ -4,6 +4,11 @@ import {
   createClient,
   getLiveness,
   getReadiness,
+  getSettings,
+  updateSettings,
+  testContentAgentConnection,
+  testStorageConnection,
+  type Settings,
   type ProblemDetails,
   type SuccessEnvelope,
 } from '../src';
@@ -14,6 +19,11 @@ describe('Control Plane client public API', () => {
     expect(createClient).toBeTypeOf('function');
     expect(getLiveness).toBeTypeOf('function');
     expect(getReadiness).toBeTypeOf('function');
+    expect(getSettings).toBeTypeOf('function');
+    expect(updateSettings).toBeTypeOf('function');
+    expect(testContentAgentConnection).toBeTypeOf('function');
+    expect(testStorageConnection).toBeTypeOf('function');
+    expectTypeOf<Settings>().toHaveProperty('retention');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');
     expectTypeOf<ProblemDetails>().toHaveProperty('requestId');
   });

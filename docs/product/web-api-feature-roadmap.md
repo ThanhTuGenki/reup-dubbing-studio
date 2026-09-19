@@ -38,7 +38,7 @@
 
 - [ ] **Hoàn tất feature Cài đặt.**
   - [x] Phân tích các nhóm cấu hình và chốt contract/schema cần dùng.
-  - [ ] API đọc/cập nhật cấu hình, credential mã hóa và kiểm tra kết nối phù hợp.
+  - [x] API đọc/cập nhật cấu hình, credential mã hóa và kiểm tra kết nối phù hợp.
   - [ ] Web xây màn hình form theo từng nhóm, validation và trạng thái lưu/test.
   - [ ] Integration test bảo đảm secret không bị trả ngược hoặc ghi log.
 
