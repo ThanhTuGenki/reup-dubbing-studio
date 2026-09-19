@@ -29,6 +29,7 @@ export async function registerSecurity(
   const allowedOrigins = new Set(config.corsOrigins);
   await app.register(helmet);
   await app.register(cors, {
+    exposedHeaders: ['ETag', 'X-Request-Id'],
     origin(origin, callback) {
       callback(null, origin === undefined || allowedOrigins.has(origin));
     },
