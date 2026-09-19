@@ -420,12 +420,15 @@ field override nullable như tài liệu Profile, không copy cấu hình của 
 ```text
 id                    uuid v7 PK
 name                  text
-language              text
+normalized_name       text UNIQUE
+primary_language      text
 status                DRAFT | READY | BLOCKED_LICENSE | ARCHIVED
 license_kind          text nullable
+license_reference     text nullable
 commercial_use_allowed boolean
-notes                 text nullable
-created_by            uuid FK users
+source_reference      text nullable
+description           text nullable
+tags                  text[]
 created_at            timestamptz
 updated_at            timestamptz
 version               integer
@@ -433,6 +436,11 @@ version               integer
 
 License gate là field nghiệp vụ, không chỉ note. Worker chỉ nhận voice `READY` và
 phù hợp policy môi trường.
+
+Reference audio dùng `voice_profile_samples` liên kết sang Asset Registry, có
+`language`, `transcript`, `duration_ms`, `revision` và `is_current`. Chi tiết
+license matrix, revision flow và REST contract nằm tại
+`docs/architecture/voice-library.md`.
 
 ### 7.5 `cast_sheets`, `cast_sheet_entries` (`CORE`)
 
