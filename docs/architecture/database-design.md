@@ -249,7 +249,13 @@ nhóm Discovery với `videos`, assets và workflow.
 | --- | --- | --- |
 | `notifications` | `HOLD` | Ngoài MVP; chỉ tạo nếu có notification center read/unread |
 | `notification_deliveries` | `HOLD` | Email/webhook delivery attempts tương lai |
+| `system_settings` | `CORE` | Cấu hình typed singleton cho Content Agent, R2 và retention |
+| `system_credentials` | `CORE` | Credential mã hóa theo kind cố định; không trả plaintext |
 | `app_settings` | `HOLD` | Tránh generic key/value cho tới khi có setting không thuộc aggregate |
+
+Schema chi tiết, ownership và secret handling của hai bảng `CORE` được chốt tại
+[`system-settings.md`](system-settings.md). Không dùng `app_settings` thay cho hai
+bảng typed này.
 
 ## 6. Identity, idempotency và audit
 
