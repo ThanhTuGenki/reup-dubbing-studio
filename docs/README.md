@@ -10,6 +10,8 @@ thư mục mới.
 | ------------------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------- |
 | Vấn đề, người dùng, phạm vi, luồng nghiệp vụ            | [`product/design.md`](product/design.md)                               | `ACCEPTED` (§12 đã bị thay thế)                      |
 | Stack, cấu trúc monorepo, Just-in-Time Contract, CI gate | [`architecture/application.md`](architecture/application.md)          | `ACCEPTED`                                           |
+| Mô hình dữ liệu và inventory bảng toàn hệ thống         | [`architecture/database-design.md`](architecture/database-design.md)  | `DRAFT`, review trước từng migration                 |
+| Discovery và ingest metadata từ Douyin                 | [`architecture/douyin-discovery.md`](architecture/douyin-discovery.md) | `DRAFT`, triển khai theo validation gate             |
 | Thiết kế các stage của pipeline media                   | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)         | thiết kế `ACCEPTED`, triển khai `ARCHIVED`           |
 | Quyết định kiến trúc đơn lẻ                             | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR              |
 | **Contract giữa web ↔ api ↔ worker**                    | `contracts/openapi/*.yaml` ở **gốc repo**                              | draft theo slice; nguồn chuẩn sau khi `VERIFIED`     |

@@ -578,6 +578,11 @@ theo trước khi slice hiện tại có đường chạy E2E.
 
 PostgreSQL là nguồn dữ liệu chuẩn cho domain state và task state. Prisma dùng cho phần lớn CRUD và transaction nghiệp vụ; một repository SQL chuyên biệt được phép dùng cho thao tác atomic lease.
 
+Thiết kế logic, inventory bảng, constraint, decision log và validation backlog
+nằm tại [`database-design.md`](database-design.md). Danh sách bên dưới chỉ là
+aggregate khái niệm ban đầu; nếu tên/ranh giới khác nhau, tài liệu database mới là
+nguồn chi tiết hiện hành.
+
 ### 8.1 Các aggregate/bảng khái niệm
 
 Tên cuối cùng sẽ được chốt khi thiết kế schema:
@@ -646,7 +651,9 @@ Task chỉ được cấp cho worker có capability và slot tương ứng.
 6. Hoàn tất task chỉ được ghi nhận khi output cần thiết đã upload và checksum hợp lệ.
 7. Nếu worker mất heartbeat hoặc lease hết hạn, task được đánh giá để retry; không tự động chạy trùng khi attempt cũ vẫn có khả năng ghi output.
 
-Chi tiết timeout, retry và fencing token là `TBD` cho vòng phân tích tiếp theo.
+Chi tiết attempt, lease, retry và fencing token nằm trong
+[`database-design.md`](database-design.md); giá trị timeout cụ thể vẫn phải được
+benchmark trước khi cấu hình production.
 
 ## 9. GPU Worker architecture
 

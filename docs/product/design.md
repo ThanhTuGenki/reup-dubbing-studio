@@ -554,11 +554,17 @@ trong Studio để sửa tay nếu muốn. Render 9:16 crop/scale từ nguồn 1
 ## 6. Nguồn: Discovery + Ingest + quản lý cookie
 
 ### 6.1 Discovery (tìm & chọn video — không tải)
-Không copy link từng video. Hai chế độ nhập, đều dùng yt-dlp đọc **chỉ metadata**
-(`--flat-playlist -J`), chưa tải nội dung → nhanh, nhẹ:
-- **Dán link kênh/tác giả/playlist:** yt-dlp liệt kê toàn bộ video của trang đó.
+Không copy link từng video. Hai chế độ nhập đều chỉ đọc metadata, chưa tải nội
+dung → nhanh, nhẹ:
+- **Dán link kênh/tác giả/playlist:** dùng provider phù hợp theo platform.
+  Bilibili/YouTube có thể dùng extractor hỗ trợ flat playlist; Douyin dùng browser
+  discovery adapter vì yt-dlp hiện không hỗ trợ list URL tác giả.
 - **Gõ từ khóa:** search extractor (`bilisearch:` cho Bilibili, `ytsearch:` cho
-  YouTube). Douyin search hạn chế → ưu tiên dán link tác giả.
+  YouTube). Douyin search qua browser adapter nhưng có thể bị captcha, nên ưu tiên
+  Jingxuan/category hoặc dán link tác giả.
+
+Thiết kế, dữ liệu, bảo mật cookie và validation gate riêng cho Douyin nằm tại
+[`docs/architecture/douyin-discovery.md`](../architecture/douyin-discovery.md).
 
 Kết quả đổ ra **bảng** trong dashboard: tiêu đề, thời lượng, ngày đăng, lượt xem,
 thumbnail, id, trạng thái (mới / đã tải). Người dùng tick chọn → **enqueue job
