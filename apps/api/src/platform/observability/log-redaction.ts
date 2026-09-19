@@ -1,5 +1,5 @@
 const REDACTED = '[Redacted]';
-const SENSITIVE_KEYS = /^(?:authorization|cookie|set-cookie|token|accessToken|refreshToken|secret|apiKey|password)$/iu;
+const SENSITIVE_KEYS = /^(?:authorization|cookie|set-cookie|token|accessToken|refreshToken|secret|apiKey|password|value|accessKeyId|secretAccessKey|encryptedPayload)$/iu;
 const PRESIGNED_URL_KEYS = /^(?:presignedUrl|signedUrl)$/iu;
 const URL_KEYS = /^(?:url|href|uri)$/iu;
 const QUERY_KEYS = /^(?:query|queryString|search)$/iu;

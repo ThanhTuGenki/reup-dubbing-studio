@@ -30,7 +30,14 @@ describe('generated health contract', () => {
   it('exports envelope and Problem Details types from the package boundary', () => {
     expectTypeOf<SuccessEnvelope['data']['status']>().toEqualTypeOf<'ok'>();
     expectTypeOf<ProblemDetails['code']>().toEqualTypeOf<
-      'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR'
+      | 'VALIDATION_ERROR'
+      | 'ROUTE_NOT_FOUND'
+      | 'RATE_LIMITED'
+      | 'INTERNAL_ERROR'
+      | 'SETTINGS_NOT_CONFIGURED'
+      | 'SETTINGS_VALIDATION_FAILED'
+      | 'CONNECTION_TEST_FAILED'
+      | 'VERSION_CONFLICT'
     >();
   });
 });

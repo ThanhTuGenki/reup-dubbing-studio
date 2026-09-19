@@ -12,10 +12,12 @@ export interface AppConfig {
   rateLimitWindowMs: number;
   healthRateLimitMax: number;
   trustProxy: false | string[];
+  databaseUrl: string;
+  settingsEncryptionKey: string;
 }
 
 const required = ['NODE_ENV', 'PORT', 'LOG_LEVEL', 'CORS_ORIGINS', 'RATE_LIMIT_MAX',
-  'RATE_LIMIT_WINDOW_MS', 'HEALTH_RATE_LIMIT_MAX'] as const;
+  'RATE_LIMIT_WINDOW_MS', 'HEALTH_RATE_LIMIT_MAX', 'DATABASE_URL', 'SETTINGS_ENCRYPTION_KEY'] as const;
 const allowedEnvironments = new Set<NodeEnvironment>(['development', 'test', 'production']);
 const allowedLogLevels = new Set<LogLevel>(['fatal', 'error', 'warn', 'info', 'debug', 'trace']);
 
@@ -35,11 +37,31 @@ export function parseConfig(environment: NodeJS.ProcessEnv): AppConfig {
   const rateLimitWindowMs = positiveInteger(environment.RATE_LIMIT_WINDOW_MS, 'RATE_LIMIT_WINDOW_MS');
   const healthRateLimitMax = positiveInteger(environment.HEALTH_RATE_LIMIT_MAX, 'HEALTH_RATE_LIMIT_MAX');
   const corsOrigins = parseOrigins(environment.CORS_ORIGINS, nodeEnv);
+  validateDatabaseUrl(environment.DATABASE_URL);
+  validateEncryptionKey(environment.SETTINGS_ENCRYPTION_KEY);
 
   return {
     nodeEnv, port, logLevel, corsOrigins, rateLimitMax, rateLimitWindowMs,
     healthRateLimitMax, trustProxy: parseTrustProxy(environment.TRUST_PROXY),
+    databaseUrl: environment.DATABASE_URL!,
+    settingsEncryptionKey: environment.SETTINGS_ENCRYPTION_KEY!,
   };
+}
+
+function validateDatabaseUrl(value: string | undefined): void {
+  try {
+    if (!value) throw new Error();
+    const url = new URL(value);
+    if (url.protocol !== 'postgresql:' && url.protocol !== 'postgres:') throw new Error();
+  } catch {
+    throw new Error('Invalid runtime configuration: DATABASE_URL');
+  }
+}
+
+function validateEncryptionKey(value: string | undefined): void {
+  if (!value || Buffer.from(value, 'base64').byteLength !== 32) {
+    throw new Error('Invalid runtime configuration: SETTINGS_ENCRYPTION_KEY');
+  }
 }
 
 function positiveInteger(value: string | undefined, field: string, max = Number.MAX_SAFE_INTEGER): number {

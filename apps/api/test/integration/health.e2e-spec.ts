@@ -15,6 +15,8 @@ const config: AppConfig = {
   rateLimitWindowMs: 60_000,
   healthRateLimitMax: 100,
   trustProxy: false,
+  databaseUrl: 'postgresql://postgres:postgres@localhost:5432/test',
+  settingsEncryptionKey: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
 };
 
 describe('Control Plane health', () => {

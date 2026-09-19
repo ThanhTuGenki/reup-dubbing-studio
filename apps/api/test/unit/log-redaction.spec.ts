@@ -10,6 +10,10 @@ describe('structured log redaction', () => {
     ['secret', 'secret-sentinel'],
     ['apiKey', 'api-key-sentinel'],
     ['password', 'password-sentinel'],
+    ['value', 'value-sentinel'],
+    ['accessKeyId', 'access-key-sentinel'],
+    ['secretAccessKey', 'secret-access-key-sentinel'],
+    ['encryptedPayload', 'ciphertext-sentinel'],
   ])('redacts %s values recursively', (key, value) => {
     const output = redactLog({
       request: {

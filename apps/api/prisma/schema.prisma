@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ContentAgentProvider {
+  ANTHROPIC
+  OPENAI
+}
+
+enum StorageBackend {
+  R2
+}
+
+enum SystemCredentialKind {
+  CONTENT_AGENT_API_KEY
+  OBJECT_STORAGE_KEYPAIR
+}
+
+model SystemCredential {
+  id               String               @id @db.Uuid
+  kind             SystemCredentialKind @unique
+  encryptedPayload Bytes                @map("encrypted_payload")
+  keyVersion       Int                  @map("key_version")
+  hint             String?
+  rotatedAt        DateTime             @map("rotated_at") @db.Timestamptz(6)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contentAgentSettings SystemSetting[] @relation("ContentAgentCredential")
+  storageSettings      SystemSetting[] @relation("StorageCredential")
+
+  @@map("system_credentials")
+}
+
+model SystemSetting {
+  id                       String               @id @db.Uuid
+  singletonKey             String               @unique @default("DEFAULT") @map("singleton_key")
+  contentAgentProvider     ContentAgentProvider @map("content_agent_provider")
+  contentAgentModel        String               @map("content_agent_model")
+  contentAgentCredentialId String?              @map("content_agent_credential_id") @db.Uuid
+  storageBackend           StorageBackend       @default(R2) @map("storage_backend")
+  storageAccountId         String               @map("storage_account_id")
+  storageBucket            String               @map("storage_bucket")
+  storageCredentialId      String?              @map("storage_credential_id") @db.Uuid
+  rawVideoDays             Int                  @default(7) @map("raw_video_days")
+  intermediateDays         Int                  @default(3) @map("intermediate_days")
+  taskLogDays              Int                  @default(30) @map("task_log_days")
+  finalOutputDays          Int                  @default(90) @map("final_output_days")
+  version                  Int                  @default(1)
+  createdAt                DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contentAgentCredential SystemCredential? @relation("ContentAgentCredential", fields: [contentAgentCredentialId], references: [id], onDelete: Restrict)
+  storageCredential      SystemCredential? @relation("StorageCredential", fields: [storageCredentialId], references: [id], onDelete: Restrict)
+
+  @@map("system_settings")
+}
+
+model IdempotencyRecord {
+  id             String   @id @db.Uuid
+  scope          String
+  key            String
+  requestHash    String   @map("request_hash")
+  responseBody   Json     @map("response_body")
+  responseEtag   String   @map("response_etag")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([scope, key])
+  @@map("idempotency_records")
+}

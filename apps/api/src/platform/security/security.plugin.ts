@@ -37,13 +37,14 @@ export async function registerSecurity(
     global: true,
     hook: 'onRequest',
     max(request) {
-      return isHealthRequest(request)
+      return isHealthRequest(request) || isSettingsTestRequest(request)
         ? config.healthRateLimitMax
         : config.rateLimitMax;
     },
     timeWindow: config.rateLimitWindowMs,
     keyGenerator(request) {
-      return `${isHealthRequest(request) ? 'health' : 'global'}:${request.ip}`;
+      const scope = isHealthRequest(request) ? 'health' : isSettingsTestRequest(request) ? 'settings-test' : 'global';
+      return `${scope}:${request.ip}`;
     },
     errorResponseBuilder(_request, context) {
       return Object.assign(new Error('Rate limited'), { statusCode: context.statusCode });
@@ -53,6 +54,10 @@ export async function registerSecurity(
   app.addHook('onSend', async (_request, reply) => {
     if (reply.statusCode === 429) reply.type('application/problem+json');
   });
+}
+
+function isSettingsTestRequest(request: FastifyRequest): boolean {
+  return request.url.split(/[?#]/u, 1)[0]?.startsWith('/v1/settings/tests/') ?? false;
 }
 
 function isHealthRequest(request: FastifyRequest): boolean {

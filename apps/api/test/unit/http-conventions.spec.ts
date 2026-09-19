@@ -8,6 +8,7 @@ import {
 import { of, lastValueFrom } from 'rxjs';
 
 import { ProblemDetailsFilter } from '../../src/platform/http/problem-details.filter';
+import { ProblemDetailsException } from '../../src/platform/http/problem-details.exception';
 import { SuccessEnvelopeInterceptor } from '../../src/platform/http/success-envelope.interceptor';
 
 type ResponseRecorder = {
@@ -152,6 +153,22 @@ describe('HTTP conventions', () => {
         requestId: '018f0f2a-7b3c-7abc-8def-1234567890ab',
       });
       expect(JSON.stringify(response.body)).not.toContain(secret);
+    });
+
+    it('exposes only the controlled code and safe detail of a business problem', () => {
+      const filter = new ProblemDetailsFilter();
+      const response = responseRecorder();
+
+      filter.catch(
+        new ProblemDetailsException(409, 'VERSION_CONFLICT', 'Settings version is stale'),
+        argumentsHost(response),
+      );
+
+      expect(response.body).toMatchObject({
+        status: 409,
+        code: 'VERSION_CONFLICT',
+        detail: 'Settings version is stale',
+      });
     });
 
     it('strips query strings from the problem instance path', () => {

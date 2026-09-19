@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses } from './types.gen.js';
+import type { GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -17,6 +17,58 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      * used to access values that aren't defined as part of the SDK function.
      */
     meta?: Record<string, unknown>;
+};
+
+/**
+ * Đọc cấu hình hệ thống của workspace
+ */
+export const getSettings = <ThrowOnError extends boolean = false>(options?: Options<GetSettingsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<GetSettingsResponses, GetSettingsErrors, ThrowOnError>({
+        url: '/settings',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật nguyên tử một hoặc nhiều nhóm cấu hình
+ */
+export const updateSettings = <ThrowOnError extends boolean = false>(options: Options<UpdateSettingsData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdateSettingsResponses, UpdateSettingsErrors, ThrowOnError>({
+        url: '/settings',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Kiểm tra credential và model Content Agent
+ */
+export const testContentAgentConnection = <ThrowOnError extends boolean = false>(options: Options<TestContentAgentConnectionData, ThrowOnError>) => {
+    return (options.client ?? client).post<TestContentAgentConnectionResponses, TestContentAgentConnectionErrors, ThrowOnError>({
+        url: '/settings/tests/content-agent',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Kiểm tra quyền write/read/delete trên Cloudflare R2
+ */
+export const testStorageConnection = <ThrowOnError extends boolean = false>(options: Options<TestStorageConnectionData, ThrowOnError>) => {
+    return (options.client ?? client).post<TestStorageConnectionResponses, TestStorageConnectionErrors, ThrowOnError>({
+        url: '/settings/tests/storage',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
 };
 
 /**
