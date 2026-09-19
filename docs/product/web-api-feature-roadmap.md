@@ -29,7 +29,7 @@
 - [x] Hoàn thiện application shell dùng shadcn Sidebar, topbar, responsive
   navigation và route metadata.
 - [x] Chuẩn hóa OpenAPI generation, typed API client và MSW fixture dùng chung.
-- [ ] Chuẩn hóa pagination, filter, empty/loading/error state và query-key factory.
+- [x] Chuẩn hóa pagination, filter, empty/loading/error state và query-key factory.
 - [ ] Thiết lập SSE client dùng chung cho progress/status và cơ chế refetch sau
   reconnect.
 - [ ] Chốt quy ước upload/download asset bằng presigned URL.

@@ -49,6 +49,20 @@ Tab/Enter/Escape để kiểm tra focus và drawer mobile, sau đó bật reduce
 Route dành trước như `/discovery` chỉ hiện trạng thái chưa khả dụng; URL lạ giữ
 app shell và cung cấp đường về `/`.
 
+## Nền tảng danh sách
+
+Các màn hình danh sách dùng chung:
+
+- `shared/lib/list-query.ts` để chuẩn hóa page, page size `20/50/100`, filter
+  rỗng và query key phân cấp;
+- `shared/ui/list-filter-bar.tsx` cho khung filter và hành động đặt lại;
+- `shared/ui/list-pagination.tsx` cho range, page size và điều hướng trang;
+- `shared/ui/list-state.tsx` cho loading, empty và error state có live-region phù
+  hợp.
+
+Filter mới phải đưa về page 1. Cursor hoặc schema filter của provider không được
+đoán ở shared layer; chúng được chốt trong contract của vertical slice tương ứng.
+
 ## Chẩn đoán readiness
 
 1. Xác nhận `VITE_CONTROL_PLANE_URL` trỏ tới public base URL kết thúc bằng `/v1`.
