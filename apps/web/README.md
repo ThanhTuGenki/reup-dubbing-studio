@@ -63,6 +63,17 @@ Các màn hình danh sách dùng chung:
 Filter mới phải đưa về page 1. Cursor hoặc schema filter của provider không được
 đoán ở shared layer; chúng được chốt trong contract của vertical slice tương ứng.
 
+## Nền tảng SSE
+
+`shared/api/event-stream.ts` bọc lifecycle của native `EventSource` nhưng không
+tạo thêm retry loop; browser tiếp tục sở hữu reconnect, `retry` và
+`Last-Event-ID`. Hook `useQueryInvalidationStream` đánh dấu stale các TanStack
+Query liên quan khi nhận event, rồi refetch query REST đang active sau khi stream
+kết nối lại. SSE không ghi trực tiếp dữ liệu nghiệp vụ vào cache.
+
+URL, tên event và envelope được thêm Just-in-Time trong contract của vertical
+slice sử dụng chúng. Foundation không giả định endpoint hoặc payload chung.
+
 ## Chẩn đoán readiness
 
 1. Xác nhận `VITE_CONTROL_PLANE_URL` trỏ tới public base URL kết thúc bằng `/v1`.
@@ -80,6 +91,6 @@ source `apps/api`.
 - [Quy ước OpenAPI](../../contracts/openapi/README.md)
 - [Quickstart của spec](../../../agent-team/projects/reup-dubbing-studio/specs/003-web-foundation/quickstart.md)
 
-Ngoài phạm vi: authentication/authorization, SSE/WebSocket, database, worker,
-object store, presigned URL, upload/download, mutation, workflow state, mock KPI,
-domain entity và màn hình nghiệp vụ hoàn chỉnh.
+Ngoài phạm vi: authentication/authorization, WebSocket, database, worker, object
+store, presigned URL, upload/download, mutation, workflow state, mock KPI, domain
+entity và màn hình nghiệp vụ hoàn chỉnh.
