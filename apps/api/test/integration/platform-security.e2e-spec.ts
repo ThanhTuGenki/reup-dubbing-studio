@@ -66,6 +66,15 @@ describe('platform security integration', () => {
     expect(response.headers.vary).toContain('Origin');
   });
 
+  it('allows the web client to read concurrency and support headers', async () => {
+    const response = await app.inject({
+      method: 'GET', url: '/v1/security-probe', headers: { origin: 'http://localhost:5173' },
+    });
+
+    expect(response.headers['access-control-expose-headers']).toContain('ETag');
+    expect(response.headers['access-control-expose-headers']).toContain('X-Request-Id');
+  });
+
   it('does not grant CORS permission to an origin outside the allowlist', async () => {
     const response = await app.inject({
       method: 'OPTIONS',
