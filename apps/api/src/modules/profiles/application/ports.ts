@@ -4,6 +4,7 @@ import type {
   CreateSeriesProfile,
   ProfileList,
   ProfileListQuery,
+  ProfileJobSnapshot,
   SeriesProfileView,
   UpdateChannelProfile,
   UpdateSeriesProfile,
@@ -22,4 +23,5 @@ export interface ProfileRepository {
   updateSeries(id: string, expectedVersion: number, expectedParentVersion: number, input: UpdateSeriesProfile): Promise<SeriesProfileView>;
   archiveSeries(id: string, expectedVersion: number, expectedParentVersion: number): Promise<SeriesProfileView>;
   restoreSeries(id: string, expectedVersion: number, expectedParentVersion: number): Promise<SeriesProfileView>;
+  snapshotForJob(input: { channelProfileId: string; seriesProfileId?: string }): Promise<ProfileJobSnapshot>;
 }

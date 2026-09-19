@@ -44,11 +44,11 @@
 
 ## 2. Hồ sơ kênh và series
 
-- [ ] **Hoàn tất feature Hồ sơ.**
+- [x] **Hoàn tất feature Hồ sơ.**
   - [x] Phân tích inheritance Channel/Series Profile và chốt contract/schema.
   - [x] API CRUD profile, cấu hình pipeline, mask subtitle và asset liên quan.
   - [x] Web xây danh sách, tạo/sửa, cấu hình series và mask editor.
-  - [ ] Kiểm thử validation, inheritance và snapshot cấu hình khi tạo job.
+  - [x] Kiểm thử validation, inheritance và snapshot cấu hình khi tạo job.
 
 ## 3. Thư viện giọng
 

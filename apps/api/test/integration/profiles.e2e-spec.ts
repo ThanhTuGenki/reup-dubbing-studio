@@ -4,7 +4,9 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../../src/application';
 import type { ProfileObjectStore } from '../../src/modules/profiles/application/asset-ports';
 import { ProfileAssetsService } from '../../src/modules/profiles/application/profile-assets.service';
+import { ProfilesService } from '../../src/modules/profiles/application/profiles.service';
 import { PrismaProfileAssetRepository } from '../../src/modules/profiles/infrastructure/prisma-profile-asset-repository';
+import { PrismaProfileRepository } from '../../src/modules/profiles/infrastructure/prisma-profile-repository';
 import type { AppConfig } from '../../src/platform/config/config';
 import { uuidV7 } from '../../src/platform/ids/uuid-v7';
 
@@ -26,6 +28,9 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
       settingsEncryptionKey: Buffer.alloc(32, 4).toString('base64'),
     };
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
+    await prisma.systemSetting.update({ where: { singletonKey: 'DEFAULT' }, data: {
+      version: 1, rawVideoDays: 7, intermediateDays: 3, taskLogDays: 30, finalOutputDays: 90,
+    } });
     await prisma.idempotencyRecord.deleteMany({ where: { scope: { contains: 'PROFILE' } } });
     await prisma.channelProfileAsset.deleteMany();
     await prisma.seriesProfileAsset.deleteMany();
@@ -183,5 +188,52 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     });
     expect(response.statusCode).toBe(422);
     expect(response.json()).toMatchObject({ code: 'PROFILE_VALIDATION_FAILED' });
+  });
+
+  it('resolves an immutable job snapshot from active inherited configuration', async () => {
+    const create = await app.inject({
+      method: 'POST', url: '/v1/series-profiles',
+      headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000024' },
+      payload: { channelProfileId: channelId, name: 'Snapshot series', overrides: { ttsSpeed: 1.2 } },
+    });
+    expect(create.statusCode).toBe(201);
+    const snapshotSeriesId = create.json().data.id as string;
+    const activate = await app.inject({
+      method: 'PATCH', url: `/v1/series-profiles/${snapshotSeriesId}`,
+      headers: { 'if-match': '"1:3"' }, payload: { status: 'ACTIVE' },
+    });
+    expect(activate.statusCode).toBe(200);
+
+    const service = new ProfilesService(new PrismaProfileRepository(prisma));
+    const captured = await service.snapshotForJob(channelId, snapshotSeriesId);
+    const persisted = JSON.parse(JSON.stringify(captured)) as typeof captured;
+    expect(captured).toMatchObject({
+      schemaVersion: 1,
+      profile: { channelProfileId: channelId, channelProfileVersion: 3, seriesProfileId: snapshotSeriesId, seriesProfileVersion: 2 },
+      pipeline: { targetLanguage: 'vi', subtitleMaxLineLength: 50, ttsSpeed: 1.2 },
+      defaultVoice: { profileId: voiceId, version: 1 },
+      retention: { settingsVersion: 1, rawVideoDays: 7 },
+    });
+
+    await prisma.channelProfile.update({ where: { id: channelId }, data: {
+      subtitleLanguage: 'en', version: { increment: 1 },
+    } });
+    await prisma.systemSetting.update({ where: { singletonKey: 'DEFAULT' }, data: {
+      rawVideoDays: 14, version: { increment: 1 },
+    } });
+    const current = await service.snapshotForJob(channelId, snapshotSeriesId);
+    expect(current).toMatchObject({
+      profile: { channelProfileVersion: 4 }, pipeline: { subtitleLanguage: 'en', ttsSpeed: 1.2 },
+      retention: { settingsVersion: 2, rawVideoDays: 14 },
+    });
+    expect(persisted).toMatchObject({
+      profile: { channelProfileVersion: 3 }, pipeline: { subtitleLanguage: 'vi', ttsSpeed: 1.2 },
+      retention: { settingsVersion: 1, rawVideoDays: 7 },
+    });
+  });
+
+  it('refuses a job snapshot from a draft or unready profile', async () => {
+    const service = new ProfilesService(new PrismaProfileRepository(prisma));
+    await expect(service.snapshotForJob(channelId, seriesId)).rejects.toMatchObject({ code: 'PROFILE_NOT_READY' });
   });
 });
