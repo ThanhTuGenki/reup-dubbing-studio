@@ -3,7 +3,9 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import {
   createClient,
   listChannelProfiles,
+  previewSeriesProfileAsset,
   type ChannelProfileEnvelope,
+  type PreviewGrant,
   type SeriesProfile,
 } from '../src';
 
@@ -24,5 +26,7 @@ describe('generated Profile contract', () => {
     expectTypeOf<ChannelProfileEnvelope['data']>().toHaveProperty('pipeline');
     expectTypeOf<SeriesProfile['overrides']['targetLanguage']>().toEqualTypeOf<string | null>();
     expectTypeOf<SeriesProfile['inheritance']['targetLanguage']>().toEqualTypeOf<'CHANNEL' | 'SERIES'>();
+    expectTypeOf<PreviewGrant['method']>().toEqualTypeOf<'GET'>();
+    expect(previewSeriesProfileAsset).toBeTypeOf('function');
   });
 });

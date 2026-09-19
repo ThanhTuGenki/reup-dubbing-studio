@@ -12,6 +12,8 @@ import {
   createChannelProfile,
   listSeriesProfiles,
   createSeriesProfile,
+  previewChannelProfileAsset,
+  previewSeriesProfileAsset,
   type Settings,
   type ProblemDetails,
   type SuccessEnvelope,
@@ -31,6 +33,8 @@ describe('Control Plane client public API', () => {
     expect(createChannelProfile).toBeTypeOf('function');
     expect(listSeriesProfiles).toBeTypeOf('function');
     expect(createSeriesProfile).toBeTypeOf('function');
+    expect(previewChannelProfileAsset).toBeTypeOf('function');
+    expect(previewSeriesProfileAsset).toBeTypeOf('function');
     expectTypeOf<Settings>().toHaveProperty('retention');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');
     expectTypeOf<ProblemDetails>().toHaveProperty('requestId');

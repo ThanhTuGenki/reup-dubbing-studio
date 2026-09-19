@@ -162,6 +162,20 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
         default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/assets/{linkId}/preview:
+    get:
+      summary: Xin presigned preview URL cho asset Channel hiện tại
+      operationId: previewChannelProfileAsset
+      parameters:
+        - $ref: '#/components/parameters/ChannelProfileId'
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '200':
+          description: Presigned GET grant năm phút.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreviewGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
   /channel-profiles/{channelProfileId}/assets/{linkId}:
     delete:
       summary: Gỡ asset hiện tại khỏi Channel Profile
@@ -331,6 +345,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/UploadGrantEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/assets/{linkId}/preview:
+    get:
+      summary: Xin presigned preview URL cho mask reference hiện tại
+      operationId: previewSeriesProfileAsset
+      parameters:
+        - $ref: '#/components/parameters/SeriesProfileId'
+        - $ref: '#/components/parameters/LinkId'
+      responses:
+        '200':
+          description: Presigned GET grant năm phút.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreviewGrantEnvelope' }
         default: { $ref: '#/components/responses/Problem' }
   /series-profiles/{seriesProfileId}/assets/{linkId}:
     delete:
@@ -866,6 +894,18 @@ components:
         headers: { type: object, additionalProperties: { type: string } }
         expiresAt: { type: string, format: date-time }
         maxByteSize: { type: integer, format: int64 }
+    PreviewGrant:
+      type: object
+      additionalProperties: false
+      required: [assetId, method, url, expiresAt, fileName, contentType, byteSize]
+      properties:
+        assetId: { $ref: '#/components/schemas/UuidV7' }
+        method: { type: string, const: GET }
+        url: { type: string, format: uri }
+        expiresAt: { type: string, format: date-time }
+        fileName: { type: string }
+        contentType: { type: string }
+        byteSize: { type: integer, format: int64 }
     CommittedAsset:
       type: object
       additionalProperties: false
@@ -915,6 +955,13 @@ components:
       required: [data, meta]
       properties:
         data: { $ref: '#/components/schemas/UploadGrant' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    PreviewGrantEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/PreviewGrant' }
         meta: { $ref: '#/components/schemas/SuccessMeta' }
     CommittedAssetEnvelope:
       type: object

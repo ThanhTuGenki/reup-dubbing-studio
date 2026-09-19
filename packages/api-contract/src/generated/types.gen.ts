@@ -231,6 +231,16 @@ export type UploadGrant = {
     maxByteSize: number;
 };
 
+export type PreviewGrant = {
+    assetId: UuidV7;
+    method: 'GET';
+    url: string;
+    expiresAt: string;
+    fileName: string;
+    contentType: string;
+    byteSize: number;
+};
+
 export type CommittedAsset = {
     asset: ProfileAsset;
     profileVersion: number;
@@ -264,6 +274,11 @@ export type SeriesProfileListEnvelope = {
 
 export type UploadGrantEnvelope = {
     data: UploadGrant;
+    meta: SuccessMeta;
+};
+
+export type PreviewGrantEnvelope = {
+    data: PreviewGrant;
     meta: SuccessMeta;
 };
 
@@ -749,6 +764,38 @@ export type RefreshChannelProfileAssetUploadResponses = {
 
 export type RefreshChannelProfileAssetUploadResponse = RefreshChannelProfileAssetUploadResponses[keyof RefreshChannelProfileAssetUploadResponses];
 
+export type PreviewChannelProfileAssetData = {
+    body?: never;
+    path: {
+        channelProfileId: UuidV7;
+        linkId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/assets/{linkId}/preview';
+};
+
+export type PreviewChannelProfileAssetErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewChannelProfileAssetError = PreviewChannelProfileAssetErrors[keyof PreviewChannelProfileAssetErrors];
+
+export type PreviewChannelProfileAssetResponses = {
+    /**
+     * Presigned GET grant năm phút.
+     */
+    200: PreviewGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewChannelProfileAssetResponse = PreviewChannelProfileAssetResponses[keyof PreviewChannelProfileAssetResponses];
+
 export type DetachChannelProfileAssetData = {
     body?: never;
     headers: {
@@ -1095,6 +1142,38 @@ export type RefreshSeriesProfileAssetUploadResponses = {
 };
 
 export type RefreshSeriesProfileAssetUploadResponse = RefreshSeriesProfileAssetUploadResponses[keyof RefreshSeriesProfileAssetUploadResponses];
+
+export type PreviewSeriesProfileAssetData = {
+    body?: never;
+    path: {
+        seriesProfileId: UuidV7;
+        linkId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/assets/{linkId}/preview';
+};
+
+export type PreviewSeriesProfileAssetErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewSeriesProfileAssetError = PreviewSeriesProfileAssetErrors[keyof PreviewSeriesProfileAssetErrors];
+
+export type PreviewSeriesProfileAssetResponses = {
+    /**
+     * Presigned GET grant năm phút.
+     */
+    200: PreviewGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewSeriesProfileAssetResponse = PreviewSeriesProfileAssetResponses[keyof PreviewSeriesProfileAssetResponses];
 
 export type DetachSeriesProfileAssetData = {
     body?: never;

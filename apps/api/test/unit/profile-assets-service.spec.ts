@@ -22,6 +22,7 @@ describe('ProfileAssetsService', () => {
     repository = {
       createPending: jest.fn().mockResolvedValue(pending),
       getPending: jest.fn().mockResolvedValue(pending),
+      getAvailable: jest.fn().mockResolvedValue(pending),
       replayCommit: jest.fn().mockResolvedValue(null),
       commit: jest.fn().mockResolvedValue(committed),
       detach: jest.fn(),
@@ -31,6 +32,10 @@ describe('ProfileAssetsService', () => {
       createUploadGrant: jest.fn().mockResolvedValue({
         url: 'https://example.invalid/upload?signature=secret', headers: { 'Content-Type': 'image/webp' },
         expiresAt: new Date('2026-09-19T12:10:00.000Z'),
+      }),
+      createPreviewGrant: jest.fn().mockResolvedValue({
+        url: 'https://example.invalid/preview?signature=secret',
+        expiresAt: new Date('2026-09-19T12:05:00.000Z'),
       }),
       inspect: jest.fn().mockResolvedValue({ byteSize: 100, contentType: 'image/webp' }),
     };
@@ -71,5 +76,12 @@ describe('ProfileAssetsService', () => {
     )).resolves.toEqual(committed);
     expect(store.inspect).not.toHaveBeenCalled();
     expect(repository.commit).not.toHaveBeenCalled();
+  });
+
+  it('returns a short-lived preview grant for the current asset link', async () => {
+    await expect(service.preview(
+      { type: 'SERIES', id: '01994429-ec00-7000-8000-000000000012' },
+      '01994429-ec00-7000-8000-000000000011',
+    )).resolves.toMatchObject({ assetId: pending.id, method: 'GET', contentType: 'image/webp' });
   });
 });

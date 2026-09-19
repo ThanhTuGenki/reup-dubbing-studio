@@ -130,6 +130,9 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
         url: 'https://example.invalid/upload?signature=secret',
         headers: { 'Content-Type': 'image/webp' }, expiresAt: new Date('2026-09-20T12:10:00.000Z'),
       }),
+      createPreviewGrant: async () => ({
+        url: 'https://example.invalid/preview?signature=secret', expiresAt: new Date('2026-09-20T12:05:00.000Z'),
+      }),
       inspect: async () => ({ byteSize: 128, contentType: 'image/webp' }),
     };
     const service = new ProfileAssetsService(repository, store);
@@ -143,6 +146,10 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     expect(committed).toMatchObject({ profileVersion: 2, parentVersion: 3, asset: { role: 'MASK_REFERENCE_FRAME', revision: 1 } });
     await expect(service.commit(owner, grant.assetId, 1, 3, key)).resolves.toEqual(committed);
     expect(await prisma.seriesProfileAsset.count({ where: { seriesProfileId: seriesId } })).toBe(1);
+
+    await expect(service.preview(owner, committed.asset.linkId)).resolves.toMatchObject({
+      assetId: committed.asset.assetId, method: 'GET', fileName: 'mask-frame.webp', byteSize: 128,
+    });
 
     const ready = await app.inject({ method: 'GET', url: `/v1/series-profiles/${seriesId}` });
     expect(ready.headers.etag).toBe('"2:3"');

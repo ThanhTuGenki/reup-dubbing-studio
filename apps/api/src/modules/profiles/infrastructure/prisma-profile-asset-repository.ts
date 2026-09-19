@@ -33,6 +33,17 @@ export class PrismaProfileAssetRepository implements ProfileAssetRepository {
     return pendingView(row, metadataRole(row.metadata));
   }
 
+  async getAvailable(owner: ProfileOwner, linkId: string): Promise<PendingProfileAsset> {
+    if (owner.type === 'CHANNEL') {
+      const link = await this.prisma.channelProfileAsset.findUnique({ where: { id: linkId }, include: { asset: true } });
+      if (!link || link.channelProfileId !== owner.id || !link.isCurrent || link.asset.status !== 'AVAILABLE') unavailable();
+      return pendingView(link.asset, metadataRole(link.asset.metadata));
+    }
+    const link = await this.prisma.seriesProfileAsset.findUnique({ where: { id: linkId }, include: { asset: true } });
+    if (!link || link.seriesProfileId !== owner.id || !link.isCurrent || link.asset.status !== 'AVAILABLE') unavailable();
+    return pendingView(link.asset, metadataRole(link.asset.metadata));
+  }
+
   async replayCommit(owner: ProfileOwner, idempotencyKey: string, requestHash: string): Promise<CommittedProfileAsset | null> {
     const scope = `COMMIT_${owner.type}_PROFILE_ASSET`;
     const previous = await this.prisma.idempotencyRecord.findUnique({ where: { scope_key: { scope, key: idempotencyKey } } });
