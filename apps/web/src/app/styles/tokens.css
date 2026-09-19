@@ -19,6 +19,7 @@
   --danger: #b42318;
   --disabled-bg: #e8ede9;
   --disabled-fg: #7b877e;
+  --scrim: color-mix(in oklch, var(--fg) 18%, transparent);
 
   /* shadcn semantic adapter. */
   --background: var(--canvas);

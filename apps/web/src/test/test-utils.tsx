@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 export function renderApp(ui: ReactElement, options?: RenderOptions & { route?: string }) {
   const queryClient = new QueryClient({
@@ -10,7 +11,7 @@ export function renderApp(ui: ReactElement, options?: RenderOptions & { route?: 
 
   return render(
     <MemoryRouter initialEntries={[options?.route ?? '/']}>
-      <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}><TooltipProvider>{ui}</TooltipProvider></QueryClientProvider>
     </MemoryRouter>,
     options,
   );

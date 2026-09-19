@@ -1,11 +1,23 @@
-import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { SidebarNav } from './sidebar-nav';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { AppSidebar } from './app-sidebar';
 import { Topbar } from './topbar';
 
+function getInitialSidebarOpen() {
+  if (window.innerWidth < 1180) return false;
+  const savedState = document.cookie.match(/(?:^|; )sidebar_state=(true|false)(?:;|$)/)?.[1];
+  return savedState === undefined ? true : savedState === 'true';
+}
+
 export function AppShell() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  return <div className="app-shell"><a className="skip-link" href="#main-content">Đi đến nội dung chính</a><aside className="desktop-sidebar" aria-label="Điều hướng ứng dụng"><SidebarNav /></aside><Sheet open={mobileOpen} onOpenChange={setMobileOpen}><Topbar><SheetTrigger asChild><Button className="menu-trigger" variant="outline" aria-label="Mở điều hướng"><span aria-hidden="true">☰</span><span>Menu</span></Button></SheetTrigger></Topbar><SheetContent className="mobile-drawer" side="left" showCloseButton={false} aria-describedby={undefined}><SheetTitle className="sr-only">Điều hướng ứng dụng</SheetTitle><SheetClose asChild><Button className="drawer-close" variant="ghost" size="icon-sm" aria-label="Đóng điều hướng">×</Button></SheetClose><SidebarNav onNavigate={() => setMobileOpen(false)} /></SheetContent></Sheet><main id="main-content" className="main-content" tabIndex={-1}><Outlet /></main></div>;
+  return (
+    <SidebarProvider defaultOpen={getInitialSidebarOpen()}>
+      <a className="skip-link" href="#main-content">Đi đến nội dung chính</a>
+      <AppSidebar />
+      <SidebarInset className="app-shell-main" id="main-content" tabIndex={-1}>
+        <Topbar />
+        <div className="main-content"><Outlet /></div>
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }

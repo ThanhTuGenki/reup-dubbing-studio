@@ -19,7 +19,8 @@ thư mục mới.
 | Kết quả các lần chạy thủ công                           | [`operations/acceptance-log.md`](operations/acceptance-log.md)         | log, append                                          |
 | Nợ kỹ thuật đã biết                                     | [`operations/known-followups.md`](operations/known-followups.md)       | ⚠️ tracker tạm                                       |
 | Bố cục màn hình và route đã duyệt                       | [`reference/ui-prototype/`](reference/ui-prototype/)                   | `ARCHIVED`                                           |
-| **Trạng thái công việc**                                | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1)  | **không nhân đôi vào file**                          |
+| Roadmap và tiến độ cấp feature Web + API                | [`product/web-api-feature-roadmap.md`](product/web-api-feature-roadmap.md) | `ACTIVE`                                          |
+| **Trạng thái issue/task chi tiết**                      | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1)  | **không nhân đôi vào file**                          |
 
 ## Bốn quy tắc
 

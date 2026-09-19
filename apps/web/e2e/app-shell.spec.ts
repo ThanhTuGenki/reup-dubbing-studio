@@ -29,6 +29,17 @@ test('mobile drawer supports keyboard, Escape, and focus return', async ({ page 
   await expect(menu).toBeFocused();
 });
 
+test('desktop shell exposes grouped navigation and can collapse', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await ready(page);
+  await page.goto('/');
+  const navigation = page.getByRole('navigation', { name: 'Điều hướng chính' });
+  await expect(navigation.getByRole('link')).toHaveCount(9);
+  await expect(page.getByLabel('Breadcrumb')).toContainText('Tổng quan');
+  await page.getByRole('button', { name: 'Thu gọn điều hướng' }).click();
+  await expect(page.locator('[data-slot="sidebar"][data-state="collapsed"]')).toBeVisible();
+});
+
 test('foundation shell has no serious accessibility violations', async ({ page }) => {
   await ready(page);
   await page.goto('/');
