@@ -9,6 +9,7 @@ import type {
   CreateSeriesProfile,
   DestinationInput,
   PipelineConfig,
+  ProfileJobSnapshot,
   ProfileList,
   ProfileListQuery,
   SeriesOverrides,
@@ -199,6 +200,22 @@ export class PrismaProfileRepository implements ProfileRepository {
 
   restoreSeries(id: string, version: number, parentVersion: number): Promise<SeriesProfileView> {
     return this.changeSeriesStatus(id, version, parentVersion, 'DRAFT');
+  }
+
+  snapshotForJob(input: { channelProfileId: string; seriesProfileId?: string }): Promise<ProfileJobSnapshot> {
+    return this.prisma.$transaction(async (tx) => {
+      const settings = await tx.systemSetting.findUniqueOrThrow({ where: { singletonKey: 'DEFAULT' } });
+      if (input.seriesProfileId) {
+        const row = await tx.seriesProfile.findUnique({ where: { id: input.seriesProfileId }, include: seriesInclude });
+        if (!row || row.channelProfileId !== input.channelProfileId) notFound();
+        ensureJobReady(toSeriesView(row));
+        return jobSnapshot(row.channelProfile, row, settings);
+      }
+      const row = await tx.channelProfile.findUnique({ where: { id: input.channelProfileId }, include: channelInclude });
+      if (!row) notFound();
+      ensureJobReady(toChannelView(row));
+      return jobSnapshot(row, null, settings);
+    }, { isolationLevel: 'RepeatableRead' });
   }
 
   private changeSeriesStatus(id: string, version: number, parentVersion: number, status: 'DRAFT' | 'ARCHIVED') {
@@ -415,6 +432,49 @@ function assetView(link: ChannelRow['assets'][number] | SeriesRow['assets'][numb
     byteSize: link.asset.byteSize?.toString() ?? null, width: link.asset.width,
     height: link.asset.height, revision: link.revision,
   };
+}
+
+function jobSnapshot(
+  channel: ChannelRow,
+  series: SeriesRow | null,
+  settings: { version: number; rawVideoDays: number; intermediateDays: number; taskLogDays: number; finalOutputDays: number },
+): ProfileJobSnapshot {
+  const channelView = toChannelView(channel);
+  const seriesView = series ? toSeriesView(series) : null;
+  const voice = series?.defaultVoiceOverride ?? channel.defaultVoice;
+  if (!voice) throw new ProfileError('PROFILE_NOT_READY', 'Profile has no default voice to snapshot');
+  return {
+    schemaVersion: 1,
+    profile: {
+      channelProfileId: channel.id, channelProfileVersion: channel.version,
+      seriesProfileId: series?.id ?? null, seriesProfileVersion: series?.version ?? null,
+    },
+    pipeline: seriesView?.effectiveConfig ?? channelView.pipeline,
+    content: channelView.content,
+    mask: seriesView?.mask ?? null,
+    assets: [...channel.assets, ...(series?.assets ?? [])].map(assetSnapshot),
+    destinations: channelView.destinations,
+    defaultVoice: { profileId: voice.id, version: voice.version },
+    retention: {
+      settingsVersion: settings.version, rawVideoDays: settings.rawVideoDays,
+      intermediateDays: settings.intermediateDays, taskLogDays: settings.taskLogDays,
+      finalOutputDays: settings.finalOutputDays,
+    },
+  };
+}
+
+function assetSnapshot(link: ChannelRow['assets'][number] | SeriesRow['assets'][number]) {
+  return {
+    ...assetView(link), assetVersion: link.asset.version, storageBackend: link.asset.storageBackend,
+    bucket: link.asset.bucket, objectKey: link.asset.objectKey, checksumSha256: link.asset.checksumSha256,
+  };
+}
+
+function ensureJobReady(profile: ChannelProfileView | SeriesProfileView): void {
+  if (profile.status !== 'ACTIVE') throw new ProfileError('PROFILE_NOT_READY', 'Only an active profile can create a job snapshot');
+  if (profile.readiness !== 'READY') {
+    throw new ProfileError('PROFILE_NOT_READY', `Profile is not ready: ${profile.readinessIssues.join(', ')}`);
+  }
 }
 
 function page<T extends { id: string }>(items: T[], limit: number): ProfileList<T> {

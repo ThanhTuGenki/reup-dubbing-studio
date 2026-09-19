@@ -63,6 +63,10 @@ export class ProfilesService {
   restoreSeries(id: string, version: number, parentVersion: number) {
     return this.repository.restoreSeries(id, version, parentVersion);
   }
+
+  snapshotForJob(channelProfileId: string, seriesProfileId?: string) {
+    return this.repository.snapshotForJob({ channelProfileId, ...(seriesProfileId ? { seriesProfileId } : {}) });
+  }
 }
 
 function validateChannel(input: CreateChannelProfile): void {

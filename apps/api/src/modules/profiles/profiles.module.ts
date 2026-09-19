@@ -17,6 +17,7 @@ export class ProfilesModule {
     return {
       module: ProfilesModule,
       controllers: [ProfilesController],
+      exports: [ProfilesService],
       providers: [
         { provide: PrismaService, useFactory: () => new PrismaService(config.databaseUrl) },
         {

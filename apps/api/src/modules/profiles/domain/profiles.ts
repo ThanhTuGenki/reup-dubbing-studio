@@ -133,3 +133,34 @@ export type ProfileListQuery = {
   readiness?: Readiness;
   channelProfileId?: string;
 };
+
+export type ProfileAssetSnapshot = ProfileAssetView & {
+  assetVersion: number;
+  storageBackend: 'LOCAL' | 'R2' | 'S3';
+  bucket: string | null;
+  objectKey: string;
+  checksumSha256: string | null;
+};
+
+export type ProfileJobSnapshot = {
+  schemaVersion: 1;
+  profile: {
+    channelProfileId: string;
+    channelProfileVersion: number;
+    seriesProfileId: string | null;
+    seriesProfileVersion: number | null;
+  };
+  pipeline: PipelineConfig;
+  content: ContentConfig;
+  mask: SubtitleMask | null;
+  assets: ProfileAssetSnapshot[];
+  destinations: DestinationView[];
+  defaultVoice: { profileId: string; version: number };
+  retention: {
+    settingsVersion: number;
+    rawVideoDays: number;
+    intermediateDays: number;
+    taskLogDays: number;
+    finalOutputDays: number;
+  };
+};
