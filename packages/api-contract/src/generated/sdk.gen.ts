@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
+import type { ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -122,6 +122,16 @@ export const refreshChannelProfileAssetUpload = <ThrowOnError extends boolean = 
 };
 
 /**
+ * Xin presigned preview URL cho asset Channel hiện tại
+ */
+export const previewChannelProfileAsset = <ThrowOnError extends boolean = false>(options: Options<PreviewChannelProfileAssetData, ThrowOnError>) => {
+    return (options.client ?? client).get<PreviewChannelProfileAssetResponses, PreviewChannelProfileAssetErrors, ThrowOnError>({
+        url: '/channel-profiles/{channelProfileId}/assets/{linkId}/preview',
+        ...options
+    });
+};
+
+/**
  * Gỡ asset hiện tại khỏi Channel Profile
  */
 export const detachChannelProfileAsset = <ThrowOnError extends boolean = false>(options: Options<DetachChannelProfileAssetData, ThrowOnError>) => {
@@ -229,6 +239,16 @@ export const commitSeriesProfileAssetUpload = <ThrowOnError extends boolean = fa
 export const refreshSeriesProfileAssetUpload = <ThrowOnError extends boolean = false>(options: Options<RefreshSeriesProfileAssetUploadData, ThrowOnError>) => {
     return (options.client ?? client).post<RefreshSeriesProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadErrors, ThrowOnError>({
         url: '/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant',
+        ...options
+    });
+};
+
+/**
+ * Xin presigned preview URL cho mask reference hiện tại
+ */
+export const previewSeriesProfileAsset = <ThrowOnError extends boolean = false>(options: Options<PreviewSeriesProfileAssetData, ThrowOnError>) => {
+    return (options.client ?? client).get<PreviewSeriesProfileAssetResponses, PreviewSeriesProfileAssetErrors, ThrowOnError>({
+        url: '/series-profiles/{seriesProfileId}/assets/{linkId}/preview',
         ...options
     });
 };

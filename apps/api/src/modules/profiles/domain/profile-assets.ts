@@ -28,4 +28,14 @@ export type UploadGrant = {
   maxByteSize: number;
 };
 
+export type PreviewGrant = {
+  assetId: string;
+  method: 'GET';
+  url: string;
+  expiresAt: string;
+  fileName: string;
+  contentType: string;
+  byteSize: number;
+};
+
 export type CommittedProfileAsset = { asset: ProfileAssetView; profileVersion: number; parentVersion?: number };

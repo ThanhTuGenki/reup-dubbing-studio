@@ -4,6 +4,10 @@ import type {
   ProblemDetails,
   SettingsEnvelope,
   SuccessEnvelope,
+  ChannelProfile,
+  ChannelProfileListEnvelope,
+  SeriesProfile,
+  SeriesProfileListEnvelope,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -39,6 +43,34 @@ export const settingsEnvelope = {
   },
   meta: { requestId: READY_REQUEST_ID },
 } satisfies SettingsEnvelope;
+
+const pipeline = {
+  targetLanguage: 'vi', defaultVoiceProfileId: '0191f3d2-7f5b-7abc-8b2e-123456789ae0',
+  voiceMode: 'SINGLE' as const, subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.vi.srt',
+  subtitleMaxLineLength: 42, ttsSpeed: 1, timingPolicy: 'FIT_SEGMENT' as const,
+  output16x9Enabled: true, output9x16Enabled: false,
+};
+
+export const channelProfile = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789ac0', name: 'Kênh Việt hóa', status: 'ACTIVE', pipeline,
+  content: { voiceRules: {}, ctaTemplate: 'Theo dõi kênh', metadataTemplate: {}, baseKeywords: ['phim ngắn'] },
+  destinations: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789ad0', platform: 'YOUTUBE', externalId: 'UC-demo', displayName: 'Kênh Việt hóa', isRequired: true, isActive: true, platformConfig: {}, version: 1 }],
+  assets: [], readiness: 'READY', readinessIssues: [], version: 3,
+  createdAt: '2026-09-18T08:00:00.000Z', updatedAt: '2026-09-20T08:00:00.000Z',
+} satisfies ChannelProfile;
+
+export const seriesProfile = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789ac1', channelProfileId: channelProfile.id,
+  name: 'Tổng tài tập ngắn', status: 'ACTIVE',
+  overrides: { targetLanguage: null, defaultVoiceProfileId: null, voiceMode: null, subtitleLanguage: null, subtitleFilenameRule: null, subtitleMaxLineLength: null, ttsSpeed: 1.1, timingPolicy: null, output16x9Enabled: null, output9x16Enabled: true },
+  effectiveConfig: { ...pipeline, ttsSpeed: 1.1, output9x16Enabled: true },
+  inheritance: { targetLanguage: 'CHANNEL', defaultVoiceProfileId: 'CHANNEL', voiceMode: 'CHANNEL', subtitleLanguage: 'CHANNEL', subtitleFilenameRule: 'CHANNEL', subtitleMaxLineLength: 'CHANNEL', ttsSpeed: 'SERIES', timingPolicy: 'CHANNEL', output16x9Enabled: 'CHANNEL', output9x16Enabled: 'SERIES' },
+  mask: { x: 0.1, y: 0.8, width: 0.8, height: 0.1 }, assets: [], readiness: 'READY', readinessIssues: [],
+  version: 2, parentVersion: channelProfile.version, createdAt: '2026-09-19T08:00:00.000Z', updatedAt: '2026-09-20T09:00:00.000Z',
+} satisfies SeriesProfile;
+
+export const channelProfilesEnvelope = { data: { items: [channelProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies ChannelProfileListEnvelope;
+export const seriesProfilesEnvelope = { data: { items: [seriesProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies SeriesProfileListEnvelope;
 
 export function createProblemDetails(
   overrides: Partial<ProblemDetails> = {},

@@ -115,6 +115,11 @@ export class ProfilesController {
     return result;
   }
 
+  @Get('channel-profiles/:id/assets/:linkId/preview')
+  previewChannelAsset(@Param('id') id: string, @Param('linkId') linkId: string) {
+    return this.run(() => this.assets.preview({ type: 'CHANNEL', id: profileId(id) }, profileId(linkId)));
+  }
+
   @Get('series-profiles')
   listSeries(@Query() query: ProfileListQueryDto) {
     return this.run(() => this.profiles.listSeries(query));
@@ -200,6 +205,11 @@ export class ProfilesController {
     ));
     response.header('ETag', seriesEtag(result.profileVersion, result.parentVersion!));
     return result;
+  }
+
+  @Get('series-profiles/:id/assets/:linkId/preview')
+  previewSeriesAsset(@Param('id') id: string, @Param('linkId') linkId: string) {
+    return this.run(() => this.assets.preview({ type: 'SERIES', id: profileId(id) }, profileId(linkId)));
   }
 
   private async run<T>(action: () => Promise<T>): Promise<T> {

@@ -28,6 +28,16 @@ export class ProfileAssetsService {
     };
   }
 
+  async preview(owner: ProfileOwner, linkId: string) {
+    const asset = await this.repository.getAvailable(owner, linkId);
+    const grant = await this.objectStore.createPreviewGrant(asset);
+    return {
+      assetId: asset.id, method: 'GET' as const, url: grant.url,
+      expiresAt: grant.expiresAt.toISOString(), fileName: asset.fileName,
+      contentType: asset.contentType, byteSize: asset.byteSize,
+    };
+  }
+
   async commit(owner: ProfileOwner, assetId: string, expectedVersion: number, expectedParentVersion: number | undefined, idempotencyKey: string) {
     const requestHash = createHash('sha256')
       .update(`${owner.type}:${owner.id}:${assetId}:${expectedVersion}:${expectedParentVersion ?? ''}`).digest('hex');

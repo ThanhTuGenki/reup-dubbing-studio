@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
-for (const path of ['/discovery', '/queue', '/library', '/library/video-1', '/publishing', '/workers', '/channel-profiles', '/voices']) {
+for (const path of ['/discovery', '/queue', '/library', '/library/video-1', '/publishing', '/workers', '/voices']) {
   test(`reserved route ${path} keeps the shell`, async ({ page }) => {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeVisible();

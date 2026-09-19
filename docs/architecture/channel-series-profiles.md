@@ -286,10 +286,12 @@ POST   /v1/series-profiles/{seriesProfileId}/restore
 POST   /v1/channel-profiles/{channelProfileId}/assets/uploads
 POST   /v1/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/grant
 POST   /v1/channel-profiles/{channelProfileId}/assets/uploads/{assetId}/commit
+GET    /v1/channel-profiles/{channelProfileId}/assets/{linkId}/preview
 DELETE /v1/channel-profiles/{channelProfileId}/assets/{linkId}
 POST   /v1/series-profiles/{seriesProfileId}/assets/uploads
 POST   /v1/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/grant
 POST   /v1/series-profiles/{seriesProfileId}/assets/uploads/{assetId}/commit
+GET    /v1/series-profiles/{seriesProfileId}/assets/{linkId}/preview
 DELETE /v1/series-profiles/{seriesProfileId}/assets/{linkId}
 
 GET    /v1/series-profiles/{seriesProfileId}/cast
