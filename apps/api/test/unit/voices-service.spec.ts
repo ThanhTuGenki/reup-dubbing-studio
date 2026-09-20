@@ -61,4 +61,16 @@ describe('VoiceSamplesService', () => {
     const service = new VoiceSamplesService(repository, store);
     await expect(service.preview('voice-id', 'sample-id')).rejects.toMatchObject({ code: 'VOICE_SAMPLE_NOT_AVAILABLE', message: 'R2 unavailable' });
   });
+
+  it.each([
+    [{ ...pending, durationMs: 2999 }, 'Sample duration'],
+    [{ ...pending, contentType: 'audio/ogg' }, 'Unsupported sample content type'],
+    [{ ...pending, checksumSha256: 'not-a-checksum' }, 'Invalid sample checksum'],
+  ])('rejects invalid sample authorization metadata', async (input, message) => {
+    const repository = { createPending: jest.fn() } as unknown as VoiceSampleRepository;
+    const store = { target: jest.fn() } as unknown as ProfileObjectStore;
+    const service = new VoiceSamplesService(repository, store);
+    await expect(service.requestUpload('voice-id', input)).rejects.toThrow(message);
+    expect(store.target).not.toHaveBeenCalled();
+  });
 });

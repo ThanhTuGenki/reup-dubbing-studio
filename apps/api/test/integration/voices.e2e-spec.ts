@@ -41,9 +41,13 @@ describeWithDatabase('Voice Library API with PostgreSQL', () => {
     };
     const samples = new VoiceSamplesService(new PrismaVoiceSampleRepository(prisma), store);
     const grant = await samples.requestUpload(voiceId, { language: 'vi', transcript: 'Xin chào thế giới', durationMs: 5000, fileName: 'sample.wav', contentType: 'audio/wav', byteSize: 128 });
+    const pendingAsset = await prisma.asset.findUniqueOrThrow({ where: { id: grant.assetId } });
+    expect(JSON.stringify({ bucket: pendingAsset.bucket, objectKey: pendingAsset.objectKey, metadata: pendingAsset.metadata })).not.toContain('signature=secret');
     const committed = await samples.commit(voiceId, grant.assetId, 1, '01994429-ec00-7000-8000-000000000033');
     expect(committed).toMatchObject({ profileVersion: 2, sample: { language: 'vi', revision: 1 } });
     await expect(samples.commit(voiceId, grant.assetId, 1, '01994429-ec00-7000-8000-000000000033')).resolves.toEqual(committed);
+    const commitRecord = await prisma.idempotencyRecord.findUniqueOrThrow({ where: { scope_key: { scope: 'COMMIT_VOICE_SAMPLE', key: '01994429-ec00-7000-8000-000000000033' } } });
+    expect(JSON.stringify(commitRecord)).not.toMatch(/signature=secret|example\.invalid/u);
     const sampleId = (committed.sample as { id: string }).id;
     await expect(samples.preview(voiceId, sampleId)).resolves.toMatchObject({ method: 'GET', fileName: 'sample.wav' });
 
