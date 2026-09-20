@@ -4,10 +4,15 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
-  it.each(['/queue', '/library', '/library/video-1', '/publishing', '/workers'])('keeps the shell for reserved path %s', (route) => {
+  it.each(['/library', '/library/video-1', '/publishing', '/workers'])('keeps the shell for reserved path %s', (route) => {
     renderApp(<AppRoutes />, { route });
     expect(screen.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+  });
+  it('renders Queue inside the shell', async () => {
+    renderApp(<AppRoutes />, { route: '/queue' });
+    expect(await screen.findByRole('heading', { name: 'Hàng đợi xử lý' })).toBeInTheDocument();
+    expect((await screen.findAllByText('Video Queue mẫu')).length).toBeGreaterThan(0);
   });
   it('renders Discovery inside the shell', async () => {
     renderApp(<AppRoutes />, { route: '/discovery' });

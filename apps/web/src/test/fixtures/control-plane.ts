@@ -14,6 +14,8 @@ import type {
   DiscoveryCategory,
   DiscoveryItem,
   Watchlist,
+  QueueJob,
+  QueueJobDetail,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -107,6 +109,11 @@ export const ingestCreateEnvelope = {
   },
   meta: { requestId: READY_REQUEST_ID },
 };
+export const queueTask = { id: ingestTaskId, taskType: 'DOWNLOAD', resourceClass: 'IO', status: 'READY' as const, progressPercent: 25, progressDetail: 'Đang chuẩn bị tải', attemptCount: 0, maxAttempts: 3, readyAt: '2026-09-20T08:31:00.000Z', version: 1, createdAt: '2026-09-20T08:31:00.000Z', updatedAt: '2026-09-20T08:32:00.000Z' };
+export const queueJob = { id: ingestJobId, videoId: ingestVideoId, kind: 'INGEST' as const, status: 'QUEUED' as const, version: 1, title: 'Video Queue mẫu', channelProfileId: channelProfile.id, channelProfileName: channelProfile.name, seriesProfileId: null, seriesProfileName: null, currentTask: queueTask, progress: { percent: 25, completedTasks: 0, totalTasks: 1 }, failure: null, actions: { canRetry: false, canCancel: true }, startedAt: null, finishedAt: null, createdAt: '2026-09-20T08:31:00.000Z', updatedAt: '2026-09-20T08:32:00.000Z' } satisfies QueueJob;
+export const queueJobDetail = { ...queueJob, tasks: [queueTask], timeline: [] } satisfies QueueJobDetail;
+export const queueListEnvelope = { data: { items: [queueJob], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } };
+export const queueDetailEnvelope = { data: queueJobDetail, meta: { requestId: READY_REQUEST_ID } };
 
 export function createProblemDetails(
   overrides: Partial<ProblemDetails> = {},
