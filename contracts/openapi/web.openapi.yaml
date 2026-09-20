@@ -647,6 +647,188 @@ paths:
                   requestId: 0191f3d2-7f5b-7abc-8b2e-123456789abd
         default:
           $ref: '#/components/responses/Problem'
+  /source-accounts:
+    get:
+      summary: Liệt kê tài khoản nguồn
+      operationId: listSourceAccounts
+      parameters:
+        - name: platform
+          in: query
+          schema: { $ref: '#/components/schemas/SourcePlatform' }
+      responses:
+        '200':
+          description: Danh sách tài khoản nguồn và health metadata.
+          content: { application/json: { schema: { $ref: '#/components/schemas/SourceAccountListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Tạo tài khoản nguồn
+      operationId: createSourceAccount
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateSourceAccount' } } }
+      responses:
+        '201':
+          description: Tài khoản nguồn đã tạo.
+          content: { application/json: { schema: { $ref: '#/components/schemas/SourceAccountEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /source-accounts/{sourceAccountId}/credentials:
+    post:
+      summary: Rotate Netscape cookie đã mã hóa
+      operationId: importSourceCredential
+      parameters: [{ $ref: '#/components/parameters/SourceAccountId' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ImportSourceCredential' } } }
+      responses:
+        '200':
+          description: Credential đã rotate; response không chứa secret.
+          content: { application/json: { schema: { $ref: '#/components/schemas/SourceAccountEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /source-accounts/{sourceAccountId}/validate:
+    post:
+      summary: Kiểm tra credential bằng browser adapter
+      operationId: validateSourceAccount
+      parameters: [{ $ref: '#/components/parameters/SourceAccountId' }]
+      responses:
+        '200':
+          description: Health metadata mới nhất.
+          content: { application/json: { schema: { $ref: '#/components/schemas/SourceAccountEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /source-accounts/{sourceAccountId}/credentials/current:
+    delete:
+      summary: Revoke credential hiện tại
+      operationId: revokeSourceCredential
+      parameters: [{ $ref: '#/components/parameters/SourceAccountId' }]
+      responses:
+        '200':
+          description: Credential đã revoke.
+          content: { application/json: { schema: { $ref: '#/components/schemas/SourceAccountEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /discovery/categories:
+    get:
+      summary: Liệt kê category động của provider
+      operationId: listDiscoveryCategories
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/SourcePlatform' }
+      responses:
+        '200':
+          description: Category đang active.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryCategoryListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /discovery/runs:
+    post:
+      summary: Queue một lần quét Discovery
+      operationId: createDiscoveryRun
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateDiscoveryRun' } } }
+      responses:
+        '202':
+          description: Run QUEUED; provider chạy ngoài request.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryRunEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /discovery/runs/{discoveryRunId}:
+    get:
+      summary: Đọc trạng thái Discovery run
+      operationId: getDiscoveryRun
+      parameters: [{ $ref: '#/components/parameters/DiscoveryRunId' }]
+      responses:
+        '200':
+          description: Run không lộ provider cursor hoặc raw payload.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryRunEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /discovery/runs/{discoveryRunId}/cancel:
+    post:
+      summary: Hủy run theo cách idempotent
+      operationId: cancelDiscoveryRun
+      parameters: [{ $ref: '#/components/parameters/DiscoveryRunId' }]
+      responses:
+        '200':
+          description: Run sau yêu cầu cancel.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryRunEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /discovery/items:
+    get:
+      summary: Liệt kê source content đã persist
+      operationId: listDiscoveryItems
+      parameters:
+        - { name: runId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: categoryId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: creatorId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: contentType, in: query, schema: { $ref: '#/components/schemas/SourceContentType' } }
+        - { name: availability, in: query, schema: { $ref: '#/components/schemas/Availability' } }
+        - { name: ingestEligible, in: query, schema: { type: boolean } }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Cursor nội bộ; chỉ cover URL đã sanitize.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryItemListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /watchlists:
+    get:
+      summary: Liệt kê watchlist
+      operationId: listWatchlists
+      responses:
+        '200':
+          description: Danh sách watchlist.
+          content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Tạo creator watchlist
+      operationId: createWatchlist
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateWatchlist' } } }
+      responses:
+        '201':
+          description: Watchlist đã tạo.
+          content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /watchlists/{watchlistId}:
+    patch:
+      summary: Cập nhật watchlist
+      operationId: updateWatchlist
+      parameters:
+        - { $ref: '#/components/parameters/WatchlistId' }
+        - { $ref: '#/components/parameters/DiscoveryIfMatch' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateWatchlist' } } }
+      responses:
+        '200':
+          description: Watchlist sau cập nhật.
+          content: { application/json: { schema: { $ref: '#/components/schemas/WatchlistEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+    delete:
+      summary: Xóa watchlist khi không có active run
+      operationId: deleteWatchlist
+      parameters:
+        - { $ref: '#/components/parameters/WatchlistId' }
+        - { $ref: '#/components/parameters/DiscoveryIfMatch' }
+      responses:
+        '200':
+          description: Watchlist đã xóa.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DeletedResourceEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /watchlists/{watchlistId}/run:
+    post:
+      summary: Queue run có audit trail cho watchlist
+      operationId: runWatchlist
+      parameters:
+        - { $ref: '#/components/parameters/WatchlistId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      responses:
+        '202':
+          description: Discovery run QUEUED.
+          content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryRunEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
 components:
   parameters:
     ChannelProfileId:
@@ -661,6 +843,21 @@ components:
       schema: { $ref: '#/components/schemas/UuidV7' }
     VoiceProfileId:
       name: voiceProfileId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    SourceAccountId:
+      name: sourceAccountId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    DiscoveryRunId:
+      name: discoveryRunId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    WatchlistId:
+      name: watchlistId
       in: path
       required: true
       schema: { $ref: '#/components/schemas/UuidV7' }
@@ -691,6 +888,11 @@ components:
       description: Strong effective ETag gồm version Series và parent Channel.
       schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
     VoiceIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    DiscoveryIfMatch:
       name: If-Match
       in: header
       required: true
@@ -754,6 +956,211 @@ components:
       description: Strong ETag của Voice Profile và current sample set.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    SourcePlatform: { type: string, enum: [DOUYIN, BILIBILI, YOUTUBE] }
+    CredentialStatus: { type: string, enum: [ACTIVE, EXPIRED, CAPTCHA_REQUIRED, INVALID, REVOKED] }
+    DiscoveryMode: { type: string, enum: [JINGXUAN, CATEGORY, COURSE, CREATOR, MIX, SEARCH_VIDEO, SEARCH_USER, VIDEO_URL, WATCHLIST] }
+    DiscoveryRunStatus: { type: string, enum: [QUEUED, RUNNING, SUCCEEDED, PARTIAL, FAILED, CANCELLED] }
+    SourceContentType: { type: string, enum: [VIDEO, LONG_VIDEO, NOTE, SLIDES, ARTICLE, LIVE, UNKNOWN] }
+    Availability: { type: string, enum: [AVAILABLE, PRIVATE, REMOVED, REGION_BLOCKED, UNKNOWN] }
+    WatchlistStatus: { type: string, enum: [ACTIVE, PAUSED, CREDENTIAL_REQUIRED, FAILED] }
+    CreateSourceAccount:
+      type: object
+      additionalProperties: false
+      required: [platform, displayName]
+      properties:
+        platform: { $ref: '#/components/schemas/SourcePlatform' }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+    ImportSourceCredential:
+      type: object
+      additionalProperties: false
+      required: [netscapeCookie]
+      properties:
+        netscapeCookie: { type: string, minLength: 1, maxLength: 262144, writeOnly: true }
+    SourceCredentialHealth:
+      type: object
+      additionalProperties: false
+      required: [kind, importedAt, expiresAt]
+      properties:
+        kind: { type: string, const: NETSCAPE_COOKIE }
+        importedAt: { type: string, format: date-time }
+        expiresAt: { type: [string, 'null'], format: date-time }
+    SourceAccount:
+      type: object
+      additionalProperties: false
+      required: [id, platform, displayName, status, credential, lastValidatedAt, lastSuccessAt, consecutiveFailures, cooldownUntil, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        platform: { $ref: '#/components/schemas/SourcePlatform' }
+        displayName: { type: string }
+        status: { $ref: '#/components/schemas/CredentialStatus' }
+        credential: { oneOf: [{ $ref: '#/components/schemas/SourceCredentialHealth' }, { type: 'null' }] }
+        lastValidatedAt: { type: [string, 'null'], format: date-time }
+        lastSuccessAt: { type: [string, 'null'], format: date-time }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        cooldownUntil: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DiscoveryCategory:
+      type: object
+      additionalProperties: false
+      required: [id, platform, externalKey, slug, label, kind, parentId]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        platform: { $ref: '#/components/schemas/SourcePlatform' }
+        externalKey: { type: string }
+        slug: { type: [string, 'null'] }
+        label: { type: string }
+        kind: { type: string }
+        parentId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+    CreateDiscoveryRun:
+      type: object
+      additionalProperties: false
+      required: [sourceAccountId, mode]
+      properties:
+        sourceAccountId: { $ref: '#/components/schemas/UuidV7' }
+        mode: { $ref: '#/components/schemas/DiscoveryMode' }
+        input: { type: string, maxLength: 2000 }
+        query: { type: string, maxLength: 200 }
+        categoryId: { $ref: '#/components/schemas/UuidV7' }
+        requestedLimit: { type: integer, enum: [20, 50, 100] }
+    DiscoveryRun:
+      type: object
+      additionalProperties: false
+      required: [id, sourceAccountId, mode, status, input, query, categoryId, watchlistId, requestedLimit, pageCount, itemCount, skippedCounts, errorCode, errorDetail, version, startedAt, finishedAt, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        sourceAccountId: { $ref: '#/components/schemas/UuidV7' }
+        mode: { $ref: '#/components/schemas/DiscoveryMode' }
+        status: { $ref: '#/components/schemas/DiscoveryRunStatus' }
+        input: { type: [string, 'null'] }
+        query: { type: [string, 'null'] }
+        categoryId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        watchlistId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        requestedLimit: { type: [integer, 'null'] }
+        pageCount: { type: integer, minimum: 0 }
+        itemCount: { type: integer, minimum: 0 }
+        skippedCounts: { type: object, additionalProperties: { type: integer, minimum: 0 } }
+        errorCode: { type: [string, 'null'] }
+        errorDetail: { type: [string, 'null'] }
+        version: { type: integer, minimum: 1 }
+        startedAt: { type: [string, 'null'], format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    DiscoveryCreatorSummary:
+      type: object
+      additionalProperties: false
+      required: [id, externalId, nickname, profileUrl]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        externalId: { type: string }
+        nickname: { type: [string, 'null'] }
+        profileUrl: { type: [string, 'null'], format: uri }
+    DiscoveryMetrics:
+      type: object
+      additionalProperties: false
+      required: [capturedAt, playCount, diggCount, commentCount, collectCount, shareCount]
+      properties:
+        capturedAt: { type: string, format: date-time }
+        playCount: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        diggCount: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        commentCount: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        collectCount: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        shareCount: { type: [string, 'null'], pattern: '^[0-9]+$' }
+    SourceContentSummary:
+      type: object
+      additionalProperties: false
+      required: [id, platform, externalId, contentType, title, description, canonicalUrl, publishedAt, durationMs, width, height, availability, ingestEligible, firstSeenAt, lastSeenAt, creator, categories, cover, metrics]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        platform: { $ref: '#/components/schemas/SourcePlatform' }
+        externalId: { type: string }
+        contentType: { $ref: '#/components/schemas/SourceContentType' }
+        title: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        canonicalUrl: { type: [string, 'null'], format: uri }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        durationMs: { type: [integer, 'null'], minimum: 0 }
+        width: { type: [integer, 'null'], minimum: 0 }
+        height: { type: [integer, 'null'], minimum: 0 }
+        availability: { $ref: '#/components/schemas/Availability' }
+        ingestEligible: { type: boolean }
+        firstSeenAt: { type: string, format: date-time }
+        lastSeenAt: { type: string, format: date-time }
+        creator: { oneOf: [{ $ref: '#/components/schemas/DiscoveryCreatorSummary' }, { type: 'null' }] }
+        categories: { type: array, items: { $ref: '#/components/schemas/DiscoveryCategory' } }
+        cover:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [url, requiresRefresh]
+              properties: { url: { type: string, format: uri }, requiresRefresh: { type: boolean } }
+            - type: 'null'
+        metrics: { oneOf: [{ $ref: '#/components/schemas/DiscoveryMetrics' }, { type: 'null' }] }
+    DiscoveryItem:
+      type: object
+      additionalProperties: false
+      required: [id, runId, rank, discoveredAt, sourceContent]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        runId: { $ref: '#/components/schemas/UuidV7' }
+        rank: { type: integer, minimum: 1 }
+        discoveredAt: { type: string, format: date-time }
+        sourceContent: { $ref: '#/components/schemas/SourceContentSummary' }
+    CreateWatchlist:
+      type: object
+      additionalProperties: false
+      required: [sourceAccountId, mode, input, displayName, scheduleIntervalMin]
+      properties:
+        sourceAccountId: { $ref: '#/components/schemas/UuidV7' }
+        mode: { type: string, const: CREATOR }
+        input: { type: string, format: uri, maxLength: 2000 }
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        scheduleIntervalMin: { type: integer, minimum: 15, maximum: 43200 }
+    UpdateWatchlist:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 120 }
+        status: { $ref: '#/components/schemas/WatchlistStatus' }
+        scheduleIntervalMin: { type: integer, minimum: 15, maximum: 43200 }
+    Watchlist:
+      type: object
+      additionalProperties: false
+      required: [id, sourceAccountId, mode, resolvedInput, displayName, status, scheduleIntervalMin, nextRunAt, lastRunAt, lastSuccessAt, consecutiveFailures, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        sourceAccountId: { $ref: '#/components/schemas/UuidV7' }
+        mode: { type: string, const: CREATOR }
+        resolvedInput: { type: object, additionalProperties: true }
+        displayName: { type: string }
+        status: { $ref: '#/components/schemas/WatchlistStatus' }
+        scheduleIntervalMin: { type: integer }
+        nextRunAt: { type: string, format: date-time }
+        lastRunAt: { type: [string, 'null'], format: date-time }
+        lastSuccessAt: { type: [string, 'null'], format: date-time }
+        consecutiveFailures: { type: integer, minimum: 0 }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SourceAccountEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/SourceAccount' } } }]
+    SourceAccountListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/SourceAccount' } } } } } }]
+    DiscoveryCategoryListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/DiscoveryCategory' } } } } } }]
+    DiscoveryRunEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/DiscoveryRun' } } }]
+    DiscoveryItemListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items, nextCursor], properties: { items: { type: array, items: { $ref: '#/components/schemas/DiscoveryItem' } }, nextCursor: { type: [string, 'null'] } } } } }]
+    WatchlistEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Watchlist' } } }]
+    WatchlistListEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/Watchlist' } } } } } }]
+    DeletedResourceEnvelope:
+      allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [id], properties: { id: { $ref: '#/components/schemas/UuidV7' } } } } }]
     UuidV7:
       type: string
       format: uuid
@@ -1554,6 +1961,19 @@ components:
             - VOICE_ARCHIVED
             - VOICE_IN_USE
             - VOICE_SAMPLE_NOT_AVAILABLE
+            - SOURCE_ACCOUNT_NOT_FOUND
+            - SOURCE_ACCOUNT_VERSION_CONFLICT
+            - SOURCE_ACCOUNT_CREDENTIAL_REQUIRED
+            - DISCOVERY_RUN_NOT_FOUND
+            - DISCOVERY_MODE_DISABLED
+            - DISCOVERY_RUN_CONFLICT
+            - WATCHLIST_NOT_FOUND
+            - WATCHLIST_VERSION_CONFLICT
+            - WATCHLIST_DUPLICATE
+            - WATCHLIST_RUN_ACTIVE
+            - DISCOVERY_VALIDATION_FAILED
+            - DISCOVERY_CURSOR_INVALID
+            - DISCOVERY_PROVIDER_UNAVAILABLE
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

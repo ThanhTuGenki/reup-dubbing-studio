@@ -18,6 +18,13 @@ import {
   createVoiceProfile,
   commitVoiceSampleUpload,
   previewVoiceSample,
+  listSourceAccounts,
+  importSourceCredential,
+  createDiscoveryRun,
+  listDiscoveryItems,
+  createWatchlist,
+  runWatchlist,
+  type DiscoveryRun,
   type Settings,
   type ProblemDetails,
   type SuccessEnvelope,
@@ -43,6 +50,13 @@ describe('Control Plane client public API', () => {
     expect(createVoiceProfile).toBeTypeOf('function');
     expect(commitVoiceSampleUpload).toBeTypeOf('function');
     expect(previewVoiceSample).toBeTypeOf('function');
+    expect(listSourceAccounts).toBeTypeOf('function');
+    expect(importSourceCredential).toBeTypeOf('function');
+    expect(createDiscoveryRun).toBeTypeOf('function');
+    expect(listDiscoveryItems).toBeTypeOf('function');
+    expect(createWatchlist).toBeTypeOf('function');
+    expect(runWatchlist).toBeTypeOf('function');
+    expectTypeOf<DiscoveryRun>().toHaveProperty('status');
     expectTypeOf<Settings>().toHaveProperty('retention');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');
     expectTypeOf<ProblemDetails>().toHaveProperty('requestId');

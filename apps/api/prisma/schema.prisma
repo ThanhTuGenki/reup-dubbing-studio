@@ -85,6 +85,76 @@ enum SeriesProfileAssetRole {
   MASK_REFERENCE_FRAME
 }
 
+enum SourcePlatform {
+  DOUYIN
+  BILIBILI
+  YOUTUBE
+}
+
+enum CredentialStatus {
+  ACTIVE
+  EXPIRED
+  CAPTCHA_REQUIRED
+  INVALID
+  REVOKED
+}
+
+enum DiscoveryMode {
+  JINGXUAN
+  CATEGORY
+  COURSE
+  CREATOR
+  MIX
+  SEARCH_VIDEO
+  SEARCH_USER
+  VIDEO_URL
+  WATCHLIST
+}
+
+enum DiscoveryRunStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+  CANCELLED
+}
+
+enum SourceContentType {
+  VIDEO
+  LONG_VIDEO
+  NOTE
+  SLIDES
+  ARTICLE
+  LIVE
+  UNKNOWN
+}
+
+enum Availability {
+  AVAILABLE
+  PRIVATE
+  REMOVED
+  REGION_BLOCKED
+  UNKNOWN
+}
+
+enum MediaCandidateRole {
+  COVER
+  COVER_169
+  ORIGIN_COVER
+  PLAYBACK
+  PLAYBACK_H265
+  AUDIO
+  OTHER
+}
+
+enum WatchlistStatus {
+  ACTIVE
+  PAUSED
+  CREDENTIAL_REQUIRED
+  FAILED
+}
+
 model SystemCredential {
   id               String               @id @db.Uuid
   kind             SystemCredentialKind @unique
@@ -154,8 +224,8 @@ model VoiceProfile {
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  channelDefaults ChannelProfile[] @relation("ChannelDefaultVoice")
-  seriesOverrides SeriesProfile[]  @relation("SeriesOverrideVoice")
+  channelDefaults ChannelProfile[]     @relation("ChannelDefaultVoice")
+  seriesOverrides SeriesProfile[]      @relation("SeriesOverrideVoice")
   samples         VoiceProfileSample[]
 
   @@index([status, primaryLanguage, createdAt, id])
@@ -327,4 +397,276 @@ model SeriesProfileAsset {
   @@unique([seriesProfileId, role, revision])
   @@index([assetId])
   @@map("series_profile_assets")
+}
+
+model SourceAccount {
+  id                  String           @id @db.Uuid
+  platform            SourcePlatform
+  displayName         String           @map("display_name")
+  status              CredentialStatus @default(INVALID)
+  lastValidatedAt     DateTime?        @map("last_validated_at") @db.Timestamptz(6)
+  lastSuccessAt       DateTime?        @map("last_success_at") @db.Timestamptz(6)
+  consecutiveFailures Int              @default(0) @map("consecutive_failures")
+  cooldownUntil       DateTime?        @map("cooldown_until") @db.Timestamptz(6)
+  version             Int              @default(1)
+  createdAt           DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  credentials SourceCredential[]
+  runs        DiscoveryRun[]
+  watchlists  Watchlist[]
+
+  @@index([platform, createdAt, id])
+  @@map("source_accounts")
+}
+
+model SourceCredential {
+  id              String    @id @db.Uuid
+  sourceAccountId String    @map("source_account_id") @db.Uuid
+  kind            String
+  ciphertext      Bytes
+  encryptionKeyId String    @map("encryption_key_id")
+  encryptedAt     DateTime  @map("encrypted_at") @db.Timestamptz(6)
+  expiresAt       DateTime? @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt      DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt       DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  sourceAccount SourceAccount @relation(fields: [sourceAccountId], references: [id], onDelete: Restrict)
+
+  @@index([sourceAccountId, kind, revokedAt])
+  @@map("source_credentials")
+}
+
+model SourceCreator {
+  id               String         @id @db.Uuid
+  platform         SourcePlatform
+  externalId       String         @map("external_id")
+  externalSecureId String?        @map("external_secure_id")
+  nickname         String?
+  avatarUrl        String?        @map("avatar_url")
+  profileUrl       String?        @map("profile_url")
+  availability     Availability   @default(UNKNOWN)
+  firstSeenAt      DateTime       @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt       DateTime       @map("last_seen_at") @db.Timestamptz(6)
+  metadata         Json           @default("{}")
+  createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  contents SourceContent[]
+
+  @@unique([platform, externalId])
+  @@index([platform, lastSeenAt])
+  @@map("source_creators")
+}
+
+model SourceCategory {
+  id          String         @id @db.Uuid
+  platform    SourcePlatform
+  externalKey String         @map("external_key")
+  slug        String?
+  label       String
+  kind        String
+  parentId    String?        @map("parent_id") @db.Uuid
+  isActive    Boolean        @default(true) @map("is_active")
+  lastSeenAt  DateTime       @map("last_seen_at") @db.Timestamptz(6)
+  metadata    Json           @default("{}")
+
+  parent       SourceCategory?         @relation("SourceCategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children     SourceCategory[]        @relation("SourceCategoryTree")
+  contentLinks SourceContentCategory[]
+  runItems     DiscoveryItem[]
+  runs         DiscoveryRun[]
+
+  @@unique([platform, kind, externalKey])
+  @@index([platform, kind, isActive])
+  @@map("source_categories")
+}
+
+model SourceContent {
+  id                String            @id @db.Uuid
+  platform          SourcePlatform
+  externalId        String            @map("external_id")
+  encodedExternalId String?           @map("encoded_external_id")
+  creatorId         String?           @map("creator_id") @db.Uuid
+  contentType       SourceContentType @map("content_type")
+  externalTypeCode  String?           @map("external_type_code")
+  title             String?
+  description       String?
+  canonicalUrl      String?           @map("canonical_url")
+  publishedAt       DateTime?         @map("published_at") @db.Timestamptz(6)
+  durationMs        Int?              @map("duration_ms")
+  width             Int?
+  height            Int?
+  availability      Availability      @default(UNKNOWN)
+  isIngestEligible  Boolean           @default(false) @map("is_ingest_eligible")
+  firstSeenAt       DateTime          @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt        DateTime          @map("last_seen_at") @db.Timestamptz(6)
+  metadataVersion   Int               @default(1) @map("metadata_version")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  creator         SourceCreator?          @relation(fields: [creatorId], references: [id], onDelete: Restrict)
+  mediaCandidates SourceMediaCandidate[]
+  metricSnapshots ContentMetricSnapshot[]
+  categoryLinks   SourceContentCategory[]
+  discoveryItems  DiscoveryItem[]
+
+  @@unique([platform, externalId])
+  @@index([platform, publishedAt, id])
+  @@index([creatorId, publishedAt, id])
+  @@index([availability, lastSeenAt])
+  @@index([contentType, publishedAt])
+  @@map("source_contents")
+}
+
+model SourceMediaCandidate {
+  id              String             @id @db.Uuid
+  sourceContentId String             @map("source_content_id") @db.Uuid
+  role            MediaCandidateRole
+  canonicalUrl    String?            @map("canonical_url")
+  urlFingerprint  String             @map("url_fingerprint")
+  requiresRefresh Boolean            @default(false) @map("requires_refresh")
+  codec           String?
+  container       String?
+  bitrate         Int?
+  width           Int?
+  height          Int?
+  observedAt      DateTime           @map("observed_at") @db.Timestamptz(6)
+  expiresAt       DateTime?          @map("expires_at") @db.Timestamptz(6)
+  metadata        Json               @default("{}")
+
+  sourceContent SourceContent @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceContentId, role, urlFingerprint])
+  @@index([sourceContentId, role, observedAt])
+  @@map("source_media_candidates")
+}
+
+model ContentMetricSnapshot {
+  id              String   @id @db.Uuid
+  sourceContentId String   @map("source_content_id") @db.Uuid
+  capturedAt      DateTime @map("captured_at") @db.Timestamptz(6)
+  playCount       BigInt?  @map("play_count")
+  diggCount       BigInt?  @map("digg_count")
+  commentCount    BigInt?  @map("comment_count")
+  collectCount    BigInt?  @map("collect_count")
+  shareCount      BigInt?  @map("share_count")
+  forwardCount    BigInt?  @map("forward_count")
+  liveWatchCount  BigInt?  @map("live_watch_count")
+
+  sourceContent SourceContent @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceContentId, capturedAt])
+  @@map("content_metric_snapshots")
+}
+
+model SourceContentCategory {
+  sourceContentId  String @map("source_content_id") @db.Uuid
+  sourceCategoryId String @map("source_category_id") @db.Uuid
+  relationType     String @map("relation_type")
+
+  sourceContent  SourceContent  @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  sourceCategory SourceCategory @relation(fields: [sourceCategoryId], references: [id], onDelete: Restrict)
+
+  @@id([sourceContentId, sourceCategoryId, relationType])
+  @@map("source_content_categories")
+}
+
+model DiscoveryRun {
+  id              String             @id @db.Uuid
+  sourceAccountId String             @map("source_account_id") @db.Uuid
+  mode            DiscoveryMode
+  status          DiscoveryRunStatus @default(QUEUED)
+  input           String?
+  query           String?
+  categoryId      String?            @map("category_id") @db.Uuid
+  watchlistId     String?            @map("watchlist_id") @db.Uuid
+  providerCursor  Json?              @map("provider_cursor")
+  requestedLimit  Int?               @map("requested_limit")
+  pageCount       Int                @default(0) @map("page_count")
+  itemCount       Int                @default(0) @map("item_count")
+  skippedCounts   Json               @default("{}") @map("skipped_counts")
+  responseLogId   String?            @map("response_log_id")
+  errorCode       String?            @map("error_code")
+  errorDetailSafe String?            @map("error_detail_safe")
+  version         Int                @default(1)
+  startedAt       DateTime?          @map("started_at") @db.Timestamptz(6)
+  finishedAt      DateTime?          @map("finished_at") @db.Timestamptz(6)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sourceAccount SourceAccount    @relation(fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  category      SourceCategory?  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  watchlist     Watchlist?       @relation(fields: [watchlistId], references: [id], onDelete: Restrict)
+  items         DiscoveryItem[]
+  rawEvents     SourceRawEvent[]
+
+  @@index([sourceAccountId, status, createdAt])
+  @@index([watchlistId, status, createdAt])
+  @@map("discovery_runs")
+}
+
+model DiscoveryItem {
+  id              String   @id @db.Uuid
+  discoveryRunId  String   @map("discovery_run_id") @db.Uuid
+  sourceContentId String   @map("source_content_id") @db.Uuid
+  rank            Int
+  pageIndex       Int      @map("page_index")
+  categoryId      String?  @map("category_id") @db.Uuid
+  isTopCard       Boolean  @default(false) @map("is_top_card")
+  isBigCard       Boolean  @default(false) @map("is_big_card")
+  providerReason  String?  @map("provider_reason")
+  discoveredAt    DateTime @map("discovered_at") @db.Timestamptz(6)
+
+  discoveryRun  DiscoveryRun    @relation(fields: [discoveryRunId], references: [id], onDelete: Restrict)
+  sourceContent SourceContent   @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  category      SourceCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([discoveryRunId, sourceContentId])
+  @@unique([discoveryRunId, rank])
+  @@index([discoveryRunId, rank, id])
+  @@map("discovery_items")
+}
+
+model Watchlist {
+  id                  String          @id @db.Uuid
+  sourceAccountId     String          @map("source_account_id") @db.Uuid
+  mode                DiscoveryMode
+  resolvedInput       Json            @map("resolved_input")
+  resolvedIdentity    String          @map("resolved_identity")
+  displayName         String          @map("display_name")
+  status              WatchlistStatus @default(ACTIVE)
+  scheduleIntervalMin Int             @map("schedule_interval_min")
+  nextRunAt           DateTime        @map("next_run_at") @db.Timestamptz(6)
+  lastRunAt           DateTime?       @map("last_run_at") @db.Timestamptz(6)
+  lastSuccessAt       DateTime?       @map("last_success_at") @db.Timestamptz(6)
+  cursor              Json?
+  consecutiveFailures Int             @default(0) @map("consecutive_failures")
+  version             Int             @default(1)
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sourceAccount SourceAccount  @relation(fields: [sourceAccountId], references: [id], onDelete: Restrict)
+  runs          DiscoveryRun[]
+
+  @@unique([sourceAccountId, mode, resolvedIdentity])
+  @@index([status, nextRunAt])
+  @@map("watchlists")
+}
+
+model SourceRawEvent {
+  id              String   @id @db.Uuid
+  discoveryRunId  String   @map("discovery_run_id") @db.Uuid
+  endpointKind    String   @map("endpoint_kind")
+  schemaVersion   Int      @map("schema_version")
+  payloadChecksum String   @map("payload_checksum")
+  payload         Json
+  capturedAt      DateTime @map("captured_at") @db.Timestamptz(6)
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(6)
+
+  discoveryRun DiscoveryRun @relation(fields: [discoveryRunId], references: [id], onDelete: Restrict)
+
+  @@index([expiresAt])
+  @@map("source_raw_events")
 }
