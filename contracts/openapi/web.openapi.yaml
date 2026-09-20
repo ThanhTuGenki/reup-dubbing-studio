@@ -857,6 +857,83 @@ paths:
           description: Ít nhất một Ingest Job được tạo.
           content: { application/json: { schema: { $ref: '#/components/schemas/IngestCreateEnvelope' } } }
         default: { $ref: '#/components/responses/Problem' }
+  /queue/jobs:
+    get:
+      summary: Liệt kê Job trong Queue
+      operationId: listQueueJobs
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: kind, in: query, schema: { type: string } }
+        - { name: resourceClass, in: query, schema: { type: string } }
+        - { name: channelProfileId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: query, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: createdFrom, in: query, schema: { type: string, format: date-time } }
+        - { name: createdTo, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Trang Queue theo cursor.
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueJobListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /queue/jobs/{queueJobId}:
+    get:
+      summary: Đọc chi tiết Job, Task và timeline an toàn
+      operationId: getQueueJob
+      parameters: [{ $ref: '#/components/parameters/QueueJobId' }]
+      responses:
+        '200':
+          description: Queue Job hiện tại.
+          headers: { ETag: { $ref: '#/components/headers/QueueJobEtag' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueJobDetailEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /queue/jobs/{queueJobId}/attempts:
+    get:
+      summary: Liệt kê attempt an toàn của Job
+      operationId: listQueueJobAttempts
+      parameters:
+        - { $ref: '#/components/parameters/QueueJobId' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Trang attempt.
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueAttemptListEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /queue/jobs/{queueJobId}/cancel:
+    post:
+      summary: Hủy Job idempotent
+      operationId: cancelQueueJob
+      parameters:
+        - { $ref: '#/components/parameters/QueueJobId' }
+        - { $ref: '#/components/parameters/QueueIfMatch' }
+        - { $ref: '#/components/parameters/IngestIdempotencyKey' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/QueueAction' } } }
+      responses:
+        '200':
+          description: Job sau cancel.
+          headers: { ETag: { $ref: '#/components/headers/QueueJobEtag' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueJobDetailEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /queue/jobs/{queueJobId}/retry:
+    post:
+      summary: Retry một Task lỗi của Job
+      operationId: retryQueueJob
+      parameters:
+        - { $ref: '#/components/parameters/QueueJobId' }
+        - { $ref: '#/components/parameters/QueueIfMatch' }
+        - { $ref: '#/components/parameters/IngestIdempotencyKey' }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/QueueAction' } } }
+      responses:
+        '200':
+          description: Job đã queue lại Task lỗi.
+          headers: { ETag: { $ref: '#/components/headers/QueueJobEtag' } }
+          content: { application/json: { schema: { $ref: '#/components/schemas/QueueJobDetailEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
 components:
   parameters:
     ChannelProfileId:
@@ -886,6 +963,11 @@ components:
       schema: { $ref: '#/components/schemas/UuidV7' }
     WatchlistId:
       name: watchlistId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    QueueJobId:
+      name: queueJobId
       in: path
       required: true
       schema: { $ref: '#/components/schemas/UuidV7' }
@@ -969,6 +1051,11 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 8, maxLength: 128, pattern: '^[!-~]+$' }
+    QueueIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   headers:
     RequestId:
       description: UUID v7 do API sinh cho request hiện tại.
@@ -987,6 +1074,9 @@ components:
       schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
     VoiceProfileEtag:
       description: Strong ETag của Voice Profile và current sample set.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    QueueJobEtag:
+      description: Strong ETag của Queue Job.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
     SourcePlatform: { type: string, enum: [DOUYIN, BILIBILI, YOUTUBE] }
@@ -2022,6 +2112,130 @@ components:
       properties:
         data: { $ref: '#/components/schemas/IngestCreateResult' }
         meta: { $ref: '#/components/schemas/SuccessMeta' }
+    QueueJobStatus: { type: string, enum: [QUEUED, RUNNING, WAITING_FOR_GPU, WAITING_FOR_REVIEW, SUCCEEDED, FAILED, CANCELLED] }
+    QueueTask:
+      type: object
+      additionalProperties: false
+      required: [id, taskType, resourceClass, status, progressPercent, progressDetail, attemptCount, maxAttempts, readyAt, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        taskType: { type: string }
+        resourceClass: { type: string }
+        status: { type: string, enum: [BLOCKED, READY, LEASED, RUNNING, WAITING, SUCCEEDED, FAILED, CANCELLED] }
+        progressPercent: { type: integer, minimum: 0, maximum: 100 }
+        progressDetail: { type: [string, 'null'] }
+        attemptCount: { type: integer, minimum: 0 }
+        maxAttempts: { type: integer, minimum: 1 }
+        readyAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    QueueJob:
+      type: object
+      required: [id, videoId, kind, status, version, title, channelProfileId, channelProfileName, seriesProfileId, seriesProfileName, currentTask, progress, failure, actions, startedAt, finishedAt, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        kind: { type: string, enum: [INGEST, FULL_PIPELINE, RERENDER, REGENERATE_CONTENT] }
+        status: { $ref: '#/components/schemas/QueueJobStatus' }
+        version: { type: integer, minimum: 1 }
+        title: { type: [string, 'null'] }
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        channelProfileName: { type: [string, 'null'] }
+        seriesProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        seriesProfileName: { type: [string, 'null'] }
+        currentTask: { oneOf: [{ $ref: '#/components/schemas/QueueTask' }, { type: 'null' }] }
+        progress:
+          type: object
+          additionalProperties: false
+          required: [percent, completedTasks, totalTasks]
+          properties:
+            percent: { type: integer, minimum: 0, maximum: 100 }
+            completedTasks: { type: integer, minimum: 0 }
+            totalTasks: { type: integer, minimum: 0 }
+        failure:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [code, detail]
+              properties: { code: { type: string }, detail: { type: [string, 'null'] } }
+            - { type: 'null' }
+        actions:
+          type: object
+          additionalProperties: false
+          required: [canRetry, canCancel]
+          properties: { canRetry: { type: boolean }, canCancel: { type: boolean } }
+        startedAt: { type: [string, 'null'], format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    QueueTimelineEvent:
+      type: object
+      additionalProperties: false
+      required: [id, eventType, fromStatus, toStatus, message, occurredAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        eventType: { type: string }
+        fromStatus: { type: [string, 'null'] }
+        toStatus: { type: [string, 'null'] }
+        message: { type: [string, 'null'] }
+        occurredAt: { type: string, format: date-time }
+    QueueJobDetail:
+      allOf:
+        - { $ref: '#/components/schemas/QueueJob' }
+        - type: object
+          required: [tasks, timeline]
+          properties:
+            tasks: { type: array, items: { $ref: '#/components/schemas/QueueTask' } }
+            timeline: { type: array, items: { $ref: '#/components/schemas/QueueTimelineEvent' } }
+    QueueAction:
+      type: object
+      additionalProperties: false
+      properties:
+        taskId: { $ref: '#/components/schemas/UuidV7' }
+        reason: { type: string, maxLength: 500 }
+    QueueAttempt:
+      type: object
+      additionalProperties: false
+      required: [id, taskId, taskType, attemptNumber, executorKind, status, startedAt, finishedAt, executionMs, errorCode, errorDetail]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        taskId: { $ref: '#/components/schemas/UuidV7' }
+        taskType: { type: string }
+        attemptNumber: { type: integer, minimum: 1 }
+        executorKind: { type: string, enum: [CONTROL_PLANE, WORKER] }
+        status: { type: string, enum: [STARTED, SUCCEEDED, FAILED, TIMED_OUT, CANCELLED] }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: [string, 'null'], format: date-time }
+        executionMs: { type: [string, 'null'], pattern: '^[0-9]+$' }
+        errorCode: { type: [string, 'null'] }
+        errorDetail: { type: [string, 'null'] }
+    QueueJobListEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items: { type: array, items: { $ref: '#/components/schemas/QueueJob' } }
+            nextCursor: { type: [string, 'null'] }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    QueueJobDetailEnvelope:
+      type: object
+      required: [data, meta]
+      properties: { data: { $ref: '#/components/schemas/QueueJobDetail' }, meta: { $ref: '#/components/schemas/SuccessMeta' } }
+    QueueAttemptListEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items: { type: array, items: { $ref: '#/components/schemas/QueueAttempt' } }
+            nextCursor: { type: [string, 'null'] }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     ProblemDetails:
       type: object
       description: RFC 9457 với extension code và requestId.
@@ -2093,6 +2307,12 @@ components:
             - DISCOVERY_PROVIDER_UNAVAILABLE
             - INGEST_VALIDATION_FAILED
             - INGEST_NO_CREATABLE_ITEMS
+            - QUEUE_VALIDATION_FAILED
+            - QUEUE_JOB_NOT_FOUND
+            - QUEUE_CURSOR_INVALID
+            - JOB_NOT_CANCELLABLE
+            - JOB_NOT_RETRYABLE
+            - JOB_RETRY_CONFLICT
             - IDEMPOTENCY_KEY_REUSED
         requestId:
           $ref: '#/components/schemas/RequestId'

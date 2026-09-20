@@ -80,7 +80,7 @@
 
 - [ ] **Hoàn tất feature Queue.**
   - [x] Phân tích lifecycle job/task và các action được phép theo từng trạng thái.
-  - [ ] API list/detail/filter job, progress, attempt/log an toàn, retry/cancel và
+  - [x] API list/detail/filter job, progress, attempt/log an toàn, retry/cancel và
     SSE status update.
   - [ ] Web xây bảng queue, progress, filter, detail/drawer và action retry/cancel.
   - [ ] Kiểm thử state transition, stale update, reconnect và error recovery.
