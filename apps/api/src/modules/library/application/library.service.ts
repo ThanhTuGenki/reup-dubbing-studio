@@ -10,6 +10,6 @@ export class LibraryService {
   async grantOutput(videoId: string, outputId: string, part: AssetPart, purpose: GrantPurpose) { return this.grant(await this.repository.outputAssetForGrant(videoId, outputId, part), purpose); }
   private async grant(asset: Awaited<ReturnType<PrismaLibraryRepository['assetForGrant']>>, purpose: GrantPurpose) {
     const signed = await this.objects.createGrant(asset, purpose);
-    return { data: { method: 'GET' as const, url: signed.url, expiresAt: signed.expiresAt.toISOString(), fileName: asset.fileName, contentType: asset.contentType, byteSize: asset.byteSize?.toString() ?? null } };
+    return { method: 'GET' as const, url: signed.url, expiresAt: signed.expiresAt.toISOString(), fileName: asset.fileName, contentType: asset.contentType, byteSize: asset.byteSize?.toString() ?? null };
   }
 }

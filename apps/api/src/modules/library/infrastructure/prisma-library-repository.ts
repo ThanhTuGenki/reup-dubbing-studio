@@ -21,9 +21,9 @@ export class PrismaLibraryRepository {
       collected.push(...matched); const lastScanned = rows.at(-1); mayHaveMore = rows.length === 101; if (!mayHaveMore || !lastScanned) break; scan = { at: lastScanned.updatedAt, id: lastScanned.id };
     }
     const page = collected.slice(0, limit); const last = page.at(-1);
-    return { data: { items: page.map(view), nextCursor: (collected.length > limit || mayHaveMore) && last ? encode(last.updatedAt, last.id) : null } };
+    return { items: page.map(view), nextCursor: (collected.length > limit || mayHaveMore) && last ? encode(last.updatedAt, last.id) : null };
   }
-  async detail(id: string) { const row = await this.prisma.video.findUnique({ where: { id }, include }); if (!row) throw new LibraryError('VIDEO_NOT_FOUND', 'Video was not found'); return { data: view(row) }; }
+  async detail(id: string) { const row = await this.prisma.video.findUnique({ where: { id }, include }); if (!row) throw new LibraryError('VIDEO_NOT_FOUND', 'Video was not found'); return view(row); }
   async assetForGrant(videoId: string, linkId: string) { const link = await this.prisma.videoAsset.findFirst({ where: { id: linkId, videoId, isCurrent: true }, include: { asset: true } }); if (!link || link.asset.status !== 'AVAILABLE' || link.asset.deletedAt) throw new LibraryError('LIBRARY_ASSET_NOT_AVAILABLE', 'Asset is not available'); return link.asset; }
   async outputAssetForGrant(videoId: string, outputId: string, part: AssetPart) { const output = await this.prisma.renderOutput.findFirst({ where: { id: outputId, videoId }, include: { videoAsset: { include: { asset: true } }, subtitleAsset: { include: { asset: true } }, thumbnailAsset: { include: { asset: true } } } }); const link = part === 'video' ? output?.videoAsset : part === 'subtitle' ? output?.subtitleAsset : output?.thumbnailAsset; if (!link || link.asset.status !== 'AVAILABLE' || link.asset.deletedAt) throw new LibraryError('LIBRARY_ASSET_NOT_AVAILABLE', 'Output asset is not available'); return link.asset; }
 }
