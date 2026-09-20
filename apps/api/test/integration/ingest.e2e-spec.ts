@@ -230,6 +230,38 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
     expect(await prisma.outboxMessage.count({ where: { aggregateId: { in: bulkJobIds }, eventType: 'queue.invalidate' } })).toBe(2);
   });
 
+  it('rejects stale and invalid transitions without partial Queue writes', async () => {
+    const retriedJobId = bulkJobIds[0]!;
+    const cancelledJobId = bulkJobIds[1]!;
+    const beforeEvents = await prisma.workflowEvent.count({ where: { pipelineJobId: { in: bulkJobIds } } });
+    const beforeOutbox = await prisma.outboxMessage.count({ where: { aggregateId: { in: bulkJobIds }, eventType: 'queue.invalidate' } });
+
+    const stale = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${retriedJobId}/cancel`, headers: { 'if-match': '"2"', 'idempotency-key': 'queue-stale-cancel-0003' }, payload: {} });
+    expect(stale.statusCode).toBe(412);
+    expect(stale.json()).toMatchObject({ code: 'VERSION_CONFLICT' });
+
+    const replayCancelled = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${cancelledJobId}/cancel`, headers: { 'if-match': '"2"', 'idempotency-key': 'queue-cancel-replay-0004' }, payload: {} });
+    expect(replayCancelled.statusCode).toBe(200);
+    expect(replayCancelled.json().data).toMatchObject({ status: 'CANCELLED', version: 2 });
+
+    await prisma.pipelineJob.update({ where: { id: retriedJobId }, data: { status: 'SUCCEEDED', finishedAt: new Date(), version: { increment: 1 } } });
+    const terminal = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${retriedJobId}/cancel`, headers: { 'if-match': '"4"', 'idempotency-key': 'queue-terminal-cancel-0005' }, payload: {} });
+    expect(terminal.statusCode).toBe(409);
+    expect(terminal.json()).toMatchObject({ code: 'JOB_NOT_CANCELLABLE' });
+
+    const task = await prisma.pipelineTask.findFirstOrThrow({ where: { pipelineJobId: retriedJobId } });
+    await prisma.pipelineTask.update({ where: { id: task.id }, data: { status: 'FAILED' } });
+    await prisma.pipelineJob.update({ where: { id: retriedJobId }, data: { status: 'FAILED', failureCode: 'PERMANENT_INPUT_INVALID', version: { increment: 1 } } });
+    const permanent = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${retriedJobId}/retry`, headers: { 'if-match': '"5"', 'idempotency-key': 'queue-permanent-retry-0006' }, payload: {} });
+    expect(permanent.statusCode).toBe(409);
+    expect(permanent.json()).toMatchObject({ code: 'JOB_NOT_RETRYABLE' });
+    const permanentDetail = await app.inject({ method: 'GET', url: `/v1/queue/jobs/${retriedJobId}` });
+    expect(permanentDetail.json().data.actions.canRetry).toBe(false);
+
+    expect(await prisma.workflowEvent.count({ where: { pipelineJobId: { in: bulkJobIds } } })).toBe(beforeEvents);
+    expect(await prisma.outboxMessage.count({ where: { aggregateId: { in: bulkJobIds }, eventType: 'queue.invalidate' } })).toBe(beforeOutbox);
+  });
+
   it('streams only safe Queue invalidation payloads written after connection', async () => {
     const repository = new PrismaQueueRepository(prisma);
     const eventPromise = firstValueFrom(repository.events().pipe(timeout(2_500)));
