@@ -8,6 +8,8 @@ import type {
   ChannelProfileListEnvelope,
   SeriesProfile,
   SeriesProfileListEnvelope,
+  VoiceProfile,
+  VoiceProfileListEnvelope,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -71,6 +73,15 @@ export const seriesProfile = {
 
 export const channelProfilesEnvelope = { data: { items: [channelProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies ChannelProfileListEnvelope;
 export const seriesProfilesEnvelope = { data: { items: [seriesProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies SeriesProfileListEnvelope;
+export const voiceProfile = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789ae0', name: 'Giọng kể ấm', primaryLanguage: 'vi',
+  description: 'Giọng kể phim ngắn', tags: ['ấm', 'kể chuyện'], status: 'READY', licenseKind: 'OWNED_RECORDING',
+  licenseReference: null, sourceReference: 'Studio nội bộ', commercialUseAllowed: true,
+  samples: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789ae1', assetId: '0191f3d2-7f5b-7abc-8b2e-123456789ae2', language: 'vi', transcript: 'Xin chào khán giả', durationMs: 5000, fileName: 'voice.wav', contentType: 'audio/wav', byteSize: '128', revision: 1 }],
+  readiness: 'READY', readinessIssues: [], referencedBy: { channelProfiles: 1, seriesProfiles: 0 }, version: 3,
+  createdAt: '2026-09-18T08:00:00.000Z', updatedAt: '2026-09-20T08:00:00.000Z',
+} satisfies VoiceProfile;
+export const voiceProfilesEnvelope = { data: { items: [voiceProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies VoiceProfileListEnvelope;
 
 export function createProblemDetails(
   overrides: Partial<ProblemDetails> = {},
