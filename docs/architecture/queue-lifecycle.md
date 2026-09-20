@@ -127,6 +127,9 @@ Job progress là trung bình `progress_bps` của Task bắt buộc, trong đó 
   `FAILED` gần nhất theo DAG; không retry hàng loạt ngầm.
 - Chỉ retry failure code nằm trong allowlist retryable. Task được reset `READY`,
   `ready_at = now`, `progress_bps = 0`; attempt cũ giữ nguyên.
+- Allowlist Control Plane ban đầu gồm `DOWNLOAD_TIMEOUT`, `RENDER_OOM`,
+  `PROVIDER_TIMEOUT`, `WORKER_LOST`, `LEASE_EXPIRED`, `TRANSIENT_STORAGE_ERROR`
+  và `TRANSIENT_NETWORK_ERROR`; code khác mặc định không retry.
 - Mỗi manual retry cấp đúng một attempt mới bằng cách bảo đảm
   `max_attempts >= attempt_count + 1`. Audit phân biệt automatic và manual retry.
 - Successor chưa chạy giữ `BLOCKED`; successor đã terminal làm request bị từ chối

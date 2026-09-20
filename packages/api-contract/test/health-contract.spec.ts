@@ -73,6 +73,12 @@ describe('generated health contract', () => {
       | 'DISCOVERY_PROVIDER_UNAVAILABLE'
       | 'INGEST_VALIDATION_FAILED'
       | 'INGEST_NO_CREATABLE_ITEMS'
+      | 'QUEUE_VALIDATION_FAILED'
+      | 'QUEUE_JOB_NOT_FOUND'
+      | 'QUEUE_CURSOR_INVALID'
+      | 'JOB_NOT_CANCELLABLE'
+      | 'JOB_NOT_RETRYABLE'
+      | 'JOB_RETRY_CONFLICT'
       | 'IDEMPOTENCY_KEY_REUSED'
     >();
   });

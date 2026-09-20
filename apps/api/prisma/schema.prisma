@@ -205,6 +205,19 @@ enum PipelineTaskStatus {
   CANCELLED
 }
 
+enum TaskExecutorKind {
+  CONTROL_PLANE
+  WORKER
+}
+
+enum TaskAttemptStatus {
+  STARTED
+  SUCCEEDED
+  FAILED
+  TIMED_OUT
+  CANCELLED
+}
+
 enum AuditActorType {
   USER
   WORKER
@@ -632,11 +645,12 @@ model Video {
   updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
   version          Int         @default(1)
 
-  sourceContent  SourceContent  @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
-  channelProfile ChannelProfile @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
-  seriesProfile  SeriesProfile? @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
-  createdBy      User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  sourceContent  SourceContent   @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  channelProfile ChannelProfile  @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  seriesProfile  SeriesProfile?  @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+  createdBy      User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
   jobs           PipelineJob[]
+  workflowEvents WorkflowEvent[]
 
   @@unique([sourceContentId, channelProfileId])
   @@index([status, updatedAt, id])
@@ -661,9 +675,10 @@ model PipelineJob {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   version           Int               @default(1)
 
-  video     Video          @relation(fields: [videoId], references: [id], onDelete: Restrict)
-  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  tasks     PipelineTask[]
+  video          Video           @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  createdBy      User?           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  tasks          PipelineTask[]
+  workflowEvents WorkflowEvent[]
 
   @@index([status, priority, createdAt])
   @@index([videoId, status])
@@ -671,26 +686,126 @@ model PipelineJob {
 }
 
 model PipelineTask {
-  id            String             @id @db.Uuid
-  pipelineJobId String             @map("pipeline_job_id") @db.Uuid
-  taskType      PipelineTaskType   @map("task_type")
-  resourceClass ResourceClass      @map("resource_class")
-  status        PipelineTaskStatus @default(BLOCKED)
-  priority      Int                @default(0)
-  readyAt       DateTime?          @map("ready_at") @db.Timestamptz(6)
-  attemptCount  Int                @default(0) @map("attempt_count")
-  maxAttempts   Int                @default(3) @map("max_attempts")
-  inputManifest Json               @map("input_manifest")
-  configuration Json               @default("{}")
-  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
-  version       Int                @default(1)
+  id                 String             @id @db.Uuid
+  pipelineJobId      String             @map("pipeline_job_id") @db.Uuid
+  taskType           PipelineTaskType   @map("task_type")
+  resourceClass      ResourceClass      @map("resource_class")
+  status             PipelineTaskStatus @default(BLOCKED)
+  priority           Int                @default(0)
+  readyAt            DateTime?          @map("ready_at") @db.Timestamptz(6)
+  attemptCount       Int                @default(0) @map("attempt_count")
+  maxAttempts        Int                @default(3) @map("max_attempts")
+  inputManifest      Json               @map("input_manifest")
+  configuration      Json               @default("{}")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version            Int                @default(1)
+  progressBps        Int                @default(0) @map("progress_bps")
+  progressDetailSafe String?            @map("progress_detail_safe")
 
-  pipelineJob PipelineJob @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  pipelineJob    PipelineJob     @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  attempts       TaskAttempt[]
+  leases         TaskLease[]
+  workflowEvents WorkflowEvent[]
 
   @@index([status, resourceClass, priority, readyAt, id])
   @@index([pipelineJobId, status])
   @@map("pipeline_tasks")
+}
+
+model TaskAttempt {
+  id                 String            @id @db.Uuid
+  pipelineTaskId     String            @map("pipeline_task_id") @db.Uuid
+  attemptNumber      Int               @map("attempt_number")
+  executorKind       TaskExecutorKind  @map("executor_kind")
+  executorInstanceId String            @map("executor_instance_id")
+  workerSessionId    String?           @map("worker_session_id") @db.Uuid
+  status             TaskAttemptStatus
+  startedAt          DateTime          @map("started_at") @db.Timestamptz(6)
+  finishedAt         DateTime?         @map("finished_at") @db.Timestamptz(6)
+  queueWaitMs        BigInt?           @map("queue_wait_ms")
+  executionMs        BigInt?           @map("execution_ms")
+  gpuActiveMs        BigInt?           @map("gpu_active_ms")
+  inputBytes         BigInt?           @map("input_bytes")
+  outputBytes        BigInt?           @map("output_bytes")
+  exitCode           Int?              @map("exit_code")
+  errorCode          String?           @map("error_code")
+  errorDetailSafe    String?           @map("error_detail_safe")
+  metricsSafe        Json              @default("{}") @map("metrics_safe")
+
+  pipelineTask   PipelineTask    @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  leases         TaskLease[]
+  workflowEvents WorkflowEvent[]
+
+  @@unique([pipelineTaskId, attemptNumber])
+  @@index([pipelineTaskId, startedAt])
+  @@map("task_attempts")
+}
+
+model TaskLease {
+  id                 String           @id @db.Uuid
+  pipelineTaskId     String           @map("pipeline_task_id") @db.Uuid
+  taskAttemptId      String           @map("task_attempt_id") @db.Uuid
+  executorKind       TaskExecutorKind @map("executor_kind")
+  executorInstanceId String           @map("executor_instance_id")
+  workerSessionId    String?          @map("worker_session_id") @db.Uuid
+  fencingToken       BigInt           @map("fencing_token")
+  leasedAt           DateTime         @map("leased_at") @db.Timestamptz(6)
+  renewedAt          DateTime         @map("renewed_at") @db.Timestamptz(6)
+  expiresAt          DateTime         @map("expires_at") @db.Timestamptz(6)
+  releasedAt         DateTime?        @map("released_at") @db.Timestamptz(6)
+  releaseReason      String?          @map("release_reason")
+
+  pipelineTask PipelineTask @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  taskAttempt  TaskAttempt  @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+
+  @@unique([pipelineTaskId, fencingToken])
+  @@index([expiresAt])
+  @@map("task_leases")
+}
+
+model WorkflowEvent {
+  id             String         @id @db.Uuid
+  videoId        String?        @map("video_id") @db.Uuid
+  pipelineJobId  String?        @map("pipeline_job_id") @db.Uuid
+  pipelineTaskId String?        @map("pipeline_task_id") @db.Uuid
+  taskAttemptId  String?        @map("task_attempt_id") @db.Uuid
+  eventType      String         @map("event_type")
+  fromStatus     String?        @map("from_status")
+  toStatus       String?        @map("to_status")
+  actorType      AuditActorType @map("actor_type")
+  actorId        String?        @map("actor_id") @db.Uuid
+  messageSafe    String?        @map("message_safe")
+  payloadSafe    Json           @default("{}") @map("payload_safe")
+  occurredAt     DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  video        Video?        @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  pipelineJob  PipelineJob?  @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  pipelineTask PipelineTask? @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  taskAttempt  TaskAttempt?  @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+
+  @@index([pipelineJobId, occurredAt, id])
+  @@map("workflow_events")
+}
+
+model OutboxMessage {
+  id            String    @id @db.Uuid
+  aggregateType String    @map("aggregate_type")
+  aggregateId   String    @map("aggregate_id") @db.Uuid
+  eventType     String    @map("event_type")
+  payloadSafe   Json      @map("payload_safe")
+  occurredAt    DateTime  @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  availableAt   DateTime  @default(now()) @map("available_at") @db.Timestamptz(6)
+  attemptCount  Int       @default(0) @map("attempt_count")
+  lockedBy      String?   @map("locked_by")
+  lockedUntil   DateTime? @map("locked_until") @db.Timestamptz(6)
+  publishedAt   DateTime? @map("published_at") @db.Timestamptz(6)
+  lastErrorSafe String?   @map("last_error_safe")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([publishedAt, availableAt, id])
+  @@index([lockedUntil])
+  @@map("outbox_messages")
 }
 
 model AuditEvent {

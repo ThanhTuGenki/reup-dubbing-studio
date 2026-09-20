@@ -6,6 +6,7 @@ import { ProfilesModule } from './modules/profiles';
 import { VoicesModule } from './modules/voices';
 import { DiscoveryModule } from './modules/discovery';
 import { IngestModule } from './modules/ingest';
+import { QueueModule } from './modules/queue';
 import type { AppConfig } from './platform/config/config';
 import { HealthModule } from './platform/health/health.module';
 
@@ -14,7 +15,7 @@ export class AppModule {
   static register(config: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      imports: [HealthModule, SettingsModule.register(config), ProfilesModule.register(config), VoicesModule.register(config), DiscoveryModule.register(config), IngestModule.register(config)],
+      imports: [HealthModule, SettingsModule.register(config), ProfilesModule.register(config), VoicesModule.register(config), DiscoveryModule.register(config), IngestModule.register(config), QueueModule.register(config)],
     };
   }
 }

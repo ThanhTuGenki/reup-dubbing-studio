@@ -3,6 +3,8 @@ import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../../src/application';
 import type { AppConfig } from '../../src/platform/config/config';
 import { uuidV7 } from '../../src/platform/ids/uuid-v7';
+import { firstValueFrom, timeout } from 'rxjs';
+import { PrismaQueueRepository } from '../../src/modules/queue/infrastructure/prisma-queue-repository';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
@@ -15,14 +17,20 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
   let readySourceId: string;
   let blockedSourceId: string;
   let bulkSourceIds: string[];
+  let bulkJobIds: string[];
 
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
+    await prisma.taskLease.deleteMany();
+    await prisma.workflowEvent.deleteMany();
+    await prisma.taskAttempt.deleteMany();
+    await prisma.outboxMessage.deleteMany({ where: { eventType: 'queue.invalidate' } });
     await prisma.pipelineTask.deleteMany();
     await prisma.pipelineJob.deleteMany();
     await prisma.video.deleteMany();
     await prisma.auditEvent.deleteMany({ where: { action: 'INGEST_JOBS_CREATED' } });
     await prisma.idempotencyRecord.deleteMany({ where: { scope: 'INGEST_CREATE_JOBS_V1' } });
+    await prisma.idempotencyRecord.deleteMany({ where: { scope: { in: ['QUEUE_CANCEL_JOB_V1', 'QUEUE_RETRY_JOB_V1'] } } });
 
     const voiceId = uuidV7();
     const assetId = uuidV7();
@@ -97,11 +105,16 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
   });
 
   afterAll(async () => {
+    await prisma?.taskLease.deleteMany();
+    await prisma?.workflowEvent.deleteMany();
+    await prisma?.taskAttempt.deleteMany();
+    await prisma?.outboxMessage.deleteMany({ where: { eventType: 'queue.invalidate' } });
     await prisma?.pipelineTask.deleteMany();
     await prisma?.pipelineJob.deleteMany();
     await prisma?.video.deleteMany();
     await prisma?.auditEvent.deleteMany({ where: { action: 'INGEST_JOBS_CREATED' } });
     await prisma?.idempotencyRecord.deleteMany({ where: { scope: 'INGEST_CREATE_JOBS_V1' } });
+    await prisma?.idempotencyRecord.deleteMany({ where: { scope: { in: ['QUEUE_CANCEL_JOB_V1', 'QUEUE_RETRY_JOB_V1'] } } });
     await app?.close();
     await prisma?.$disconnect();
   });
@@ -180,9 +193,55 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
       summary: { total: 2, created: 2, reused: 0, skipped: 0 },
       items: bulkSourceIds.map((sourceContentId) => ({ sourceContentId, result: 'CREATED', jobStatus: 'QUEUED' })),
     });
+    bulkJobIds = response.json().data.items.map((item: { jobId: string }) => item.jobId);
     const videos = await prisma.video.findMany({ where: { sourceContentId: { in: bulkSourceIds }, channelProfileId: channelId } });
     expect(videos).toHaveLength(2);
     expect(await prisma.pipelineJob.count({ where: { videoId: { in: videos.map(({ id }) => id) }, kind: 'INGEST' } })).toBe(2);
     expect(await prisma.pipelineTask.count({ where: { pipelineJob: { videoId: { in: videos.map(({ id }) => id) } }, taskType: 'DOWNLOAD' } })).toBe(2);
+  });
+
+  it('lists safe Queue projections and supports retry/cancel with version and idempotency', async () => {
+    const list = await app.inject({ method: 'GET', url: '/v1/queue/jobs?status=QUEUED&limit=2' });
+    expect(list.statusCode).toBe(200);
+    expect(list.json().data.items).toHaveLength(2);
+    expect(JSON.stringify(list.json())).not.toMatch(/inputManifest|cookie|ciphertext|playback/iu);
+
+    const retryJobId = bulkJobIds[0]!;
+    const retryTask = await prisma.pipelineTask.findFirstOrThrow({ where: { pipelineJobId: retryJobId } });
+    await prisma.pipelineTask.update({ where: { id: retryTask.id }, data: { status: 'FAILED', attemptCount: 3 } });
+    await prisma.pipelineJob.update({ where: { id: retryJobId }, data: { status: 'FAILED', failureCode: 'DOWNLOAD_TIMEOUT', failureDetailSafe: 'Provider timeout', finishedAt: new Date(), version: { increment: 1 } } });
+    const failed = await app.inject({ method: 'GET', url: `/v1/queue/jobs/${retryJobId}` });
+    expect(failed.statusCode).toBe(200);
+    expect(failed.headers.etag).toBe('"2"');
+    expect(failed.json().data.actions).toEqual({ canRetry: true, canCancel: false });
+    const retryHeaders = { 'if-match': '"2"', 'idempotency-key': 'queue-retry-test-0001' };
+    const retried = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${retryJobId}/retry`, headers: retryHeaders, payload: { taskId: retryTask.id, reason: 'Manual retry' } });
+    expect(retried.statusCode).toBe(200);
+    expect(retried.headers.etag).toBe('"3"');
+    expect(retried.json().data).toMatchObject({ status: 'QUEUED', version: 3, failure: null });
+    const replay = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${retryJobId}/retry`, headers: retryHeaders, payload: { taskId: retryTask.id, reason: 'Manual retry' } });
+    expect(replay.json().data).toEqual(retried.json().data);
+
+    const cancelJobId = bulkJobIds[1]!;
+    const cancelled = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${cancelJobId}/cancel`, headers: { 'if-match': '"1"', 'idempotency-key': 'queue-cancel-test-0002' }, payload: { reason: 'Operator cancelled' } });
+    expect(cancelled.statusCode).toBe(200);
+    expect(cancelled.json().data).toMatchObject({ status: 'CANCELLED', version: 2 });
+    expect(await prisma.workflowEvent.count({ where: { pipelineJobId: { in: bulkJobIds } } })).toBe(2);
+    expect(await prisma.outboxMessage.count({ where: { aggregateId: { in: bulkJobIds }, eventType: 'queue.invalidate' } })).toBe(2);
+  });
+
+  it('streams only safe Queue invalidation payloads written after connection', async () => {
+    const repository = new PrismaQueueRepository(prisma);
+    const eventPromise = firstValueFrom(repository.events().pipe(timeout(2_500)));
+    const eventId = uuidV7();
+    const job = await prisma.pipelineJob.findUniqueOrThrow({ where: { id: bulkJobIds[0]! } });
+    await prisma.outboxMessage.create({ data: {
+      id: eventId, aggregateType: 'PIPELINE_JOB', aggregateId: job.id, eventType: 'queue.invalidate',
+      payloadSafe: { entity: 'JOB', jobId: job.id, jobVersion: job.version, reason: 'STATUS_CHANGED' },
+    } });
+    await expect(eventPromise).resolves.toEqual({
+      id: eventId, type: 'queue.invalidate',
+      data: { entity: 'JOB', jobId: job.id, jobVersion: job.version, reason: 'STATUS_CHANGED' },
+    });
   });
 });

@@ -794,6 +794,108 @@ export type IngestCreateEnvelope = {
     meta: SuccessMeta;
 };
 
+export type QueueJobStatus = 'QUEUED' | 'RUNNING' | 'WAITING_FOR_GPU' | 'WAITING_FOR_REVIEW' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+
+export type QueueTask = {
+    id: UuidV7;
+    taskType: string;
+    resourceClass: string;
+    status: 'BLOCKED' | 'READY' | 'LEASED' | 'RUNNING' | 'WAITING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
+    progressPercent: number;
+    progressDetail: string | null;
+    attemptCount: number;
+    maxAttempts: number;
+    readyAt: string | null;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type QueueJob = {
+    id: UuidV7;
+    videoId: UuidV7;
+    kind: 'INGEST' | 'FULL_PIPELINE' | 'RERENDER' | 'REGENERATE_CONTENT';
+    status: QueueJobStatus;
+    version: number;
+    title: string | null;
+    channelProfileId: UuidV7;
+    channelProfileName: string | null;
+    seriesProfileId: UuidV7 | null;
+    seriesProfileName: string | null;
+    currentTask: QueueTask | null;
+    progress: {
+        percent: number;
+        completedTasks: number;
+        totalTasks: number;
+    };
+    failure: {
+        code: string;
+        detail: string | null;
+    } | null;
+    actions: {
+        canRetry: boolean;
+        canCancel: boolean;
+    };
+    startedAt: string | null;
+    finishedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type QueueTimelineEvent = {
+    id: UuidV7;
+    eventType: string;
+    fromStatus: string | null;
+    toStatus: string | null;
+    message: string | null;
+    occurredAt: string;
+};
+
+export type QueueJobDetail = QueueJob & {
+    tasks: Array<QueueTask>;
+    timeline: Array<QueueTimelineEvent>;
+};
+
+export type QueueAction = {
+    taskId?: UuidV7;
+    reason?: string;
+};
+
+export type QueueAttempt = {
+    id: UuidV7;
+    taskId: UuidV7;
+    taskType: string;
+    attemptNumber: number;
+    executorKind: 'CONTROL_PLANE' | 'WORKER';
+    status: 'STARTED' | 'SUCCEEDED' | 'FAILED' | 'TIMED_OUT' | 'CANCELLED';
+    startedAt: string;
+    finishedAt: string | null;
+    executionMs: string | null;
+    errorCode: string | null;
+    errorDetail: string | null;
+};
+
+export type QueueJobListEnvelope = {
+    data: {
+        items: Array<QueueJob>;
+        nextCursor: string | null;
+    };
+    meta: SuccessMeta;
+};
+
+export type QueueJobDetailEnvelope = {
+    data: QueueJobDetail;
+    meta: SuccessMeta;
+};
+
+export type QueueAttemptListEnvelope = {
+    data: {
+        items: Array<QueueAttempt>;
+        nextCursor: string | null;
+    };
+    meta: SuccessMeta;
+};
+
 /**
  * RFC 9457 với extension code và requestId.
  */
@@ -803,7 +905,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'IDEMPOTENCY_KEY_REUSED';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED';
     requestId: RequestId;
 };
 
@@ -818,6 +920,8 @@ export type SourceAccountId = UuidV7;
 export type DiscoveryRunId = UuidV7;
 
 export type WatchlistId = UuidV7;
+
+export type QueueJobId = UuidV7;
 
 export type SampleId = UuidV7;
 
@@ -856,6 +960,8 @@ export type IfMatch = string;
 export type IdempotencyKey = string;
 
 export type IngestIdempotencyKey = string;
+
+export type QueueIfMatch = string;
 
 export type ListChannelProfilesData = {
     body?: never;
@@ -2734,3 +2840,177 @@ export type CreateIngestJobsResponses = {
 };
 
 export type CreateIngestJobsResponse = CreateIngestJobsResponses[keyof CreateIngestJobsResponses];
+
+export type ListQueueJobsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        status?: string;
+        kind?: string;
+        resourceClass?: string;
+        channelProfileId?: UuidV7;
+        query?: string;
+        createdFrom?: string;
+        createdTo?: string;
+    };
+    url: '/queue/jobs';
+};
+
+export type ListQueueJobsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListQueueJobsError = ListQueueJobsErrors[keyof ListQueueJobsErrors];
+
+export type ListQueueJobsResponses = {
+    /**
+     * Trang Queue theo cursor.
+     */
+    200: QueueJobListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListQueueJobsResponse = ListQueueJobsResponses[keyof ListQueueJobsResponses];
+
+export type GetQueueJobData = {
+    body?: never;
+    path: {
+        queueJobId: UuidV7;
+    };
+    query?: never;
+    url: '/queue/jobs/{queueJobId}';
+};
+
+export type GetQueueJobErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetQueueJobError = GetQueueJobErrors[keyof GetQueueJobErrors];
+
+export type GetQueueJobResponses = {
+    /**
+     * Queue Job hiện tại.
+     */
+    200: QueueJobDetailEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetQueueJobResponse = GetQueueJobResponses[keyof GetQueueJobResponses];
+
+export type ListQueueJobAttemptsData = {
+    body?: never;
+    path: {
+        queueJobId: UuidV7;
+    };
+    query?: {
+        cursor?: string;
+        limit?: number;
+    };
+    url: '/queue/jobs/{queueJobId}/attempts';
+};
+
+export type ListQueueJobAttemptsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListQueueJobAttemptsError = ListQueueJobAttemptsErrors[keyof ListQueueJobAttemptsErrors];
+
+export type ListQueueJobAttemptsResponses = {
+    /**
+     * Trang attempt.
+     */
+    200: QueueAttemptListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListQueueJobAttemptsResponse = ListQueueJobAttemptsResponses[keyof ListQueueJobAttemptsResponses];
+
+export type CancelQueueJobData = {
+    body: QueueAction;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        queueJobId: UuidV7;
+    };
+    query?: never;
+    url: '/queue/jobs/{queueJobId}/cancel';
+};
+
+export type CancelQueueJobErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CancelQueueJobError = CancelQueueJobErrors[keyof CancelQueueJobErrors];
+
+export type CancelQueueJobResponses = {
+    /**
+     * Job sau cancel.
+     */
+    200: QueueJobDetailEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CancelQueueJobResponse = CancelQueueJobResponses[keyof CancelQueueJobResponses];
+
+export type RetryQueueJobData = {
+    body: QueueAction;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        queueJobId: UuidV7;
+    };
+    query?: never;
+    url: '/queue/jobs/{queueJobId}/retry';
+};
+
+export type RetryQueueJobErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RetryQueueJobError = RetryQueueJobErrors[keyof RetryQueueJobErrors];
+
+export type RetryQueueJobResponses = {
+    /**
+     * Job đã queue lại Task lỗi.
+     */
+    200: QueueJobDetailEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RetryQueueJobResponse = RetryQueueJobResponses[keyof RetryQueueJobResponses];
