@@ -71,7 +71,7 @@
 
 - [ ] **Hoàn tất feature Tạo job.**
   - [x] Phân tích flow chọn video → profile → xác nhận và chốt contract/schema.
-  - [ ] API validate selection, tạo video/ingest job/task idempotent và trả trạng
+  - [x] API validate selection, tạo video/ingest job/task idempotent và trả trạng
     thái khởi tạo.
   - [ ] Web xây wizard/dialog xác nhận, hiển thị duplicate và nói rõ chưa chạy GPU.
   - [ ] Kiểm thử tạo một/nhiều job, retry request và điều hướng sang Queue.

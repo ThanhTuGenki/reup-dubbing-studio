@@ -737,6 +737,63 @@ export type ConnectionTestEnvelope = {
     meta: SuccessMeta;
 };
 
+export type IngestSelection = {
+    sourceAccountId: UuidV7;
+    sourceContentIds: Array<UuidV7>;
+    channelProfileId: UuidV7;
+    seriesProfileId?: UuidV7 | null;
+};
+
+export type IngestDisposition = 'READY' | 'READY_RETRY' | 'ALREADY_QUEUED' | 'ALREADY_INGESTED' | 'SOURCE_NOT_FOUND' | 'SOURCE_UNAVAILABLE' | 'SOURCE_NOT_INGEST_ELIGIBLE' | 'SOURCE_ACCOUNT_UNAVAILABLE' | 'SOURCE_CREDENTIAL_REQUIRED' | 'PROFILE_NOT_READY' | 'SERIES_NOT_READY' | 'SERIES_CHANNEL_MISMATCH' | 'VIDEO_PROFILE_CONFLICT';
+
+export type IngestPreflightItem = {
+    sourceContentId: UuidV7;
+    disposition: IngestDisposition;
+    existingVideoId: UuidV7 | null;
+    existingJobId: UuidV7 | null;
+    issues: Array<string>;
+};
+
+export type IngestPreflight = {
+    summary: {
+        total: number;
+        ready: number;
+        blocked: number;
+    };
+    items: Array<IngestPreflightItem>;
+};
+
+export type IngestCreateItem = {
+    sourceContentId: UuidV7;
+    result: 'CREATED' | 'ALREADY_QUEUED' | 'ALREADY_INGESTED' | 'SKIPPED_INVALID';
+    videoId: UuidV7 | null;
+    jobId: UuidV7 | null;
+    taskId: UuidV7 | null;
+    jobStatus: 'QUEUED' | null;
+    videoStatus: string | null;
+    issues: Array<string>;
+};
+
+export type IngestCreateResult = {
+    summary: {
+        total: number;
+        created: number;
+        reused: number;
+        skipped: number;
+    };
+    items: Array<IngestCreateItem>;
+};
+
+export type IngestPreflightEnvelope = {
+    data: IngestPreflight;
+    meta: SuccessMeta;
+};
+
+export type IngestCreateEnvelope = {
+    data: IngestCreateResult;
+    meta: SuccessMeta;
+};
+
 /**
  * RFC 9457 với extension code và requestId.
  */
@@ -746,7 +803,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'IDEMPOTENCY_KEY_REUSED';
     requestId: RequestId;
 };
 
@@ -797,6 +854,8 @@ export type ChannelProfileFilter = UuidV7;
 export type IfMatch = string;
 
 export type IdempotencyKey = string;
+
+export type IngestIdempotencyKey = string;
 
 export type ListChannelProfilesData = {
     body?: never;
@@ -2610,3 +2669,68 @@ export type RunWatchlistResponses = {
 };
 
 export type RunWatchlistResponse = RunWatchlistResponses[keyof RunWatchlistResponses];
+
+export type PreflightIngestJobsData = {
+    body: IngestSelection;
+    path?: never;
+    query?: never;
+    url: '/ingest/preflight';
+};
+
+export type PreflightIngestJobsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreflightIngestJobsError = PreflightIngestJobsErrors[keyof PreflightIngestJobsErrors];
+
+export type PreflightIngestJobsResponses = {
+    /**
+     * Disposition hiện tại của từng source content.
+     */
+    200: IngestPreflightEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreflightIngestJobsResponse = PreflightIngestJobsResponses[keyof PreflightIngestJobsResponses];
+
+export type CreateIngestJobsData = {
+    body: IngestSelection;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/ingest/jobs';
+};
+
+export type CreateIngestJobsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateIngestJobsError = CreateIngestJobsErrors[keyof CreateIngestJobsErrors];
+
+export type CreateIngestJobsResponses = {
+    /**
+     * Tất cả item dùng lại resource hiện hữu.
+     */
+    200: IngestCreateEnvelope;
+    /**
+     * Ít nhất một Ingest Job được tạo.
+     */
+    201: IngestCreateEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateIngestJobsResponse = CreateIngestJobsResponses[keyof CreateIngestJobsResponses];
