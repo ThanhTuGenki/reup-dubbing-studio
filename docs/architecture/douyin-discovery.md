@@ -1,14 +1,14 @@
 # Douyin Discovery — thiết kế dữ liệu và kế hoạch triển khai
 
-- **Trạng thái:** `DRAFT` — đủ chi tiết để chia vertical slice và triển khai; các
-  endpoint nội bộ vẫn phải qua integration smoke test trước mỗi release.
-- **Cập nhật:** 2026-09-17.
+- **Trạng thái:** `ACCEPTED` — contract/schema MVP đã chốt; adapter production vẫn
+  phải qua live smoke test opt-in trước mỗi release.
+- **Cập nhật:** 2026-09-20.
 - **Nguồn chuẩn cho:** cách thu thập, chuẩn hóa, lưu và hiển thị dữ liệu Douyin
   trong màn hình Discovery; ranh giới Discovery → Ingest; mô hình dữ liệu nguồn;
   yêu cầu bảo mật cookie và vận hành browser session.
-- **Không phải nguồn chuẩn cho:** contract OpenAPI đã `VERIFIED`, schema Prisma đã
-  migrate, thiết kế pipeline media sau khi ingest, hoặc điều khoản sử dụng của
-  Douyin.
+- **Không phải nguồn chuẩn cho:** OpenAPI/generated client đã `VERIFIED`, migration
+  Prisma đã deploy, thiết kế pipeline media sau ingest, hoặc điều khoản sử dụng
+  của Douyin. Các artifact này được tạo ở task triển khai kế tiếp.
 - **Tài liệu liên quan:**
   [`product/design.md`](../product/design.md),
   [`application.md`](application.md),
@@ -294,6 +294,21 @@ Hai loại này không tạo `source_content`; raw event chỉ ghi số lượng
 | Keyword user | Text | Browser/discover search | Cursor | Experimental/captcha |
 | Watchlist | Creator/mix ref | Scheduler gọi mode gốc | Theo mode | Thiết kế sẵn |
 
+### 4.1 Phạm vi MVP đã chốt
+
+Contract production đầu tiên chỉ bật `JINGXUAN`, `CATEGORY`, `COURSE`, `CREATOR`
+và watchlist kiểu `CREATOR`. Đây là phạm vi đã có network evidence và khớp quyết
+định `DB-15`.
+
+`VIDEO_URL`, `MIX`, `SEARCH_VIDEO` và `SEARCH_USER` vẫn có discriminator trong
+domain để không phải đổi schema về sau, nhưng API phải trả
+`DISCOVERY_MODE_DISABLED` cho tới khi validation gate tương ứng có fixture và live
+smoke test. Không giả lập kết quả production cho mode chưa kiểm chứng.
+
+MVP là single-workspace, không có login. Source account/credential là cấu hình
+operator của workspace hiện tại; không thêm `workspace_id`, user owner hoặc RBAC.
+Scan chạy bằng IO runner của Control Plane, không thuộc GPU Worker.
+
 ## 5. Boundary code
 
 Module sở hữu use case là `apps/api/src/modules/discovery`. Chỉ tạo layer khi có
@@ -520,8 +535,9 @@ Remote URL quan sát được, chưa phải asset do hệ thống sở hữu:
 id                    uuid v7 PK
 source_content_id     uuid FK
 role                  MediaCandidateRole
-remote_url            text
+canonical_url         text nullable
 url_fingerprint       text
+requires_refresh      boolean default false
 codec                 text nullable
 container             text nullable
 bitrate               integer nullable
@@ -532,9 +548,12 @@ expires_at             timestamptz nullable
 metadata              jsonb default '{}'
 ```
 
-`url_fingerprint` phải bỏ các query param chữ ký có tuổi thọ ngắn trước khi hash.
-Không coi `remote_url` là định danh bền vững. `video_assets` chỉ chứa object đã tải
-vào R2 với checksum/object key theo kiến trúc chung.
+`url_fingerprint` và `canonical_url` phải bỏ query param chữ ký/token có tuổi thọ
+ngắn trước khi ghi. Playback URL cần chữ ký đặt `requires_refresh=true`; ingest
+phải resolve lại URL trong credential session và không thể dùng row này như URL
+tải trực tiếp. Không lưu signed URL trong DB, raw event, idempotency response hoặc
+log. `video_assets` chỉ chứa object đã tải vào R2 với checksum/object key theo kiến
+trúc chung.
 
 ### 6.8 `content_metric_snapshots`
 
@@ -786,7 +805,29 @@ Notifications/SSE slice có sẵn, event chỉ báo invalidation và UI refetch 
 Bulk ingest nhận `sourceContentIds` và `Idempotency-Key`. Response trả item nào đã
 queue, item nào đã có active ingest và item nào không đủ điều kiện.
 
-### 9.3 Watchlist
+### 9.3 Resource contract MVP đã chốt
+
+- Mọi mutation nhận `Idempotency-Key` khi có thể tạo resource/run; PATCH nhận
+  strong `If-Match` từ resource version.
+- `POST /discovery/runs` chỉ persist run `QUEUED` và trả `202`; không giữ HTTP mở
+  trong lúc Chromium chạy.
+- `GET /discovery/runs/{id}` trả status, safe error code, counts và version; không
+  trả provider cursor, raw payload, cookie hoặc URL có chữ ký.
+- `GET /discovery/items` nhận cursor nội bộ opaque, `limit=20|50|100`, filter theo
+  provider/run/category/creator/type/availability/ingest eligibility và trả
+  `{items,nextCursor}`. Cursor Douyin không đi qua public API.
+- Source content response gồm identity, creator, category/collection summary,
+  latest metrics, cover candidate đã sanitize và projection ingest. Nó không trả
+  playback candidate.
+- Credential import không echo cookie. Resource account chỉ trả health metadata:
+  status, hint không nhạy cảm, `lastValidatedAt`, `lastSuccessAt`, cooldown và
+  version.
+- Run lifecycle hợp lệ là `QUEUED -> RUNNING -> SUCCEEDED|PARTIAL|FAILED|CANCELLED`;
+  cancel là idempotent và không đổi terminal run.
+- Provider failure có RFC 9457 code ổn định; detail đã sanitize. `requestId` và
+  `discoveryRunId` là hai mã hỗ trợ duy nhất được đưa ra UI.
+
+### 9.4 Watchlist
 
 ```text
 POST   /v1/watchlists
@@ -1090,7 +1131,7 @@ Test thật phải opt-in bằng env và không chạy trên PR mặc định:
 10. yt-dlp listing không được dùng cho creator Douyin; ingest phải có fresh-cookie
     preflight.
 
-## 18. Open validation gates
+## 18. Validation gates sau MVP
 
 Các mục sau không được coi là hoàn tất chỉ dựa trên bundle analysis:
 
@@ -1101,5 +1142,6 @@ Các mục sau không được coi là hoàn tất chỉ dựa trên bundle anal
 - search sau captcha trong account test;
 - giới hạn request an toàn theo thời gian và account.
 
-Những gate này không cản Slice 1–3, nhưng cản việc bật production cho mode liên
-quan.
+Những gate này không cản contract/schema hoặc Slice 1–3 đã accepted, nhưng cản
+việc bật production cho mode liên quan. Thay đổi kết quả probe không được làm đổi
+identity/core schema; chỉ cập nhật capability flag, mapper version hoặc adapter.
