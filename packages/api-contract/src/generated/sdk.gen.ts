@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses } from './types.gen.js';
+import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CancelDiscoveryRunData, CancelDiscoveryRunErrors, CancelDiscoveryRunResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateDiscoveryRunData, CreateDiscoveryRunErrors, CreateDiscoveryRunResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateSourceAccountData, CreateSourceAccountErrors, CreateSourceAccountResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, CreateWatchlistData, CreateWatchlistErrors, CreateWatchlistResponses, DeleteWatchlistData, DeleteWatchlistErrors, DeleteWatchlistResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetDiscoveryRunData, GetDiscoveryRunErrors, GetDiscoveryRunResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, ImportSourceCredentialData, ImportSourceCredentialErrors, ImportSourceCredentialResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListDiscoveryCategoriesData, ListDiscoveryCategoriesErrors, ListDiscoveryCategoriesResponses, ListDiscoveryItemsData, ListDiscoveryItemsErrors, ListDiscoveryItemsResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListSourceAccountsData, ListSourceAccountsErrors, ListSourceAccountsResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, ListWatchlistsData, ListWatchlistsErrors, ListWatchlistsResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, RevokeSourceCredentialData, RevokeSourceCredentialErrors, RevokeSourceCredentialResponses, RunWatchlistData, RunWatchlistErrors, RunWatchlistResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses, UpdateWatchlistData, UpdateWatchlistErrors, UpdateWatchlistResponses, ValidateSourceAccountData, ValidateSourceAccountErrors, ValidateSourceAccountResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -463,6 +463,176 @@ export const getLiveness = <ThrowOnError extends boolean = false>(options?: Opti
 export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>) => {
     return (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({
         url: '/health/ready',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê tài khoản nguồn
+ */
+export const listSourceAccounts = <ThrowOnError extends boolean = false>(options?: Options<ListSourceAccountsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListSourceAccountsResponses, ListSourceAccountsErrors, ThrowOnError>({
+        url: '/source-accounts',
+        ...options
+    });
+};
+
+/**
+ * Tạo tài khoản nguồn
+ */
+export const createSourceAccount = <ThrowOnError extends boolean = false>(options: Options<CreateSourceAccountData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateSourceAccountResponses, CreateSourceAccountErrors, ThrowOnError>({
+        url: '/source-accounts',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Rotate Netscape cookie đã mã hóa
+ */
+export const importSourceCredential = <ThrowOnError extends boolean = false>(options: Options<ImportSourceCredentialData, ThrowOnError>) => {
+    return (options.client ?? client).post<ImportSourceCredentialResponses, ImportSourceCredentialErrors, ThrowOnError>({
+        url: '/source-accounts/{sourceAccountId}/credentials',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Kiểm tra credential bằng browser adapter
+ */
+export const validateSourceAccount = <ThrowOnError extends boolean = false>(options: Options<ValidateSourceAccountData, ThrowOnError>) => {
+    return (options.client ?? client).post<ValidateSourceAccountResponses, ValidateSourceAccountErrors, ThrowOnError>({
+        url: '/source-accounts/{sourceAccountId}/validate',
+        ...options
+    });
+};
+
+/**
+ * Revoke credential hiện tại
+ */
+export const revokeSourceCredential = <ThrowOnError extends boolean = false>(options: Options<RevokeSourceCredentialData, ThrowOnError>) => {
+    return (options.client ?? client).delete<RevokeSourceCredentialResponses, RevokeSourceCredentialErrors, ThrowOnError>({
+        url: '/source-accounts/{sourceAccountId}/credentials/current',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê category động của provider
+ */
+export const listDiscoveryCategories = <ThrowOnError extends boolean = false>(options: Options<ListDiscoveryCategoriesData, ThrowOnError>) => {
+    return (options.client ?? client).get<ListDiscoveryCategoriesResponses, ListDiscoveryCategoriesErrors, ThrowOnError>({
+        url: '/discovery/categories',
+        ...options
+    });
+};
+
+/**
+ * Queue một lần quét Discovery
+ */
+export const createDiscoveryRun = <ThrowOnError extends boolean = false>(options: Options<CreateDiscoveryRunData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateDiscoveryRunResponses, CreateDiscoveryRunErrors, ThrowOnError>({
+        url: '/discovery/runs',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc trạng thái Discovery run
+ */
+export const getDiscoveryRun = <ThrowOnError extends boolean = false>(options: Options<GetDiscoveryRunData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetDiscoveryRunResponses, GetDiscoveryRunErrors, ThrowOnError>({
+        url: '/discovery/runs/{discoveryRunId}',
+        ...options
+    });
+};
+
+/**
+ * Hủy run theo cách idempotent
+ */
+export const cancelDiscoveryRun = <ThrowOnError extends boolean = false>(options: Options<CancelDiscoveryRunData, ThrowOnError>) => {
+    return (options.client ?? client).post<CancelDiscoveryRunResponses, CancelDiscoveryRunErrors, ThrowOnError>({
+        url: '/discovery/runs/{discoveryRunId}/cancel',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê source content đã persist
+ */
+export const listDiscoveryItems = <ThrowOnError extends boolean = false>(options?: Options<ListDiscoveryItemsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListDiscoveryItemsResponses, ListDiscoveryItemsErrors, ThrowOnError>({
+        url: '/discovery/items',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê watchlist
+ */
+export const listWatchlists = <ThrowOnError extends boolean = false>(options?: Options<ListWatchlistsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListWatchlistsResponses, ListWatchlistsErrors, ThrowOnError>({
+        url: '/watchlists',
+        ...options
+    });
+};
+
+/**
+ * Tạo creator watchlist
+ */
+export const createWatchlist = <ThrowOnError extends boolean = false>(options: Options<CreateWatchlistData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateWatchlistResponses, CreateWatchlistErrors, ThrowOnError>({
+        url: '/watchlists',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Xóa watchlist khi không có active run
+ */
+export const deleteWatchlist = <ThrowOnError extends boolean = false>(options: Options<DeleteWatchlistData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DeleteWatchlistResponses, DeleteWatchlistErrors, ThrowOnError>({
+        url: '/watchlists/{watchlistId}',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật watchlist
+ */
+export const updateWatchlist = <ThrowOnError extends boolean = false>(options: Options<UpdateWatchlistData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdateWatchlistResponses, UpdateWatchlistErrors, ThrowOnError>({
+        url: '/watchlists/{watchlistId}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Queue run có audit trail cho watchlist
+ */
+export const runWatchlist = <ThrowOnError extends boolean = false>(options: Options<RunWatchlistData, ThrowOnError>) => {
+    return (options.client ?? client).post<RunWatchlistResponses, RunWatchlistErrors, ThrowOnError>({
+        url: '/watchlists/{watchlistId}/run',
         ...options
     });
 };

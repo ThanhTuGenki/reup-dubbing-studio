@@ -4,6 +4,218 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type SourcePlatform = 'DOUYIN' | 'BILIBILI' | 'YOUTUBE';
+
+export type CredentialStatus = 'ACTIVE' | 'EXPIRED' | 'CAPTCHA_REQUIRED' | 'INVALID' | 'REVOKED';
+
+export type DiscoveryMode = 'JINGXUAN' | 'CATEGORY' | 'COURSE' | 'CREATOR' | 'MIX' | 'SEARCH_VIDEO' | 'SEARCH_USER' | 'VIDEO_URL' | 'WATCHLIST';
+
+export type DiscoveryRunStatus = 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'PARTIAL' | 'FAILED' | 'CANCELLED';
+
+export type SourceContentType = 'VIDEO' | 'LONG_VIDEO' | 'NOTE' | 'SLIDES' | 'ARTICLE' | 'LIVE' | 'UNKNOWN';
+
+export type Availability = 'AVAILABLE' | 'PRIVATE' | 'REMOVED' | 'REGION_BLOCKED' | 'UNKNOWN';
+
+export type WatchlistStatus = 'ACTIVE' | 'PAUSED' | 'CREDENTIAL_REQUIRED' | 'FAILED';
+
+export type CreateSourceAccount = {
+    platform: SourcePlatform;
+    displayName: string;
+};
+
+export type ImportSourceCredential = {
+    netscapeCookie: string;
+};
+
+export type SourceCredentialHealth = {
+    kind: 'NETSCAPE_COOKIE';
+    importedAt: string;
+    expiresAt: string | null;
+};
+
+export type SourceAccount = {
+    id: UuidV7;
+    platform: SourcePlatform;
+    displayName: string;
+    status: CredentialStatus;
+    credential: SourceCredentialHealth | null;
+    lastValidatedAt: string | null;
+    lastSuccessAt: string | null;
+    consecutiveFailures: number;
+    cooldownUntil: string | null;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type DiscoveryCategory = {
+    id: UuidV7;
+    platform: SourcePlatform;
+    externalKey: string;
+    slug: string | null;
+    label: string;
+    kind: string;
+    parentId: UuidV7 | null;
+};
+
+export type CreateDiscoveryRun = {
+    sourceAccountId: UuidV7;
+    mode: DiscoveryMode;
+    input?: string;
+    query?: string;
+    categoryId?: UuidV7;
+    requestedLimit?: 20 | 50 | 100;
+};
+
+export type DiscoveryRun = {
+    id: UuidV7;
+    sourceAccountId: UuidV7;
+    mode: DiscoveryMode;
+    status: DiscoveryRunStatus;
+    input: string | null;
+    query: string | null;
+    categoryId: UuidV7 | null;
+    watchlistId: UuidV7 | null;
+    requestedLimit: number | null;
+    pageCount: number;
+    itemCount: number;
+    skippedCounts: {
+        [key: string]: number;
+    };
+    errorCode: string | null;
+    errorDetail: string | null;
+    version: number;
+    startedAt: string | null;
+    finishedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type DiscoveryCreatorSummary = {
+    id: UuidV7;
+    externalId: string;
+    nickname: string | null;
+    profileUrl: string | null;
+};
+
+export type DiscoveryMetrics = {
+    capturedAt: string;
+    playCount: string | null;
+    diggCount: string | null;
+    commentCount: string | null;
+    collectCount: string | null;
+    shareCount: string | null;
+};
+
+export type SourceContentSummary = {
+    id: UuidV7;
+    platform: SourcePlatform;
+    externalId: string;
+    contentType: SourceContentType;
+    title: string | null;
+    description: string | null;
+    canonicalUrl: string | null;
+    publishedAt: string | null;
+    durationMs: number | null;
+    width: number | null;
+    height: number | null;
+    availability: Availability;
+    ingestEligible: boolean;
+    firstSeenAt: string;
+    lastSeenAt: string;
+    creator: DiscoveryCreatorSummary | null;
+    categories: Array<DiscoveryCategory>;
+    cover: {
+        url: string;
+        requiresRefresh: boolean;
+    } | null;
+    metrics: DiscoveryMetrics | null;
+};
+
+export type DiscoveryItem = {
+    id: UuidV7;
+    runId: UuidV7;
+    rank: number;
+    discoveredAt: string;
+    sourceContent: SourceContentSummary;
+};
+
+export type CreateWatchlist = {
+    sourceAccountId: UuidV7;
+    mode: 'CREATOR';
+    input: string;
+    displayName: string;
+    scheduleIntervalMin: number;
+};
+
+export type UpdateWatchlist = {
+    displayName?: string;
+    status?: WatchlistStatus;
+    scheduleIntervalMin?: number;
+};
+
+export type Watchlist = {
+    id: UuidV7;
+    sourceAccountId: UuidV7;
+    mode: 'CREATOR';
+    resolvedInput: {
+        [key: string]: unknown;
+    };
+    displayName: string;
+    status: WatchlistStatus;
+    scheduleIntervalMin: number;
+    nextRunAt: string;
+    lastRunAt: string | null;
+    lastSuccessAt: string | null;
+    consecutiveFailures: number;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type SourceAccountEnvelope = SuccessEnvelope & {
+    data?: SourceAccount;
+};
+
+export type SourceAccountListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<SourceAccount>;
+    };
+};
+
+export type DiscoveryCategoryListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<DiscoveryCategory>;
+    };
+};
+
+export type DiscoveryRunEnvelope = SuccessEnvelope & {
+    data?: DiscoveryRun;
+};
+
+export type DiscoveryItemListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<DiscoveryItem>;
+        nextCursor: string | null;
+    };
+};
+
+export type WatchlistEnvelope = SuccessEnvelope & {
+    data?: Watchlist;
+};
+
+export type WatchlistListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<Watchlist>;
+    };
+};
+
+export type DeletedResourceEnvelope = SuccessEnvelope & {
+    data?: {
+        id: UuidV7;
+    };
+};
+
 export type UuidV7 = string;
 
 export type ProfileStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
@@ -534,7 +746,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE';
     requestId: RequestId;
 };
 
@@ -543,6 +755,12 @@ export type ChannelProfileId = UuidV7;
 export type SeriesProfileId = UuidV7;
 
 export type VoiceProfileId = UuidV7;
+
+export type SourceAccountId = UuidV7;
+
+export type DiscoveryRunId = UuidV7;
+
+export type WatchlistId = UuidV7;
 
 export type SampleId = UuidV7;
 
@@ -558,6 +776,8 @@ export type ChannelIfMatch = string;
 export type SeriesIfMatch = string;
 
 export type VoiceIfMatch = string;
+
+export type DiscoveryIfMatch = string;
 
 export type Cursor = string;
 
@@ -1908,3 +2128,485 @@ export type GetReadinessResponses = {
 };
 
 export type GetReadinessResponse = GetReadinessResponses[keyof GetReadinessResponses];
+
+export type ListSourceAccountsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        platform?: SourcePlatform;
+    };
+    url: '/source-accounts';
+};
+
+export type ListSourceAccountsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListSourceAccountsError = ListSourceAccountsErrors[keyof ListSourceAccountsErrors];
+
+export type ListSourceAccountsResponses = {
+    /**
+     * Danh sách tài khoản nguồn và health metadata.
+     */
+    200: SourceAccountListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListSourceAccountsResponse = ListSourceAccountsResponses[keyof ListSourceAccountsResponses];
+
+export type CreateSourceAccountData = {
+    body: CreateSourceAccount;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/source-accounts';
+};
+
+export type CreateSourceAccountErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateSourceAccountError = CreateSourceAccountErrors[keyof CreateSourceAccountErrors];
+
+export type CreateSourceAccountResponses = {
+    /**
+     * Tài khoản nguồn đã tạo.
+     */
+    201: SourceAccountEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateSourceAccountResponse = CreateSourceAccountResponses[keyof CreateSourceAccountResponses];
+
+export type ImportSourceCredentialData = {
+    body: ImportSourceCredential;
+    path: {
+        sourceAccountId: UuidV7;
+    };
+    query?: never;
+    url: '/source-accounts/{sourceAccountId}/credentials';
+};
+
+export type ImportSourceCredentialErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ImportSourceCredentialError = ImportSourceCredentialErrors[keyof ImportSourceCredentialErrors];
+
+export type ImportSourceCredentialResponses = {
+    /**
+     * Credential đã rotate; response không chứa secret.
+     */
+    200: SourceAccountEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ImportSourceCredentialResponse = ImportSourceCredentialResponses[keyof ImportSourceCredentialResponses];
+
+export type ValidateSourceAccountData = {
+    body?: never;
+    path: {
+        sourceAccountId: UuidV7;
+    };
+    query?: never;
+    url: '/source-accounts/{sourceAccountId}/validate';
+};
+
+export type ValidateSourceAccountErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ValidateSourceAccountError = ValidateSourceAccountErrors[keyof ValidateSourceAccountErrors];
+
+export type ValidateSourceAccountResponses = {
+    /**
+     * Health metadata mới nhất.
+     */
+    200: SourceAccountEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ValidateSourceAccountResponse = ValidateSourceAccountResponses[keyof ValidateSourceAccountResponses];
+
+export type RevokeSourceCredentialData = {
+    body?: never;
+    path: {
+        sourceAccountId: UuidV7;
+    };
+    query?: never;
+    url: '/source-accounts/{sourceAccountId}/credentials/current';
+};
+
+export type RevokeSourceCredentialErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeSourceCredentialError = RevokeSourceCredentialErrors[keyof RevokeSourceCredentialErrors];
+
+export type RevokeSourceCredentialResponses = {
+    /**
+     * Credential đã revoke.
+     */
+    200: SourceAccountEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeSourceCredentialResponse = RevokeSourceCredentialResponses[keyof RevokeSourceCredentialResponses];
+
+export type ListDiscoveryCategoriesData = {
+    body?: never;
+    path?: never;
+    query: {
+        platform: SourcePlatform;
+    };
+    url: '/discovery/categories';
+};
+
+export type ListDiscoveryCategoriesErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListDiscoveryCategoriesError = ListDiscoveryCategoriesErrors[keyof ListDiscoveryCategoriesErrors];
+
+export type ListDiscoveryCategoriesResponses = {
+    /**
+     * Category đang active.
+     */
+    200: DiscoveryCategoryListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListDiscoveryCategoriesResponse = ListDiscoveryCategoriesResponses[keyof ListDiscoveryCategoriesResponses];
+
+export type CreateDiscoveryRunData = {
+    body: CreateDiscoveryRun;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/discovery/runs';
+};
+
+export type CreateDiscoveryRunErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateDiscoveryRunError = CreateDiscoveryRunErrors[keyof CreateDiscoveryRunErrors];
+
+export type CreateDiscoveryRunResponses = {
+    /**
+     * Run QUEUED; provider chạy ngoài request.
+     */
+    202: DiscoveryRunEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateDiscoveryRunResponse = CreateDiscoveryRunResponses[keyof CreateDiscoveryRunResponses];
+
+export type GetDiscoveryRunData = {
+    body?: never;
+    path: {
+        discoveryRunId: UuidV7;
+    };
+    query?: never;
+    url: '/discovery/runs/{discoveryRunId}';
+};
+
+export type GetDiscoveryRunErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetDiscoveryRunError = GetDiscoveryRunErrors[keyof GetDiscoveryRunErrors];
+
+export type GetDiscoveryRunResponses = {
+    /**
+     * Run không lộ provider cursor hoặc raw payload.
+     */
+    200: DiscoveryRunEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetDiscoveryRunResponse = GetDiscoveryRunResponses[keyof GetDiscoveryRunResponses];
+
+export type CancelDiscoveryRunData = {
+    body?: never;
+    path: {
+        discoveryRunId: UuidV7;
+    };
+    query?: never;
+    url: '/discovery/runs/{discoveryRunId}/cancel';
+};
+
+export type CancelDiscoveryRunErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CancelDiscoveryRunError = CancelDiscoveryRunErrors[keyof CancelDiscoveryRunErrors];
+
+export type CancelDiscoveryRunResponses = {
+    /**
+     * Run sau yêu cầu cancel.
+     */
+    200: DiscoveryRunEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CancelDiscoveryRunResponse = CancelDiscoveryRunResponses[keyof CancelDiscoveryRunResponses];
+
+export type ListDiscoveryItemsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        runId?: UuidV7;
+        categoryId?: UuidV7;
+        creatorId?: UuidV7;
+        contentType?: SourceContentType;
+        availability?: Availability;
+        ingestEligible?: boolean;
+        cursor?: string;
+        limit?: number;
+    };
+    url: '/discovery/items';
+};
+
+export type ListDiscoveryItemsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListDiscoveryItemsError = ListDiscoveryItemsErrors[keyof ListDiscoveryItemsErrors];
+
+export type ListDiscoveryItemsResponses = {
+    /**
+     * Cursor nội bộ; chỉ cover URL đã sanitize.
+     */
+    200: DiscoveryItemListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListDiscoveryItemsResponse = ListDiscoveryItemsResponses[keyof ListDiscoveryItemsResponses];
+
+export type ListWatchlistsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/watchlists';
+};
+
+export type ListWatchlistsErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWatchlistsError = ListWatchlistsErrors[keyof ListWatchlistsErrors];
+
+export type ListWatchlistsResponses = {
+    /**
+     * Danh sách watchlist.
+     */
+    200: WatchlistListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWatchlistsResponse = ListWatchlistsResponses[keyof ListWatchlistsResponses];
+
+export type CreateWatchlistData = {
+    body: CreateWatchlist;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/watchlists';
+};
+
+export type CreateWatchlistErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWatchlistError = CreateWatchlistErrors[keyof CreateWatchlistErrors];
+
+export type CreateWatchlistResponses = {
+    /**
+     * Watchlist đã tạo.
+     */
+    201: WatchlistEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWatchlistResponse = CreateWatchlistResponses[keyof CreateWatchlistResponses];
+
+export type DeleteWatchlistData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        watchlistId: UuidV7;
+    };
+    query?: never;
+    url: '/watchlists/{watchlistId}';
+};
+
+export type DeleteWatchlistErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteWatchlistError = DeleteWatchlistErrors[keyof DeleteWatchlistErrors];
+
+export type DeleteWatchlistResponses = {
+    /**
+     * Watchlist đã xóa.
+     */
+    200: DeletedResourceEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteWatchlistResponse = DeleteWatchlistResponses[keyof DeleteWatchlistResponses];
+
+export type UpdateWatchlistData = {
+    body: UpdateWatchlist;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        watchlistId: UuidV7;
+    };
+    query?: never;
+    url: '/watchlists/{watchlistId}';
+};
+
+export type UpdateWatchlistErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateWatchlistError = UpdateWatchlistErrors[keyof UpdateWatchlistErrors];
+
+export type UpdateWatchlistResponses = {
+    /**
+     * Watchlist sau cập nhật.
+     */
+    200: WatchlistEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateWatchlistResponse = UpdateWatchlistResponses[keyof UpdateWatchlistResponses];
+
+export type RunWatchlistData = {
+    body?: never;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        watchlistId: UuidV7;
+    };
+    query?: never;
+    url: '/watchlists/{watchlistId}/run';
+};
+
+export type RunWatchlistErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RunWatchlistError = RunWatchlistErrors[keyof RunWatchlistErrors];
+
+export type RunWatchlistResponses = {
+    /**
+     * Discovery run QUEUED.
+     */
+    202: DiscoveryRunEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RunWatchlistResponse = RunWatchlistResponses[keyof RunWatchlistResponses];
