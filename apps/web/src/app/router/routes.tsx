@@ -7,9 +7,10 @@ import { SettingsPage } from '../../routes/settings/page';
 import { VoicesPage } from '../../routes/voices/page';
 import { DiscoveryPage } from '../../routes/discovery/page';
 import { QueuePage } from '../../routes/queue/page';
+import { WorkersPage } from '../../routes/workers/page';
 import { AppShell } from '../layouts/app-shell';
 import { paths, reservedPaths } from './paths';
 
 export function AppRoutes() {
-  return <Routes><Route element={<AppShell />}><Route path={paths.foundation} element={<FoundationPage />} /><Route path={paths.settings} element={<SettingsPage />} /><Route path={paths.channelProfiles} element={<ProfilesPage />} /><Route path={paths.voices} element={<VoicesPage />} /><Route path={paths.discovery} element={<DiscoveryPage />} /><Route path={paths.queue} element={<QueuePage />} />{reservedPaths.filter((path) => path !== paths.settings && path !== paths.channelProfiles && path !== paths.voices && path !== paths.discovery && path !== paths.queue).map((path) => <Route key={path} path={path} element={<FeatureUnavailablePage />} />)}<Route path="*" element={<NotFoundPage />} /></Route></Routes>;
+  return <Routes><Route element={<AppShell />}><Route path={paths.foundation} element={<FoundationPage />} /><Route path={paths.settings} element={<SettingsPage />} /><Route path={paths.channelProfiles} element={<ProfilesPage />} /><Route path={paths.voices} element={<VoicesPage />} /><Route path={paths.discovery} element={<DiscoveryPage />} /><Route path={paths.queue} element={<QueuePage />} /><Route path={paths.workers} element={<WorkersPage />} />{reservedPaths.filter((path) => path !== paths.settings && path !== paths.channelProfiles && path !== paths.voices && path !== paths.discovery && path !== paths.queue && path !== paths.workers).map((path) => <Route key={path} path={path} element={<FeatureUnavailablePage />} />)}<Route path="*" element={<NotFoundPage />} /></Route></Routes>;
 }

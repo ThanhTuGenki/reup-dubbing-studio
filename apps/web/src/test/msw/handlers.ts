@@ -23,6 +23,10 @@ import {
   ingestPreflightEnvelope,
   queueDetailEnvelope,
   queueListEnvelope,
+  gpuWorker,
+  safeWorker,
+  workerImagesEnvelope,
+  workerListEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -73,4 +77,13 @@ export const handlers = [
   http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/attempts`, () => HttpResponse.json({ data: { items: [], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } })),
   http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/cancel`, () => HttpResponse.json({ ...queueDetailEnvelope, data: { ...queueDetailEnvelope.data, status: 'CANCELLED', version: 2, actions: { canRetry: false, canCancel: false } } })),
   http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/retry`, () => HttpResponse.json(queueDetailEnvelope)),
+  http.get(`${CONTROL_PLANE_BASE_URL}/workers`, () => HttpResponse.json(workerListEnvelope)),
+  http.get(`${CONTROL_PLANE_BASE_URL}/workers/:workerId`, ({ params }) => HttpResponse.json({ data: params.workerId === safeWorker.id ? safeWorker : gpuWorker, meta: { requestId: READY_REQUEST_ID } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/worker-images`, () => HttpResponse.json(workerImagesEnvelope)),
+  http.post(`${CONTROL_PLANE_BASE_URL}/workers`, async ({ request }) => {
+    const body = await request.json() as Record<string, unknown>;
+    return HttpResponse.json({ data: { worker: { ...gpuWorker, id: '0191f3d2-7f5b-7abc-8b2e-123456789b07', displayName: body.displayName, observedStatus: 'PENDING', currentSession: null, activeLeaseCount: 0, version: 1 }, enrollment: { secretAvailable: true, token: 'enroll_test_secret_once', expiresAt: '2026-09-20T10:15:00.000Z' } }, meta: { requestId: READY_REQUEST_ID } }, { status: 201 });
+  }),
+  http.post(`${CONTROL_PLANE_BASE_URL}/workers/:workerId/drain`, () => HttpResponse.json({ data: { ...gpuWorker, desiredStatus: 'DRAINING', observedStatus: 'DRAINING', version: 4 }, meta: { requestId: READY_REQUEST_ID } })),
+  http.post(`${CONTROL_PLANE_BASE_URL}/workers/:workerId/confirm-termination`, () => HttpResponse.json({ data: { ...safeWorker, observedStatus: 'TERMINATED', version: 6 }, meta: { requestId: READY_REQUEST_ID } })),
 ];

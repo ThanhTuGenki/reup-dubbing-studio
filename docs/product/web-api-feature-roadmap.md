@@ -91,7 +91,7 @@
   - [x] Phân tích enrollment/session/heartbeat/drain và chốt contract/schema.
   - [x] API quản lý worker registry, enrollment, approved image, session,
     heartbeat mới nhất và billing session.
-  - [ ] Web xây danh sách worker, trạng thái/capacity, thêm worker, drain và hướng
+  - [x] Web xây danh sách worker, trạng thái/capacity, thêm worker, drain và hướng
     dẫn xóa rental thủ công.
   - [ ] Kiểm thử offline timeout, revoke credential và version mismatch.
   - [ ] Xác nhận không thêm hoặc sửa implementation trong `workers/gpu`.
