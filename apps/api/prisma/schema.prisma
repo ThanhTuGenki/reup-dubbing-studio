@@ -138,6 +138,84 @@ enum Availability {
   UNKNOWN
 }
 
+enum VideoStatus {
+  INGEST_QUEUED
+  INGESTING
+  INGESTED
+  PROCESSING
+  AWAITING_REVIEW
+  READY_TO_PUBLISH
+  PUBLISHED
+  FAILED
+  ARCHIVED
+}
+
+enum PipelineJobKind {
+  INGEST
+  FULL_PIPELINE
+  RERENDER
+  REGENERATE_CONTENT
+}
+
+enum PipelineJobStatus {
+  QUEUED
+  RUNNING
+  WAITING_FOR_GPU
+  WAITING_FOR_REVIEW
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PipelineTaskType {
+  DOWNLOAD
+  DESUB
+  TRANSCRIBE_OCR
+  TRANSCRIBE_ASR
+  MERGE_TRANSCRIPT
+  TRANSLATE
+  ASSIGN_CAST
+  GENERATE_INITIAL_TTS
+  WAIT_FOR_REVIEW
+  REGENERATE_SEGMENT
+  SEPARATE_AUDIO
+  RENDER
+  EXPORT_SRT
+  UPLOAD_OUTPUTS
+  GENERATE_PUBLISH_PACKAGE
+}
+
+enum ResourceClass {
+  IO
+  CPU
+  GPU_BATCH
+  GPU_TTS_INTERACTIVE
+  CONTROL_PLANE
+  HUMAN_REVIEW
+}
+
+enum PipelineTaskStatus {
+  BLOCKED
+  READY
+  LEASED
+  RUNNING
+  WAITING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum AuditActorType {
+  USER
+  WORKER
+  SYSTEM
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
 enum MediaCandidateRole {
   COVER
   COVER_169
@@ -280,6 +358,7 @@ model ChannelProfile {
   destinations PublishingDestination[]
   series       SeriesProfile[]
   assets       ChannelProfileAsset[]
+  videos       Video[]
 
   @@index([status, createdAt, id])
   @@map("channel_profiles")
@@ -332,6 +411,7 @@ model SeriesProfile {
   channelProfile       ChannelProfile       @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
   defaultVoiceOverride VoiceProfile?        @relation("SeriesOverrideVoice", fields: [defaultVoiceProfileOverrideId], references: [id], onDelete: Restrict)
   assets               SeriesProfileAsset[]
+  videos               Video[]
 
   @@index([channelProfileId, status, createdAt, id])
   @@map("series_profiles")
@@ -511,6 +591,7 @@ model SourceContent {
   metricSnapshots ContentMetricSnapshot[]
   categoryLinks   SourceContentCategory[]
   discoveryItems  DiscoveryItem[]
+  videos          Video[]
 
   @@unique([platform, externalId])
   @@index([platform, publishedAt, id])
@@ -518,6 +599,116 @@ model SourceContent {
   @@index([availability, lastSeenAt])
   @@index([contentType, publishedAt])
   @@map("source_contents")
+}
+
+model User {
+  id          String     @id @db.Uuid
+  displayName String     @map("display_name")
+  email       String?
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version     Int        @default(1)
+
+  videos Video[]
+  jobs   PipelineJob[]
+
+  @@map("users")
+}
+
+model Video {
+  id               String      @id @db.Uuid
+  sourceContentId  String      @map("source_content_id") @db.Uuid
+  channelProfileId String      @map("channel_profile_id") @db.Uuid
+  seriesProfileId  String?     @map("series_profile_id") @db.Uuid
+  status           VideoStatus @default(INGEST_QUEUED)
+  sourceLanguage   String      @map("source_language")
+  targetLanguage   String      @map("target_language")
+  displayTitle     String?     @map("display_title")
+  ingestedAt       DateTime?   @map("ingested_at") @db.Timestamptz(6)
+  archivedAt       DateTime?   @map("archived_at") @db.Timestamptz(6)
+  createdById      String      @map("created_by") @db.Uuid
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version          Int         @default(1)
+
+  sourceContent  SourceContent  @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  channelProfile ChannelProfile @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  seriesProfile  SeriesProfile? @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+  createdBy      User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  jobs           PipelineJob[]
+
+  @@unique([sourceContentId, channelProfileId])
+  @@index([status, updatedAt, id])
+  @@map("videos")
+}
+
+model PipelineJob {
+  id                String            @id @db.Uuid
+  videoId           String            @map("video_id") @db.Uuid
+  kind              PipelineJobKind
+  status            PipelineJobStatus @default(QUEUED)
+  pipelineVersion   String            @map("pipeline_version")
+  profileSnapshot   Json              @map("profile_snapshot")
+  requestedOutputs  Json              @map("requested_outputs")
+  priority          Int               @default(0)
+  createdById       String?           @map("created_by") @db.Uuid
+  startedAt         DateTime?         @map("started_at") @db.Timestamptz(6)
+  finishedAt        DateTime?         @map("finished_at") @db.Timestamptz(6)
+  failureCode       String?           @map("failure_code")
+  failureDetailSafe String?           @map("failure_detail_safe")
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version           Int               @default(1)
+
+  video     Video          @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  createdBy User?          @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  tasks     PipelineTask[]
+
+  @@index([status, priority, createdAt])
+  @@index([videoId, status])
+  @@map("pipeline_jobs")
+}
+
+model PipelineTask {
+  id            String             @id @db.Uuid
+  pipelineJobId String             @map("pipeline_job_id") @db.Uuid
+  taskType      PipelineTaskType   @map("task_type")
+  resourceClass ResourceClass      @map("resource_class")
+  status        PipelineTaskStatus @default(BLOCKED)
+  priority      Int                @default(0)
+  readyAt       DateTime?          @map("ready_at") @db.Timestamptz(6)
+  attemptCount  Int                @default(0) @map("attempt_count")
+  maxAttempts   Int                @default(3) @map("max_attempts")
+  inputManifest Json               @map("input_manifest")
+  configuration Json               @default("{}")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version       Int                @default(1)
+
+  pipelineJob PipelineJob @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+
+  @@index([status, resourceClass, priority, readyAt, id])
+  @@index([pipelineJobId, status])
+  @@map("pipeline_tasks")
+}
+
+model AuditEvent {
+  id           String         @id @db.Uuid
+  actorType    AuditActorType @map("actor_type")
+  actorId      String?        @map("actor_id") @db.Uuid
+  action       String
+  entityType   String         @map("entity_type")
+  entityId     String?        @map("entity_id") @db.Uuid
+  requestId    String?        @map("request_id") @db.Uuid
+  beforeSafe   Json?          @map("before_safe")
+  afterSafe    Json?          @map("after_safe")
+  metadataSafe Json           @default("{}") @map("metadata_safe")
+  occurredAt   DateTime       @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([occurredAt])
+  @@map("audit_events")
 }
 
 model SourceMediaCandidate {

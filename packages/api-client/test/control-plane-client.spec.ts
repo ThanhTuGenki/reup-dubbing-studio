@@ -24,6 +24,8 @@ import {
   listDiscoveryItems,
   createWatchlist,
   runWatchlist,
+  preflightIngestJobs,
+  createIngestJobs,
   type DiscoveryRun,
   type Settings,
   type ProblemDetails,
@@ -56,6 +58,8 @@ describe('Control Plane client public API', () => {
     expect(listDiscoveryItems).toBeTypeOf('function');
     expect(createWatchlist).toBeTypeOf('function');
     expect(runWatchlist).toBeTypeOf('function');
+    expect(preflightIngestJobs).toBeTypeOf('function');
+    expect(createIngestJobs).toBeTypeOf('function');
     expectTypeOf<DiscoveryRun>().toHaveProperty('status');
     expectTypeOf<Settings>().toHaveProperty('retention');
     expectTypeOf<SuccessEnvelope>().toHaveProperty('meta');

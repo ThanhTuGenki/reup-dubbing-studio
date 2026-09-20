@@ -829,6 +829,34 @@ paths:
           description: Discovery run QUEUED.
           content: { application/json: { schema: { $ref: '#/components/schemas/DiscoveryRunEnvelope' } } }
         default: { $ref: '#/components/responses/Problem' }
+  /ingest/preflight:
+    post:
+      summary: Kiểm tra selection trước khi xác nhận tạo Ingest Job
+      operationId: preflightIngestJobs
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IngestSelection' } } }
+      responses:
+        '200':
+          description: Disposition hiện tại của từng source content.
+          content: { application/json: { schema: { $ref: '#/components/schemas/IngestPreflightEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /ingest/jobs:
+    post:
+      summary: Tạo idempotent Ingest Job và DOWNLOAD task
+      operationId: createIngestJobs
+      parameters: [{ $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/IngestSelection' } } }
+      responses:
+        '200':
+          description: Tất cả item dùng lại resource hiện hữu.
+          content: { application/json: { schema: { $ref: '#/components/schemas/IngestCreateEnvelope' } } }
+        '201':
+          description: Ít nhất một Ingest Job được tạo.
+          content: { application/json: { schema: { $ref: '#/components/schemas/IngestCreateEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
 components:
   parameters:
     ChannelProfileId:
@@ -936,6 +964,11 @@ components:
       schema:
         type: string
         format: uuid
+    IngestIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128, pattern: '^[!-~]+$' }
   headers:
     RequestId:
       description: UUID v7 do API sinh cho request hiện tại.
@@ -1905,6 +1938,90 @@ components:
       properties:
         data: { $ref: '#/components/schemas/ConnectionTestResult' }
         meta: { $ref: '#/components/schemas/SuccessMeta' }
+    IngestSelection:
+      type: object
+      additionalProperties: false
+      required: [sourceAccountId, sourceContentIds, channelProfileId]
+      properties:
+        sourceAccountId: { $ref: '#/components/schemas/UuidV7' }
+        sourceContentIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/UuidV7' }
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        seriesProfileId:
+          oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }]
+    IngestDisposition:
+      type: string
+      enum: [READY, READY_RETRY, ALREADY_QUEUED, ALREADY_INGESTED, SOURCE_NOT_FOUND, SOURCE_UNAVAILABLE, SOURCE_NOT_INGEST_ELIGIBLE, SOURCE_ACCOUNT_UNAVAILABLE, SOURCE_CREDENTIAL_REQUIRED, PROFILE_NOT_READY, SERIES_NOT_READY, SERIES_CHANNEL_MISMATCH, VIDEO_PROFILE_CONFLICT]
+    IngestPreflightItem:
+      type: object
+      additionalProperties: false
+      required: [sourceContentId, disposition, existingVideoId, existingJobId, issues]
+      properties:
+        sourceContentId: { $ref: '#/components/schemas/UuidV7' }
+        disposition: { $ref: '#/components/schemas/IngestDisposition' }
+        existingVideoId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        existingJobId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        issues: { type: array, items: { type: string } }
+    IngestPreflight:
+      type: object
+      additionalProperties: false
+      required: [summary, items]
+      properties:
+        summary:
+          type: object
+          additionalProperties: false
+          required: [total, ready, blocked]
+          properties:
+            total: { type: integer, minimum: 1 }
+            ready: { type: integer, minimum: 0 }
+            blocked: { type: integer, minimum: 0 }
+        items: { type: array, items: { $ref: '#/components/schemas/IngestPreflightItem' } }
+    IngestCreateItem:
+      type: object
+      additionalProperties: false
+      required: [sourceContentId, result, videoId, jobId, taskId, jobStatus, videoStatus, issues]
+      properties:
+        sourceContentId: { $ref: '#/components/schemas/UuidV7' }
+        result: { type: string, enum: [CREATED, ALREADY_QUEUED, ALREADY_INGESTED, SKIPPED_INVALID] }
+        videoId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        jobId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        taskId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        jobStatus: { type: [string, 'null'], enum: [QUEUED, null] }
+        videoStatus: { type: [string, 'null'] }
+        issues: { type: array, items: { type: string } }
+    IngestCreateResult:
+      type: object
+      additionalProperties: false
+      required: [summary, items]
+      properties:
+        summary:
+          type: object
+          additionalProperties: false
+          required: [total, created, reused, skipped]
+          properties:
+            total: { type: integer, minimum: 1 }
+            created: { type: integer, minimum: 0 }
+            reused: { type: integer, minimum: 0 }
+            skipped: { type: integer, minimum: 0 }
+        items: { type: array, items: { $ref: '#/components/schemas/IngestCreateItem' } }
+    IngestPreflightEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/IngestPreflight' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    IngestCreateEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/IngestCreateResult' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     ProblemDetails:
       type: object
       description: RFC 9457 với extension code và requestId.
@@ -1974,6 +2091,9 @@ components:
             - DISCOVERY_VALIDATION_FAILED
             - DISCOVERY_CURSOR_INVALID
             - DISCOVERY_PROVIDER_UNAVAILABLE
+            - INGEST_VALIDATION_FAILED
+            - INGEST_NO_CREATABLE_ITEMS
+            - IDEMPOTENCY_KEY_REUSED
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

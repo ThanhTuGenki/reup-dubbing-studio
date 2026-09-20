@@ -71,6 +71,9 @@ describe('generated health contract', () => {
       | 'DISCOVERY_VALIDATION_FAILED'
       | 'DISCOVERY_CURSOR_INVALID'
       | 'DISCOVERY_PROVIDER_UNAVAILABLE'
+      | 'INGEST_VALIDATION_FAILED'
+      | 'INGEST_NO_CREATABLE_ITEMS'
+      | 'IDEMPOTENCY_KEY_REUSED'
     >();
   });
 });

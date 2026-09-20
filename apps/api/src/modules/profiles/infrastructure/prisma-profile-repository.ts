@@ -211,19 +211,27 @@ export class PrismaProfileRepository implements ProfileRepository {
   }
 
   snapshotForJob(input: { channelProfileId: string; seriesProfileId?: string }): Promise<ProfileJobSnapshot> {
-    return this.prisma.$transaction(async (tx) => {
-      const settings = await tx.systemSetting.findUniqueOrThrow({ where: { singletonKey: 'DEFAULT' } });
-      if (input.seriesProfileId) {
-        const row = await tx.seriesProfile.findUnique({ where: { id: input.seriesProfileId }, include: seriesInclude });
-        if (!row || row.channelProfileId !== input.channelProfileId) notFound();
-        ensureJobReady(toSeriesView(row));
-        return jobSnapshot(row.channelProfile, row, settings);
-      }
-      const row = await tx.channelProfile.findUnique({ where: { id: input.channelProfileId }, include: channelInclude });
-      if (!row) notFound();
-      ensureJobReady(toChannelView(row));
-      return jobSnapshot(row, null, settings);
-    }, { isolationLevel: 'RepeatableRead' });
+    return this.prisma.$transaction(
+      (tx) => this.snapshotForJobInTransaction(tx, input),
+      { isolationLevel: 'RepeatableRead' },
+    );
+  }
+
+  async snapshotForJobInTransaction(
+    tx: Prisma.TransactionClient,
+    input: { channelProfileId: string; seriesProfileId?: string },
+  ): Promise<ProfileJobSnapshot> {
+    const settings = await tx.systemSetting.findUniqueOrThrow({ where: { singletonKey: 'DEFAULT' } });
+    if (input.seriesProfileId) {
+      const row = await tx.seriesProfile.findUnique({ where: { id: input.seriesProfileId }, include: seriesInclude });
+      if (!row || row.channelProfileId !== input.channelProfileId) notFound();
+      ensureJobReady(toSeriesView(row));
+      return jobSnapshot(row.channelProfile, row, settings);
+    }
+    const row = await tx.channelProfile.findUnique({ where: { id: input.channelProfileId }, include: channelInclude });
+    if (!row) notFound();
+    ensureJobReady(toChannelView(row));
+    return jobSnapshot(row, null, settings);
   }
 
   private changeSeriesStatus(id: string, version: number, parentVersion: number, status: 'DRAFT' | 'ARCHIVED') {
