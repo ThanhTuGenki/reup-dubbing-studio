@@ -88,7 +88,7 @@
 ## 7. GPU Workers
 
 - [ ] **Hoàn tất feature GPU Workers phía Web + API.**
-  - [ ] Phân tích enrollment/session/heartbeat/drain và chốt contract/schema.
+  - [x] Phân tích enrollment/session/heartbeat/drain và chốt contract/schema.
   - [ ] API quản lý worker registry, enrollment, approved image, session,
     heartbeat mới nhất và billing session.
   - [ ] Web xây danh sách worker, trạng thái/capacity, thêm worker, drain và hướng

@@ -223,7 +223,7 @@ nhóm Discovery với `videos`, assets và workflow.
 | `workers` | `CORE` | Worker config/role/provider và lifecycle |
 | `worker_sessions` | `CORE` | Một runtime boot/session và latest heartbeat |
 | `worker_enrollment_tokens` | `CORE` | Token một lần, chỉ lưu hash |
-| `worker_credentials` | `LIKELY` | Credential sau enrollment, hash/revoke |
+| `worker_credentials` | `CORE` | Credential sau enrollment, hash/revoke |
 | `approved_worker_images` | `CORE` | Version/digest được phép nhận task |
 | `worker_billing_sessions` | `CORE` | Snapshot CP/giờ và thời gian thuê |
 | `performance_profiles` | `LIKELY` | Benchmark đã duyệt theo GPU/stage/model |
@@ -926,6 +926,11 @@ stale và workflow quay lại review.
 
 ## 11. Workers, image và billing
 
+> Shape triển khai của vertical slice này đã được chốt tại
+> [`gpu-worker-control-plane.md`](gpu-worker-control-plane.md). Inventory dưới đây
+> giữ bối cảnh toàn hệ thống; khi có khác biệt về field, lifecycle hoặc constraint,
+> tài liệu slice được ưu tiên.
+
 ### 11.1 `workers` (`CORE`)
 
 ```text
@@ -940,8 +945,9 @@ observed_status       PENDING | READY | BUSY | DRAINING | SAFE_TO_TERMINATE |
                       OFFLINE | TERMINATED | ERROR
 expected_gpu_model    text nullable
 expected_vram_mb      integer nullable
-approved_image_id     uuid nullable FK
-created_by            uuid FK users
+approved_image_id     uuid FK
+last_error_code       text nullable
+last_error_detail_safe text nullable
 created_at            timestamptz
 updated_at            timestamptz
 version               integer
@@ -955,19 +961,25 @@ case được cập nhật.
 ```text
 id                    uuid v7 PK
 worker_id             uuid FK
-session_nonce         text UNIQUE
+credential_id         uuid FK worker_credentials
+billing_session_id    uuid FK worker_billing_sessions
+session_nonce         uuid
 image_id              uuid FK approved_worker_images
 image_digest          text
 agent_version         text
+contract_version      integer
 gpu_inventory         jsonb
 cpu_inventory         jsonb
 capacity              jsonb
+telemetry_safe        jsonb
 started_at            timestamptz
 last_heartbeat_at     timestamptz
+last_heartbeat_sequence bigint
 draining_at           timestamptz nullable
 ended_at              timestamptz nullable
 end_reason            text nullable
 current_task_count    integer
+UNIQUE(worker_id, session_nonce)
 ```
 
 Heartbeat update row này. Không insert một row mỗi 30 giây ở MVP.
@@ -976,11 +988,17 @@ Heartbeat update row này. Không insert một row mỗi 30 giây ở MVP.
 
 ```text
 worker_enrollment_tokens
-  id, worker_id, token_hash, expires_at, consumed_at, revoked_at, created_at
+  id, worker_id, token_prefix, token_hash, expires_at,
+  consumed_at, revoked_at, created_at
+
+worker_credentials
+  id, worker_id, credential_prefix, credential_hash, scopes,
+  issued_at, expires_at, last_used_at, revoked_at, created_at
 
 approved_worker_images
   id, role, semantic_version, image_digest, registry_ref,
-  status, approved_by, approved_at, created_at
+  contract_version, status, approved_at, revoked_at, created_at, updated_at,
+  version
   UNIQUE(role, image_digest)
 ```
 
@@ -989,14 +1007,12 @@ approved_worker_images
 ```text
 id                    uuid v7 PK
 worker_id             uuid FK
-worker_session_id     uuid nullable FK
 provider              text
 provider_instance_id  text nullable
 hourly_rate_cp        numeric(20,6)
 paid_vnd_per_cp       numeric(20,8) nullable
 billing_started_at    timestamptz
 billing_ended_at      timestamptz nullable
-termination_confirmed_by uuid nullable FK users
 termination_confirmed_at timestamptz nullable
 estimated_cost_cp     numeric(24,6) nullable
 created_at            timestamptz
