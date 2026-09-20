@@ -1,0 +1,8 @@
+import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query';
+import { fetchCategories, fetchDiscoveryItems, fetchDiscoveryRun, fetchSourceAccounts, fetchWatchlists, type DiscoveryFilters } from './discovery-api';
+export const discoveryKeys = { all: ['discovery'] as const, accounts: () => [...discoveryKeys.all, 'accounts'] as const, categories: () => [...discoveryKeys.all, 'categories'] as const, run: (id: string) => [...discoveryKeys.all, 'run', id] as const, items: (filters: Omit<DiscoveryFilters, 'cursor'>) => [...discoveryKeys.all, 'items', filters] as const, watchlists: () => [...discoveryKeys.all, 'watchlists'] as const };
+export const sourceAccountsQuery = () => queryOptions({ queryKey: discoveryKeys.accounts(), queryFn: ({ signal }) => fetchSourceAccounts(signal) });
+export const categoriesQuery = () => queryOptions({ queryKey: discoveryKeys.categories(), queryFn: ({ signal }) => fetchCategories(signal), staleTime: 300_000 });
+export const discoveryRunQuery = (id: string) => queryOptions({ queryKey: discoveryKeys.run(id), queryFn: ({ signal }) => fetchDiscoveryRun(id, signal), refetchInterval: (query) => query.state.data && ['QUEUED', 'RUNNING'].includes(query.state.data.status) ? 1500 : false });
+export const discoveryItemsQuery = (filters: Omit<DiscoveryFilters, 'cursor'>) => infiniteQueryOptions({ queryKey: discoveryKeys.items(filters), initialPageParam: undefined as string | undefined, queryFn: ({ pageParam, signal }) => fetchDiscoveryItems({ ...filters, ...(pageParam ? { cursor: pageParam } : {}) }, signal), getNextPageParam: (page) => page.nextCursor ?? undefined });
+export const watchlistsQuery = () => queryOptions({ queryKey: discoveryKeys.watchlists(), queryFn: ({ signal }) => fetchWatchlists(signal) });
