@@ -90,6 +90,23 @@ export const sourceAccount = { id: '0191f3d2-7f5b-7abc-8b2e-123456789af0', platf
 export const discoveryCategory = { id: '0191f3d2-7f5b-7abc-8b2e-123456789af1', platform: 'DOUYIN', externalKey: '300213', slug: 'knowledge', label: 'Kiến thức', kind: 'JINGXUAN_CATEGORY', parentId: null } satisfies DiscoveryCategory;
 export const discoveryItem = { id: '0191f3d2-7f5b-7abc-8b2e-123456789af2', runId: '0191f3d2-7f5b-7abc-8b2e-123456789af3', rank: 1, discoveredAt: '2026-09-20T08:30:00.000Z', sourceContent: { id: '0191f3d2-7f5b-7abc-8b2e-123456789af4', platform: 'DOUYIN', externalId: '999999999999999999', contentType: 'VIDEO', title: 'Mẹo học tiếng Trung', description: 'Dữ liệu mẫu Discovery', canonicalUrl: 'https://www.douyin.com/video/999999999999999999', publishedAt: '2026-09-19T08:30:00.000Z', durationMs: 45000, width: 1080, height: 1920, availability: 'AVAILABLE', ingestEligible: true, firstSeenAt: '2026-09-20T08:30:00.000Z', lastSeenAt: '2026-09-20T08:30:00.000Z', creator: { id: '0191f3d2-7f5b-7abc-8b2e-123456789af5', externalId: 'creator-1', nickname: 'Học mỗi ngày', profileUrl: 'https://www.douyin.com/user/creator-1' }, categories: [discoveryCategory], cover: { url: 'https://p.douyin.com/cover.jpg?size=large', requiresRefresh: false }, metrics: { capturedAt: '2026-09-20T08:30:00.000Z', playCount: '120000', diggCount: '4500', commentCount: null, collectCount: null, shareCount: null } } } satisfies DiscoveryItem;
 export const discoveryWatchlist = { id: '0191f3d2-7f5b-7abc-8b2e-123456789af6', sourceAccountId: sourceAccount.id, mode: 'CREATOR', resolvedInput: { url: 'https://www.douyin.com/user/creator-1' }, displayName: 'Học mỗi ngày', status: 'ACTIVE', scheduleIntervalMin: 60, nextRunAt: '2026-09-20T10:00:00.000Z', lastRunAt: '2026-09-20T08:00:00.000Z', lastSuccessAt: '2026-09-20T08:05:00.000Z', consecutiveFailures: 0, version: 1, createdAt: '2026-09-19T08:00:00.000Z', updatedAt: '2026-09-20T08:05:00.000Z' } satisfies Watchlist;
+export const ingestVideoId = '0191f3d2-7f5b-7abc-8b2e-123456789af7';
+export const ingestJobId = '0191f3d2-7f5b-7abc-8b2e-123456789af8';
+export const ingestTaskId = '0191f3d2-7f5b-7abc-8b2e-123456789af9';
+export const ingestPreflightEnvelope = {
+  data: {
+    summary: { total: 1, ready: 1, blocked: 0 },
+    items: [{ sourceContentId: discoveryItem.sourceContent.id, disposition: 'READY', existingVideoId: null, existingJobId: null, issues: [] }],
+  },
+  meta: { requestId: READY_REQUEST_ID },
+};
+export const ingestCreateEnvelope = {
+  data: {
+    summary: { total: 1, created: 1, reused: 0, skipped: 0 },
+    items: [{ sourceContentId: discoveryItem.sourceContent.id, result: 'CREATED', videoId: ingestVideoId, jobId: ingestJobId, taskId: ingestTaskId, jobStatus: 'QUEUED', videoStatus: 'INGEST_QUEUED', issues: [] }],
+  },
+  meta: { requestId: READY_REQUEST_ID },
+};
 
 export function createProblemDetails(
   overrides: Partial<ProblemDetails> = {},

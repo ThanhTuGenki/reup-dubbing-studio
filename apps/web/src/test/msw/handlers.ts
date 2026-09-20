@@ -19,6 +19,8 @@ import {
   discoveryCategory,
   discoveryItem,
   discoveryWatchlist,
+  ingestCreateEnvelope,
+  ingestPreflightEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -62,4 +64,6 @@ export const handlers = [
   http.get(`${CONTROL_PLANE_BASE_URL}/discovery/categories`, () => HttpResponse.json({ data: { items: [discoveryCategory] }, meta: { requestId: READY_REQUEST_ID } })),
   http.get(`${CONTROL_PLANE_BASE_URL}/discovery/items`, () => HttpResponse.json({ data: { items: [discoveryItem], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } })),
   http.get(`${CONTROL_PLANE_BASE_URL}/watchlists`, () => HttpResponse.json({ data: { items: [discoveryWatchlist] }, meta: { requestId: READY_REQUEST_ID } })),
+  http.post(`${CONTROL_PLANE_BASE_URL}/ingest/preflight`, () => HttpResponse.json(ingestPreflightEnvelope)),
+  http.post(`${CONTROL_PLANE_BASE_URL}/ingest/jobs`, () => HttpResponse.json(ingestCreateEnvelope, { status: 201 })),
 ];
