@@ -107,7 +107,7 @@
 ## 9. Chi tiết video và Studio biên tập
 
 - [ ] **Hoàn tất feature Studio.**
-  - [ ] Phân tích player, transcript, cast, revision, review và render flow rồi
+  - [x] Phân tích player, transcript, cast, revision, review và render flow rồi
     chốt contract/schema.
   - [ ] API đọc/sửa segment, gán voice/cast, tạo preview/re-gen request, lưu review
     decision và yêu cầu render.
