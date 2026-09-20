@@ -49,6 +49,18 @@ describeWithDatabase('Discovery API with PostgreSQL', () => {
     expect(run.body).not.toMatch(/cookie|never-persist-this/iu);
   });
 
+  it('blocks runs for an expired cookie and rejects malformed internal cursors', async () => {
+    const created = await app.inject({ method: 'POST', url: '/v1/source-accounts', headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000069' }, payload: { platform: 'DOUYIN', displayName: 'Cookie hết hạn' } });
+    const accountId = created.json().data.id as string;
+    const expiredCookie = '.douyin.com\tTRUE\t/\tTRUE\t1\tttwid\texpired-secret';
+    const imported = await app.inject({ method: 'POST', url: `/v1/source-accounts/${accountId}/credentials`, payload: { netscapeCookie: expiredCookie } });
+    expect(imported.json().data).toMatchObject({ status: 'EXPIRED' }); expect(imported.body).not.toContain('expired-secret');
+    const blocked = await app.inject({ method: 'POST', url: '/v1/discovery/runs', headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000070' }, payload: { sourceAccountId: accountId, mode: 'JINGXUAN', requestedLimit: 20 } });
+    expect(blocked.statusCode).toBe(409); expect(blocked.json()).toMatchObject({ code: 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' });
+    const cursor = await app.inject({ method: 'GET', url: '/v1/discovery/items?cursor=not-an-internal-cursor' });
+    expect(cursor.statusCode).toBe(422); expect(cursor.json()).toMatchObject({ code: 'DISCOVERY_CURSOR_INVALID' });
+  });
+
   it('manages creator watchlists with version checks and deduplication', async () => {
     const accounts = await app.inject({ method: 'GET', url: '/v1/source-accounts?platform=DOUYIN' }); const accountId = accounts.json().data.items[0].id as string;
     const payload = { sourceAccountId: accountId, mode: 'CREATOR', input: 'https://www.douyin.com/user/MS4wLjABAAAAopaque', displayName: 'Tác giả A', scheduleIntervalMin: 60 };
@@ -82,6 +94,11 @@ describeWithDatabase('Discovery API with PostgreSQL', () => {
     const first = await app.inject({ method: 'GET', url: `/v1/discovery/items?runId=${run.id}&limit=1` });
     expect(first.json().data.items).toHaveLength(1); expect(first.json().data.nextCursor).toBeTruthy(); expect(first.body).not.toContain('provider-secret-cursor');
     const second = await app.inject({ method: 'GET', url: `/v1/discovery/items?runId=${run.id}&limit=1&cursor=${encodeURIComponent(first.json().data.nextCursor)}` }); expect(second.json().data.items).toHaveLength(1);
+
+    const repeated = await repository.createRun({ sourceAccountId: account.id, mode: 'JINGXUAN', requestedLimit: 20 }, '01994429-ec00-7000-8000-000000000071', 'repeat-provider-run');
+    await new DiscoveryRunner(repository, cipher, provider).execute(repeated.id);
+    expect(await prisma.sourceContent.count({ where: { platform: 'DOUYIN' } })).toBe(2);
+    expect(await repository.run(repeated.id)).toMatchObject({ status: 'SUCCEEDED', itemCount: 2 });
 
     let calls = 0;
     const partialProvider: SourceDiscoveryProvider = { validate: async () => 'ACTIVE', scan: async () => { calls += 1; if (calls > 1) throw Object.assign(new Error('rate limited token=private'), { code: 'DISCOVERY_RATE_LIMITED' }); return { hasMore: true, nextCursor: { maxCursor: 'opaque' }, skippedCounts: {}, items: [{ externalId: 'partial-1', contentType: 'VIDEO', availability: 'AVAILABLE', isIngestEligible: true }] }; } };
