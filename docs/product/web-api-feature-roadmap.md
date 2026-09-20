@@ -87,14 +87,14 @@
 
 ## 7. GPU Workers
 
-- [ ] **Hoàn tất feature GPU Workers phía Web + API.**
+- [x] **Hoàn tất feature GPU Workers phía Web + API.**
   - [x] Phân tích enrollment/session/heartbeat/drain và chốt contract/schema.
   - [x] API quản lý worker registry, enrollment, approved image, session,
     heartbeat mới nhất và billing session.
   - [x] Web xây danh sách worker, trạng thái/capacity, thêm worker, drain và hướng
     dẫn xóa rental thủ công.
   - [x] Kiểm thử offline timeout, revoke credential và version mismatch.
-  - [ ] Xác nhận không thêm hoặc sửa implementation trong `workers/gpu`.
+  - [x] Xác nhận không thêm hoặc sửa implementation trong `workers/gpu`.
 
 ## 8. Thư viện video
 
