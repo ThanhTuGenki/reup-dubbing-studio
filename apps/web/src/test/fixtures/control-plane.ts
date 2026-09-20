@@ -16,6 +16,8 @@ import type {
   Watchlist,
   QueueJob,
   QueueJobDetail,
+  Worker,
+  WorkerImage,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -114,6 +116,23 @@ export const queueJob = { id: ingestJobId, videoId: ingestVideoId, kind: 'INGEST
 export const queueJobDetail = { ...queueJob, tasks: [queueTask], timeline: [] } satisfies QueueJobDetail;
 export const queueListEnvelope = { data: { items: [queueJob], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } };
 export const queueDetailEnvelope = { data: queueJobDetail, meta: { requestId: READY_REQUEST_ID } };
+
+export const workerImage = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789b01', role: 'BATCH_MEDIA', semanticVersion: '1.8.2',
+  imageDigest: `sha256:${'a'.repeat(64)}`, registryRef: 'ghcr.io/reup/media-worker@sha256:aaaa', contractVersion: 1,
+  status: 'ACTIVE', approvedAt: '2026-09-20T07:00:00.000Z', revokedAt: null, version: 1,
+} satisfies WorkerImage;
+export const ttsWorkerImage = { ...workerImage, id: '0191f3d2-7f5b-7abc-8b2e-123456789b02', role: 'INTERACTIVE_TTS', semanticVersion: '0.9.4', registryRef: 'ghcr.io/reup/tts-worker@sha256:bbbb', imageDigest: `sha256:${'b'.repeat(64)}` } satisfies WorkerImage;
+export const gpuWorker = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789b03', displayName: 'batch-a100-01', role: 'BATCH_MEDIA', provider: 'EzyCloudX', providerInstanceId: 'ctr-77aa02', mode: 'MANUAL_REGISTERED',
+  desiredStatus: 'ACTIVE', observedStatus: 'BUSY', expectedGpuModel: 'NVIDIA A100', expectedVramMb: 24576, approvedImage: workerImage,
+  currentSession: { id: '0191f3d2-7f5b-7abc-8b2e-123456789b04', sessionNonce: '0191f3d2-7f5b-7abc-8b2e-123456789b05', imageDigest: workerImage.imageDigest, agentVersion: '1.8.2', contractVersion: 1, gpuInventory: [{ model: 'NVIDIA A100', vramMb: 24576 }], cpuInventory: { cores: 16 }, capacity: { totalSlots: 4, availableSlots: 2 }, telemetry: { gpuUtilPercent: 52, temperatureC: 63 }, currentTaskCount: 2, lastHeartbeatSequence: '42', startedAt: '2026-09-20T08:00:00.000Z', lastHeartbeatAt: new Date().toISOString() },
+  activeLeaseCount: 2, safeToTerminate: false, billing: { hourlyRateCp: '6500', paidVndPerCp: '1', billingStartedAt: '2026-09-20T08:00:00.000Z', estimatedCostCp: '13000' }, lastError: null, version: 3,
+  createdAt: '2026-09-20T07:50:00.000Z', updatedAt: '2026-09-20T09:00:00.000Z',
+} satisfies Worker;
+export const safeWorker = { ...gpuWorker, id: '0191f3d2-7f5b-7abc-8b2e-123456789b06', displayName: 'batch-l40-safe', desiredStatus: 'DRAINING', observedStatus: 'SAFE_TO_TERMINATE', activeLeaseCount: 0, safeToTerminate: true, version: 5 } satisfies Worker;
+export const workerListEnvelope = { data: { items: [gpuWorker, safeWorker], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } };
+export const workerImagesEnvelope = { data: { items: [workerImage, ttsWorkerImage], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } };
 
 export function createProblemDetails(
   overrides: Partial<ProblemDetails> = {},

@@ -4,7 +4,7 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
-  it.each(['/library', '/library/video-1', '/publishing', '/workers'])('keeps the shell for reserved path %s', (route) => {
+  it.each(['/library', '/library/video-1', '/publishing'])('keeps the shell for reserved path %s', (route) => {
     renderApp(<AppRoutes />, { route });
     expect(screen.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
@@ -13,6 +13,11 @@ describe('application routes', () => {
     renderApp(<AppRoutes />, { route: '/queue' });
     expect(await screen.findByRole('heading', { name: 'Hàng đợi xử lý' })).toBeInTheDocument();
     expect((await screen.findAllByText('Video Queue mẫu')).length).toBeGreaterThan(0);
+  });
+  it('renders GPU Workers inside the shell', async () => {
+    renderApp(<AppRoutes />, { route: '/workers' });
+    expect(await screen.findByRole('heading', { name: 'GPU Workers' })).toBeInTheDocument();
+    expect(await screen.findByText('batch-a100-01')).toBeInTheDocument();
   });
   it('renders Discovery inside the shell', async () => {
     renderApp(<AppRoutes />, { route: '/discovery' });
