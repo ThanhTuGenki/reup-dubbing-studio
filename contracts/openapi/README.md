@@ -49,6 +49,12 @@ Contract health hiện ở giai đoạn `VERIFIED`: provider integration, contra
 generated client và consumer test đã pass. Không mở rộng contract này sang
 worker hoặc business API ngoài vertical slice tương ứng.
 
+GPU Worker registry Web contract trong `web.openapi.yaml` và enrollment/session/
+heartbeat boundary trong `worker.openapi.yaml` đang ở giai đoạn `IMPLEMENTING`.
+Control Plane provider đã có integration test; worker contract chỉ chuyển
+`VERIFIED` khi có consumer độc lập mà không cần thêm implementation Worker vào
+slice Web + API hiện tại.
+
 ## Lệnh kiểm chứng
 
 - `pnpm contract:generate`: sinh lại typed SDK vào
