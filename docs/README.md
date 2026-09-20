@@ -16,6 +16,7 @@ thư mục mới.
 | Mô hình dữ liệu và inventory bảng toàn hệ thống         | [`architecture/database-design.md`](architecture/database-design.md)  | `DRAFT`, review trước từng migration                 |
 | Discovery và ingest metadata từ Douyin                 | [`architecture/douyin-discovery.md`](architecture/douyin-discovery.md) | `ACCEPTED`, contract/schema MVP; mode nâng cao giữ validation gate |
 | GPU Worker registry, enrollment, heartbeat và drain    | [`architecture/gpu-worker-control-plane.md`](architecture/gpu-worker-control-plane.md) | `ACCEPTED`, contract/schema Control Plane |
+| Video Library aggregate, output, asset và filter       | [`architecture/video-library.md`](architecture/video-library.md) | `ACCEPTED`, read model/API boundary |
 | Thiết kế các stage của pipeline media                   | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)         | thiết kế `ACCEPTED`, triển khai `ARCHIVED`           |
 | Quyết định kiến trúc đơn lẻ                             | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR              |
 | **Contract giữa web ↔ api ↔ worker**                    | `contracts/openapi/*.yaml` ở **gốc repo**                              | draft theo slice; nguồn chuẩn sau khi `VERIFIED`     |
