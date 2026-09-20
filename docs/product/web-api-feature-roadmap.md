@@ -93,7 +93,7 @@
     heartbeat mới nhất và billing session.
   - [x] Web xây danh sách worker, trạng thái/capacity, thêm worker, drain và hướng
     dẫn xóa rental thủ công.
-  - [ ] Kiểm thử offline timeout, revoke credential và version mismatch.
+  - [x] Kiểm thử offline timeout, revoke credential và version mismatch.
   - [ ] Xác nhận không thêm hoặc sửa implementation trong `workers/gpu`.
 
 ## 8. Thư viện video

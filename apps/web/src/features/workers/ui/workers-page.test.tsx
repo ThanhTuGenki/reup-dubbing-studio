@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { CONTROL_PLANE_BASE_URL, gpuWorker, workerListEnvelope } from '@/test/fixtures/control-plane';
+import { CONTROL_PLANE_BASE_URL, createProblemDetails, gpuWorker, workerListEnvelope } from '@/test/fixtures/control-plane';
 import { server } from '@/test/msw/server';
 import { renderApp } from '@/test/test-utils';
 import { WorkersPage } from './workers-page';
@@ -50,5 +50,24 @@ describe('WorkersPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Dừng nhận job' }));
     await waitFor(() => expect(ifMatch).toBe('"3"'));
     expect(idempotencyKey).toMatch(/^[0-9a-f-]{36}$/u);
+  });
+
+  it('refreshes worker state after a version conflict', async () => {
+    const user = userEvent.setup();
+    let listRequests = 0;
+    server.use(
+      http.get(`${CONTROL_PLANE_BASE_URL}/workers`, () => {
+        listRequests += 1;
+        const current = listRequests > 1 ? { ...gpuWorker, observedStatus: 'OFFLINE' as const, version: 4 } : gpuWorker;
+        return HttpResponse.json({ ...workerListEnvelope, data: { items: [current], nextCursor: null } });
+      }),
+      http.post(`${CONTROL_PLANE_BASE_URL}/workers/:workerId/drain`, () => HttpResponse.json(createProblemDetails({ status: 412, code: 'VERSION_CONFLICT', title: 'Stale worker version' }), { status: 412 })),
+    );
+    renderApp(<WorkersPage />, { route: '/workers' });
+    await user.click(await screen.findByRole('button', { name: 'Dừng nhận job' }));
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Dừng nhận job' }));
+
+    expect(await screen.findByText('Mất kết nối')).toBeInTheDocument();
+    expect(listRequests).toBeGreaterThanOrEqual(2);
   });
 });
