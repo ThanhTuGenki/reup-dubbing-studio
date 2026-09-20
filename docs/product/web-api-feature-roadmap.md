@@ -100,7 +100,7 @@
 
 - [ ] **Hoàn tất feature Library.**
   - [x] Phân tích aggregate trạng thái video, filter và asset cần hiển thị.
-  - [ ] API list/detail/filter video, profile liên quan, output và asset metadata.
+  - [x] API list/detail/filter video, profile liên quan, output và asset metadata.
   - [ ] Web xây bảng/card responsive, filter, trạng thái và điều hướng vào Studio.
   - [ ] Kiểm thử pagination, empty/error state và presigned download.
 

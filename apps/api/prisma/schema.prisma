@@ -74,6 +74,36 @@ enum AssetStatus {
   FAILED
 }
 
+enum VideoAssetKind {
+  RAW
+  DESUBBED
+  OCR_JSON
+  ASR_JSON
+  TRANSCRIPT_JSON
+  BACKGROUND_AUDIO
+  VOCALS
+  DUB_AUDIO
+  PREVIEW
+  OUTPUT_VIDEO
+  OUTPUT_SUBTITLE
+  THUMBNAIL
+  LOG
+  OTHER
+}
+
+enum RenderOutputVariant {
+  FULL_16X9
+  HIGHLIGHT_9X16
+  CUSTOM
+}
+
+enum RenderOutputStatus {
+  DRAFT
+  READY
+  APPROVED
+  SUPERSEDED
+}
+
 enum ChannelProfileAssetRole {
   INTRO
   OUTRO
@@ -473,27 +503,33 @@ model SeriesProfile {
 }
 
 model Asset {
-  id             String              @id @db.Uuid
-  storageBackend AssetStorageBackend @map("storage_backend")
-  bucket         String?
-  objectKey      String              @map("object_key")
-  fileName       String              @map("file_name")
-  status         AssetStatus         @default(PENDING)
-  checksumSha256 String?             @map("checksum_sha256")
-  byteSize       BigInt?             @map("byte_size")
-  contentType    String?             @map("content_type")
-  width          Int?
-  height         Int?
-  uploadedAt     DateTime?           @map("uploaded_at") @db.Timestamptz(6)
-  verifiedAt     DateTime?           @map("verified_at") @db.Timestamptz(6)
-  metadata       Json                @default("{}")
-  version        Int                 @default(1)
-  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id                 String              @id @db.Uuid
+  storageBackend     AssetStorageBackend @map("storage_backend")
+  bucket             String?
+  objectKey          String              @map("object_key")
+  fileName           String              @map("file_name")
+  status             AssetStatus         @default(PENDING)
+  checksumSha256     String?             @map("checksum_sha256")
+  byteSize           BigInt?             @map("byte_size")
+  contentType        String?             @map("content_type")
+  width              Int?
+  height             Int?
+  durationMs         Int?                @map("duration_ms")
+  createdByAttemptId String?             @map("created_by_attempt_id") @db.Uuid
+  deleteAfter        DateTime?           @map("delete_after") @db.Timestamptz(6)
+  deletedAt          DateTime?           @map("deleted_at") @db.Timestamptz(6)
+  uploadedAt         DateTime?           @map("uploaded_at") @db.Timestamptz(6)
+  verifiedAt         DateTime?           @map("verified_at") @db.Timestamptz(6)
+  metadata           Json                @default("{}")
+  version            Int                 @default(1)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  channelLinks ChannelProfileAsset[]
-  seriesLinks  SeriesProfileAsset[]
-  voiceSamples VoiceProfileSample[]
+  channelLinks     ChannelProfileAsset[]
+  seriesLinks      SeriesProfileAsset[]
+  voiceSamples     VoiceProfileSample[]
+  videoAssets      VideoAsset[]
+  createdByAttempt TaskAttempt?          @relation(fields: [createdByAttemptId], references: [id], onDelete: Restrict)
 
   @@unique([storageBackend, bucket, objectKey])
   @@index([status, createdAt])
@@ -665,8 +701,9 @@ model User {
   updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
   version     Int        @default(1)
 
-  videos Video[]
-  jobs   PipelineJob[]
+  videos                Video[]
+  jobs                  PipelineJob[]
+  approvedRenderOutputs RenderOutput[]
 
   @@map("users")
 }
@@ -693,10 +730,59 @@ model Video {
   createdBy      User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
   jobs           PipelineJob[]
   workflowEvents WorkflowEvent[]
+  assets         VideoAsset[]
+  renderOutputs  RenderOutput[]
 
   @@unique([sourceContentId, channelProfileId])
   @@index([status, updatedAt, id])
   @@map("videos")
+}
+
+model VideoAsset {
+  id         String         @id @db.Uuid
+  videoId    String         @map("video_id") @db.Uuid
+  assetId    String         @map("asset_id") @db.Uuid
+  kind       VideoAssetKind
+  variantKey String?        @map("variant_key")
+  revision   Int            @default(1)
+  isCurrent  Boolean        @default(true) @map("is_current")
+  createdAt  DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  video            Video          @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  asset            Asset          @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  outputVideos     RenderOutput[] @relation("RenderOutputVideoLink")
+  outputSubtitles  RenderOutput[] @relation("RenderOutputSubtitleLink")
+  outputThumbnails RenderOutput[] @relation("RenderOutputThumbnailLink")
+
+  @@unique([videoId, kind, variantKey, revision])
+  @@index([videoId, kind, variantKey, isCurrent])
+  @@map("video_assets")
+}
+
+model RenderOutput {
+  id               String              @id @db.Uuid
+  videoId          String              @map("video_id") @db.Uuid
+  pipelineJobId    String?             @map("pipeline_job_id") @db.Uuid
+  variant          RenderOutputVariant
+  revision         Int                 @default(1)
+  videoAssetId     String?             @map("video_asset_id") @db.Uuid
+  subtitleAssetId  String?             @map("subtitle_asset_id") @db.Uuid
+  thumbnailAssetId String?             @map("thumbnail_asset_id") @db.Uuid
+  status           RenderOutputStatus  @default(DRAFT)
+  approvedBy       String?             @map("approved_by") @db.Uuid
+  approvedAt       DateTime?           @map("approved_at") @db.Timestamptz(6)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  video          Video        @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  pipelineJob    PipelineJob? @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  videoAsset     VideoAsset?  @relation("RenderOutputVideoLink", fields: [videoAssetId], references: [id], onDelete: Restrict)
+  subtitleAsset  VideoAsset?  @relation("RenderOutputSubtitleLink", fields: [subtitleAssetId], references: [id], onDelete: Restrict)
+  thumbnailAsset VideoAsset?  @relation("RenderOutputThumbnailLink", fields: [thumbnailAssetId], references: [id], onDelete: Restrict)
+  approvedUser   User?        @relation(fields: [approvedBy], references: [id], onDelete: Restrict)
+
+  @@unique([videoId, variant, revision])
+  @@index([videoId, variant, status])
+  @@map("render_outputs")
 }
 
 model PipelineJob {
@@ -721,6 +807,7 @@ model PipelineJob {
   createdBy      User?           @relation(fields: [createdById], references: [id], onDelete: Restrict)
   tasks          PipelineTask[]
   workflowEvents WorkflowEvent[]
+  renderOutputs  RenderOutput[]
 
   @@index([status, priority, createdAt])
   @@index([videoId, status])
@@ -916,6 +1003,7 @@ model TaskAttempt {
   workerSession  WorkerSession?  @relation(fields: [workerSessionId], references: [id], onDelete: Restrict)
   leases         TaskLease[]
   workflowEvents WorkflowEvent[]
+  createdAssets  Asset[]
 
   @@unique([pipelineTaskId, attemptNumber])
   @@index([pipelineTaskId, startedAt])

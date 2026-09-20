@@ -1008,8 +1008,59 @@ paths:
       operationId: revokeWorkerImage
       parameters: [{ $ref: '#/components/parameters/WorkerImageId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
       responses: { '200': { description: Image đã revoke., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerImageEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+  /videos:
+    get:
+      summary: Liệt kê Video Library
+      operationId: listVideos
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: platform, in: query, schema: { type: string } }
+        - { name: channelProfileId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: seriesProfileId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: outputReadiness, in: query, schema: { $ref: '#/components/schemas/VideoOutputReadiness' } }
+        - { name: updatedFrom, in: query, schema: { type: string, format: date-time } }
+        - { name: updatedTo, in: query, schema: { type: string, format: date-time } }
+        - { name: query, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: includeArchived, in: query, schema: { type: boolean, default: false } }
+      responses:
+        '200': { description: Video list, content: { application/json: { schema: { $ref: '#/components/schemas/VideoListEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}:
+    get:
+      summary: Đọc Video Library
+      operationId: getVideo
+      parameters: [{ $ref: '#/components/parameters/VideoId' }]
+      responses:
+        '200': { description: Video detail, headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/VideoEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/assets/{videoAssetId}/grant:
+    post:
+      summary: Cấp URL tải asset Video
+      operationId: grantVideoAsset
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { name: videoAssetId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: '#/components/schemas/GrantRequest' } } } }
+      responses:
+        '200': { description: Download grant, content: { application/json: { schema: { $ref: '#/components/schemas/DownloadGrantEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/outputs/{renderOutputId}/{part}/grant:
+    post:
+      summary: Cấp URL tải output Video
+      operationId: grantVideoOutput
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { name: renderOutputId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }, { name: part, in: path, required: true, schema: { type: string, enum: [video, subtitle, thumbnail] } }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: '#/components/schemas/GrantRequest' } } } }
+      responses:
+        '200': { description: Download grant, content: { application/json: { schema: { $ref: '#/components/schemas/DownloadGrantEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+
 components:
   parameters:
+    VideoId:
+      name: videoId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
     ChannelProfileId:
       name: channelProfileId
       in: path
@@ -1146,6 +1197,9 @@ components:
       required: true
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   headers:
+    VersionEtag:
+      description: Strong ETag của aggregate version.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
     RequestId:
       description: UUID v7 do API sinh cho request hiện tại.
       schema:
@@ -1171,6 +1225,68 @@ components:
       description: Strong ETag của Worker.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    VideoOutputReadiness:
+      type: string
+      enum: [NONE, PARTIAL, READY, CLEANED]
+    GrantRequest:
+      type: object
+      properties: { purpose: { type: string, enum: [preview, download], default: download } }
+    DownloadGrantEnvelope:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [method, url, expiresAt, fileName]
+          properties:
+            method: { type: string, enum: [GET] }
+            url: { type: string, format: uri }
+            expiresAt: { type: string, format: date-time }
+            fileName: { type: string }
+            contentType: { type: [string, 'null'] }
+            byteSize: { type: [string, 'null'] }
+    VideoListEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { type: object, required: [items, nextCursor], properties: { items: { type: array, items: { $ref: '#/components/schemas/Video' } }, nextCursor: { type: [string, 'null'] } } } }
+    VideoEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/Video' } }
+    Video:
+      type: object
+      required: [id, version, displayTitle, status, sourceLanguage, targetLanguage, source, profile, latestJob, reviewStatus, outputSummary, thumbnail, outputs, assets, createdAt, updatedAt, ingestedAt, archivedAt, capabilities]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        version: { type: integer }
+        displayTitle: { type: [string, 'null'] }
+        status: { type: string }
+        sourceLanguage: { type: string }
+        targetLanguage: { type: string }
+        source:
+          type: object
+          required: [platform, externalId, canonicalUrl, durationMs, creatorName]
+          properties: { platform: { type: string }, externalId: { type: string }, canonicalUrl: { type: [string, 'null'] }, durationMs: { type: [integer, 'null'] }, creatorName: { type: [string, 'null'] } }
+        profile:
+          type: object
+          required: [channelProfileId, channelProfileName, seriesProfileId, seriesProfileName]
+          properties: { channelProfileId: { $ref: '#/components/schemas/UuidV7' }, channelProfileName: { type: string }, seriesProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }, seriesProfileName: { type: [string, 'null'] } }
+        latestJob:
+          oneOf:
+            - type: object
+              required: [id, kind, status, progress, currentTask, failure, updatedAt]
+              properties: { id: { $ref: '#/components/schemas/UuidV7' }, kind: { type: string }, status: { type: string }, progress: { type: integer }, currentTask: { type: [string, 'null'] }, failure: { type: [object, 'null'], properties: { code: { type: string }, detail: { type: [string, 'null'] } }, required: [code, detail] }, updatedAt: { type: string, format: date-time } }
+            - { type: 'null' }
+        reviewStatus: { type: string, enum: [NOT_REQUIRED, PENDING, CHANGES_REQUESTED, APPROVED] }
+        outputSummary: { type: object, required: [readiness, requiredVariants, availableVariants, warnings], properties: { readiness: { $ref: '#/components/schemas/VideoOutputReadiness' }, requiredVariants: { type: array, items: { type: string } }, availableVariants: { type: array, items: { type: string } }, warnings: { type: array, items: { type: string } } } }
+        thumbnail: { type: [object, 'null'], additionalProperties: true }
+        outputs: { type: array, items: { type: object, additionalProperties: true } }
+        assets: { type: array, items: { type: object, additionalProperties: true } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        ingestedAt: { type: [string, 'null'], format: date-time }
+        archivedAt: { type: [string, 'null'], format: date-time }
+        capabilities: { type: object, required: [canOpenStudio, canOpenPublishing, canArchive], properties: { canOpenStudio: { type: boolean }, canOpenPublishing: { type: boolean }, canArchive: { type: boolean } } }
     WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
     WorkerDesiredStatus: { type: string, enum: [ACTIVE, DRAINING, REVOKED] }
     WorkerObservedStatus: { type: string, enum: [PENDING, READY, BUSY, DRAINING, SAFE_TO_TERMINATE, OFFLINE, TERMINATED, ERROR] }
