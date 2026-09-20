@@ -934,6 +934,80 @@ paths:
           headers: { ETag: { $ref: '#/components/headers/QueueJobEtag' } }
           content: { application/json: { schema: { $ref: '#/components/schemas/QueueJobDetailEnvelope' } } }
         default: { $ref: '#/components/responses/Problem' }
+  /workers:
+    get:
+      summary: Liệt kê GPU Worker
+      operationId: listWorkers
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: role, in: query, schema: { $ref: '#/components/schemas/WorkerRole' } }
+        - { name: observedStatus, in: query, schema: { $ref: '#/components/schemas/WorkerObservedStatus' } }
+        - { name: desiredStatus, in: query, schema: { $ref: '#/components/schemas/WorkerDesiredStatus' } }
+        - { name: provider, in: query, schema: { type: string } }
+        - { name: query, in: query, schema: { type: string, maxLength: 120 } }
+      responses:
+        '200': { description: Trang Worker., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerListEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Đăng ký GPU Worker thủ công và phát enrollment token một lần
+      operationId: createWorker
+      parameters: [{ $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateWorker' } } } }
+      responses:
+        '201': { description: Worker và enrollment secret một lần., content: { application/json: { schema: { $ref: '#/components/schemas/CreateWorkerEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /workers/{workerId}:
+    get:
+      summary: Đọc Worker, session, capacity và billing hiện tại
+      operationId: getWorker
+      parameters: [{ $ref: '#/components/parameters/WorkerId' }]
+      responses:
+        '200': { description: Worker hiện tại., headers: { ETag: { $ref: '#/components/headers/WorkerEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/WorkerEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /workers/{workerId}/enrollment-token:
+    post:
+      summary: Revoke token chưa dùng và phát token mới một lần
+      operationId: issueWorkerEnrollmentToken
+      parameters: [{ $ref: '#/components/parameters/WorkerId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      responses:
+        '200': { description: Enrollment secret một lần., content: { application/json: { schema: { $ref: '#/components/schemas/EnrollmentSecretEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /workers/{workerId}/drain:
+    post:
+      summary: Ngừng cấp lease mới và drain an toàn
+      operationId: drainWorker
+      parameters: [{ $ref: '#/components/parameters/WorkerId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      responses: { '200': { description: Worker đang drain hoặc đã an toàn., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+  /workers/{workerId}/revoke:
+    post:
+      summary: Thu hồi khẩn cấp credential Worker
+      operationId: revokeWorker
+      parameters: [{ $ref: '#/components/parameters/WorkerId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      responses: { '200': { description: Worker đã revoke., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+  /workers/{workerId}/confirm-termination:
+    post:
+      summary: Xác nhận người dùng đã xóa rental thủ công
+      operationId: confirmWorkerTermination
+      parameters: [{ $ref: '#/components/parameters/WorkerId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      responses: { '200': { description: Worker và billing đã kết thúc., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+  /worker-images:
+    get:
+      summary: Liệt kê approved Worker image
+      operationId: listWorkerImages
+      responses: { '200': { description: Danh sách image., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerImageListEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+    post:
+      summary: Duyệt immutable Worker image digest
+      operationId: createWorkerImage
+      parameters: [{ $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateWorkerImage' } } } }
+      responses: { '201': { description: Image đã duyệt., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerImageEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
+  /worker-images/{imageId}/revoke:
+    post:
+      summary: Revoke Worker image
+      operationId: revokeWorkerImage
+      parameters: [{ $ref: '#/components/parameters/WorkerImageId' }, { $ref: '#/components/parameters/WorkerIfMatch' }, { $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      responses: { '200': { description: Image đã revoke., content: { application/json: { schema: { $ref: '#/components/schemas/WorkerImageEnvelope' } } } }, default: { $ref: '#/components/responses/Problem' } }
 components:
   parameters:
     ChannelProfileId:
@@ -968,6 +1042,16 @@ components:
       schema: { $ref: '#/components/schemas/UuidV7' }
     QueueJobId:
       name: queueJobId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    WorkerId:
+      name: workerId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    WorkerImageId:
+      name: imageId
       in: path
       required: true
       schema: { $ref: '#/components/schemas/UuidV7' }
@@ -1056,6 +1140,11 @@ components:
       in: header
       required: true
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    WorkerIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   headers:
     RequestId:
       description: UUID v7 do API sinh cho request hiện tại.
@@ -1078,7 +1167,101 @@ components:
     QueueJobEtag:
       description: Strong ETag của Queue Job.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    WorkerEtag:
+      description: Strong ETag của Worker.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
+    WorkerDesiredStatus: { type: string, enum: [ACTIVE, DRAINING, REVOKED] }
+    WorkerObservedStatus: { type: string, enum: [PENDING, READY, BUSY, DRAINING, SAFE_TO_TERMINATE, OFFLINE, TERMINATED, ERROR] }
+    WorkerImageStatus: { type: string, enum: [ACTIVE, REVOKED] }
+    WorkerImage:
+      type: object
+      required: [id, role, semanticVersion, imageDigest, registryRef, contractVersion, status, approvedAt, revokedAt, version]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        role: { $ref: '#/components/schemas/WorkerRole' }
+        semanticVersion: { type: string }
+        imageDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
+        registryRef: { type: string }
+        contractVersion: { type: integer, minimum: 1 }
+        status: { $ref: '#/components/schemas/WorkerImageStatus' }
+        approvedAt: { type: string, format: date-time }
+        revokedAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+    WorkerSession:
+      type: object
+      additionalProperties: true
+      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        sessionNonce: { $ref: '#/components/schemas/UuidV7' }
+        imageDigest: { type: string }
+        agentVersion: { type: string }
+        contractVersion: { type: integer }
+        capacity: { type: object, additionalProperties: true }
+        currentTaskCount: { type: integer, minimum: 0 }
+        lastHeartbeatSequence: { type: string, pattern: '^[0-9]+$' }
+        startedAt: { type: string, format: date-time }
+        lastHeartbeatAt: { type: string, format: date-time }
+    Worker:
+      type: object
+      additionalProperties: true
+      required: [id, displayName, role, provider, mode, desiredStatus, observedStatus, approvedImage, currentSession, activeLeaseCount, safeToTerminate, billing, lastError, version, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        displayName: { type: string }
+        role: { $ref: '#/components/schemas/WorkerRole' }
+        provider: { type: string }
+        mode: { type: string, enum: [MANUAL_REGISTERED, API_PROVISIONED] }
+        desiredStatus: { $ref: '#/components/schemas/WorkerDesiredStatus' }
+        observedStatus: { $ref: '#/components/schemas/WorkerObservedStatus' }
+        approvedImage: { $ref: '#/components/schemas/WorkerImage' }
+        currentSession: { anyOf: [{ $ref: '#/components/schemas/WorkerSession' }, { type: 'null' }] }
+        activeLeaseCount: { type: integer, minimum: 0 }
+        safeToTerminate: { type: boolean }
+        billing: { type: [object, 'null'], additionalProperties: true }
+        lastError: { type: [object, 'null'], additionalProperties: true }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateWorkerImage:
+      type: object
+      required: [role, semanticVersion, imageDigest, registryRef, contractVersion]
+      properties:
+        role: { $ref: '#/components/schemas/WorkerRole' }
+        semanticVersion: { type: string }
+        imageDigest: { type: string }
+        registryRef: { type: string }
+        contractVersion: { type: integer, minimum: 1 }
+    CreateWorker:
+      type: object
+      required: [displayName, role, provider, approvedImageId, hourlyRateCp, billingStartedAt]
+      properties:
+        displayName: { type: string, maxLength: 120 }
+        role: { $ref: '#/components/schemas/WorkerRole' }
+        provider: { type: string }
+        providerInstanceId: { type: string }
+        expectedGpuModel: { type: string }
+        expectedVramMb: { type: integer, minimum: 0 }
+        approvedImageId: { $ref: '#/components/schemas/UuidV7' }
+        hourlyRateCp: { type: string, pattern: '^[0-9]+(?:\.[0-9]{1,6})?$' }
+        paidVndPerCp: { type: string, pattern: '^[0-9]+(?:\.[0-9]{1,8})?$' }
+        billingStartedAt: { type: string, format: date-time }
+    WorkerEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/Worker' } } }] }
+    WorkerListEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items, nextCursor], properties: { items: { type: array, items: { $ref: '#/components/schemas/Worker' } }, nextCursor: { type: [string, 'null'] } } } } }] }
+    WorkerImageEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/WorkerImage' } } }] }
+    WorkerImageListEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { type: object, required: [items, nextCursor], properties: { items: { type: array, items: { $ref: '#/components/schemas/WorkerImage' } }, nextCursor: { type: [string, 'null'] } } } } }] }
+    EnrollmentSecret:
+      type: object
+      required: [secretAvailable, token, expiresAt]
+      properties: { secretAvailable: { type: boolean }, token: { type: [string, 'null'] }, expiresAt: { type: [string, 'null'], format: date-time } }
+    CreateWorkerResult:
+      type: object
+      required: [worker, enrollment]
+      properties: { worker: { $ref: '#/components/schemas/Worker' }, enrollment: { $ref: '#/components/schemas/EnrollmentSecret' } }
+    CreateWorkerEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/CreateWorkerResult' } } }] }
+    EnrollmentSecretEnvelope: { allOf: [{ $ref: '#/components/schemas/SuccessEnvelope' }, { type: object, properties: { data: { $ref: '#/components/schemas/EnrollmentSecret' } } }] }
     SourcePlatform: { type: string, enum: [DOUYIN, BILIBILI, YOUTUBE] }
     CredentialStatus: { type: string, enum: [ACTIVE, EXPIRED, CAPTCHA_REQUIRED, INVALID, REVOKED] }
     DiscoveryMode: { type: string, enum: [JINGXUAN, CATEGORY, COURSE, CREATOR, MIX, SEARCH_VIDEO, SEARCH_USER, VIDEO_URL, WATCHLIST] }
@@ -2314,6 +2497,19 @@ components:
             - JOB_NOT_RETRYABLE
             - JOB_RETRY_CONFLICT
             - IDEMPOTENCY_KEY_REUSED
+            - WORKER_VALIDATION_FAILED
+            - WORKER_NOT_FOUND
+            - WORKER_NOT_ACTIVE
+            - WORKER_NOT_DRAINABLE
+            - WORKER_NOT_SAFE_TO_TERMINATE
+            - WORKER_SESSION_CONFLICT
+            - WORKER_VERSION_MISMATCH
+            - WORKER_IMAGE_NOT_APPROVED
+            - WORKER_HARDWARE_MISMATCH
+            - ENROLLMENT_TOKEN_INVALID
+            - ENROLLMENT_TOKEN_EXPIRED
+            - ENROLLMENT_TOKEN_CONSUMED
+            - WORKER_CREDENTIAL_REVOKED
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

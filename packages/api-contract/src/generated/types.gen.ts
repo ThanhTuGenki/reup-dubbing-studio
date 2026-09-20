@@ -4,6 +4,135 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type WorkerRole = 'BATCH_MEDIA' | 'INTERACTIVE_TTS';
+
+export type WorkerDesiredStatus = 'ACTIVE' | 'DRAINING' | 'REVOKED';
+
+export type WorkerObservedStatus = 'PENDING' | 'READY' | 'BUSY' | 'DRAINING' | 'SAFE_TO_TERMINATE' | 'OFFLINE' | 'TERMINATED' | 'ERROR';
+
+export type WorkerImageStatus = 'ACTIVE' | 'REVOKED';
+
+export type WorkerImage = {
+    id: UuidV7;
+    role: WorkerRole;
+    semanticVersion: string;
+    imageDigest: string;
+    registryRef: string;
+    contractVersion: number;
+    status: WorkerImageStatus;
+    approvedAt: string;
+    revokedAt: string | null;
+    version: number;
+};
+
+export type WorkerSession = {
+    id: UuidV7;
+    sessionNonce: UuidV7;
+    imageDigest: string;
+    agentVersion: string;
+    contractVersion: number;
+    capacity: {
+        [key: string]: unknown;
+    };
+    currentTaskCount: number;
+    lastHeartbeatSequence: string;
+    startedAt: string;
+    lastHeartbeatAt: string;
+    [key: string]: unknown | UuidV7 | string | number | {
+        [key: string]: unknown;
+    } | number | string;
+};
+
+export type Worker = {
+    id: UuidV7;
+    displayName: string;
+    role: WorkerRole;
+    provider: string;
+    mode: 'MANUAL_REGISTERED' | 'API_PROVISIONED';
+    desiredStatus: WorkerDesiredStatus;
+    observedStatus: WorkerObservedStatus;
+    approvedImage: WorkerImage;
+    currentSession: WorkerSession | null;
+    activeLeaseCount: number;
+    safeToTerminate: boolean;
+    billing: {
+        [key: string]: unknown;
+    } | null;
+    lastError: {
+        [key: string]: unknown;
+    } | null;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+    [key: string]: unknown | UuidV7 | string | WorkerRole | 'MANUAL_REGISTERED' | 'API_PROVISIONED' | WorkerDesiredStatus | WorkerObservedStatus | WorkerImage | WorkerSession | null | number | boolean | {
+        [key: string]: unknown;
+    } | null | {
+        [key: string]: unknown;
+    } | null | number;
+};
+
+export type CreateWorkerImage = {
+    role: WorkerRole;
+    semanticVersion: string;
+    imageDigest: string;
+    registryRef: string;
+    contractVersion: number;
+};
+
+export type CreateWorker = {
+    displayName: string;
+    role: WorkerRole;
+    provider: string;
+    providerInstanceId?: string;
+    expectedGpuModel?: string;
+    expectedVramMb?: number;
+    approvedImageId: UuidV7;
+    hourlyRateCp: string;
+    paidVndPerCp?: string;
+    billingStartedAt: string;
+};
+
+export type WorkerEnvelope = SuccessEnvelope & {
+    data?: Worker;
+};
+
+export type WorkerListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<Worker>;
+        nextCursor: string | null;
+    };
+};
+
+export type WorkerImageEnvelope = SuccessEnvelope & {
+    data?: WorkerImage;
+};
+
+export type WorkerImageListEnvelope = SuccessEnvelope & {
+    data?: {
+        items: Array<WorkerImage>;
+        nextCursor: string | null;
+    };
+};
+
+export type EnrollmentSecret = {
+    secretAvailable: boolean;
+    token: string | null;
+    expiresAt: string | null;
+};
+
+export type CreateWorkerResult = {
+    worker: Worker;
+    enrollment: EnrollmentSecret;
+};
+
+export type CreateWorkerEnvelope = SuccessEnvelope & {
+    data?: CreateWorkerResult;
+};
+
+export type EnrollmentSecretEnvelope = SuccessEnvelope & {
+    data?: EnrollmentSecret;
+};
+
 export type SourcePlatform = 'DOUYIN' | 'BILIBILI' | 'YOUTUBE';
 
 export type CredentialStatus = 'ACTIVE' | 'EXPIRED' | 'CAPTCHA_REQUIRED' | 'INVALID' | 'REVOKED';
@@ -905,7 +1034,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED';
     requestId: RequestId;
 };
 
@@ -922,6 +1051,10 @@ export type DiscoveryRunId = UuidV7;
 export type WatchlistId = UuidV7;
 
 export type QueueJobId = UuidV7;
+
+export type WorkerId = UuidV7;
+
+export type WorkerImageId = UuidV7;
 
 export type SampleId = UuidV7;
 
@@ -962,6 +1095,8 @@ export type IdempotencyKey = string;
 export type IngestIdempotencyKey = string;
 
 export type QueueIfMatch = string;
+
+export type WorkerIfMatch = string;
 
 export type ListChannelProfilesData = {
     body?: never;
@@ -3014,3 +3149,339 @@ export type RetryQueueJobResponses = {
 };
 
 export type RetryQueueJobResponse = RetryQueueJobResponses[keyof RetryQueueJobResponses];
+
+export type ListWorkersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        role?: WorkerRole;
+        observedStatus?: WorkerObservedStatus;
+        desiredStatus?: WorkerDesiredStatus;
+        provider?: string;
+        query?: string;
+    };
+    url: '/workers';
+};
+
+export type ListWorkersErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWorkersError = ListWorkersErrors[keyof ListWorkersErrors];
+
+export type ListWorkersResponses = {
+    /**
+     * Trang Worker.
+     */
+    200: WorkerListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWorkersResponse = ListWorkersResponses[keyof ListWorkersResponses];
+
+export type CreateWorkerData = {
+    body: CreateWorker;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/workers';
+};
+
+export type CreateWorkerErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWorkerError = CreateWorkerErrors[keyof CreateWorkerErrors];
+
+export type CreateWorkerResponses = {
+    /**
+     * Worker và enrollment secret một lần.
+     */
+    201: CreateWorkerEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWorkerResponse = CreateWorkerResponses[keyof CreateWorkerResponses];
+
+export type GetWorkerData = {
+    body?: never;
+    path: {
+        workerId: UuidV7;
+    };
+    query?: never;
+    url: '/workers/{workerId}';
+};
+
+export type GetWorkerErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetWorkerError = GetWorkerErrors[keyof GetWorkerErrors];
+
+export type GetWorkerResponses = {
+    /**
+     * Worker hiện tại.
+     */
+    200: WorkerEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetWorkerResponse = GetWorkerResponses[keyof GetWorkerResponses];
+
+export type IssueWorkerEnrollmentTokenData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        workerId: UuidV7;
+    };
+    query?: never;
+    url: '/workers/{workerId}/enrollment-token';
+};
+
+export type IssueWorkerEnrollmentTokenErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type IssueWorkerEnrollmentTokenError = IssueWorkerEnrollmentTokenErrors[keyof IssueWorkerEnrollmentTokenErrors];
+
+export type IssueWorkerEnrollmentTokenResponses = {
+    /**
+     * Enrollment secret một lần.
+     */
+    200: EnrollmentSecretEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type IssueWorkerEnrollmentTokenResponse = IssueWorkerEnrollmentTokenResponses[keyof IssueWorkerEnrollmentTokenResponses];
+
+export type DrainWorkerData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        workerId: UuidV7;
+    };
+    query?: never;
+    url: '/workers/{workerId}/drain';
+};
+
+export type DrainWorkerErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DrainWorkerError = DrainWorkerErrors[keyof DrainWorkerErrors];
+
+export type DrainWorkerResponses = {
+    /**
+     * Worker đang drain hoặc đã an toàn.
+     */
+    200: WorkerEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DrainWorkerResponse = DrainWorkerResponses[keyof DrainWorkerResponses];
+
+export type RevokeWorkerData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        workerId: UuidV7;
+    };
+    query?: never;
+    url: '/workers/{workerId}/revoke';
+};
+
+export type RevokeWorkerErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeWorkerError = RevokeWorkerErrors[keyof RevokeWorkerErrors];
+
+export type RevokeWorkerResponses = {
+    /**
+     * Worker đã revoke.
+     */
+    200: WorkerEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeWorkerResponse = RevokeWorkerResponses[keyof RevokeWorkerResponses];
+
+export type ConfirmWorkerTerminationData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        workerId: UuidV7;
+    };
+    query?: never;
+    url: '/workers/{workerId}/confirm-termination';
+};
+
+export type ConfirmWorkerTerminationErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ConfirmWorkerTerminationError = ConfirmWorkerTerminationErrors[keyof ConfirmWorkerTerminationErrors];
+
+export type ConfirmWorkerTerminationResponses = {
+    /**
+     * Worker và billing đã kết thúc.
+     */
+    200: WorkerEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ConfirmWorkerTerminationResponse = ConfirmWorkerTerminationResponses[keyof ConfirmWorkerTerminationResponses];
+
+export type ListWorkerImagesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/worker-images';
+};
+
+export type ListWorkerImagesErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWorkerImagesError = ListWorkerImagesErrors[keyof ListWorkerImagesErrors];
+
+export type ListWorkerImagesResponses = {
+    /**
+     * Danh sách image.
+     */
+    200: WorkerImageListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListWorkerImagesResponse = ListWorkerImagesResponses[keyof ListWorkerImagesResponses];
+
+export type CreateWorkerImageData = {
+    body: CreateWorkerImage;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/worker-images';
+};
+
+export type CreateWorkerImageErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWorkerImageError = CreateWorkerImageErrors[keyof CreateWorkerImageErrors];
+
+export type CreateWorkerImageResponses = {
+    /**
+     * Image đã duyệt.
+     */
+    201: WorkerImageEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateWorkerImageResponse = CreateWorkerImageResponses[keyof CreateWorkerImageResponses];
+
+export type RevokeWorkerImageData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        imageId: UuidV7;
+    };
+    query?: never;
+    url: '/worker-images/{imageId}/revoke';
+};
+
+export type RevokeWorkerImageErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeWorkerImageError = RevokeWorkerImageErrors[keyof RevokeWorkerImageErrors];
+
+export type RevokeWorkerImageResponses = {
+    /**
+     * Image đã revoke.
+     */
+    200: WorkerImageEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RevokeWorkerImageResponse = RevokeWorkerImageResponses[keyof RevokeWorkerImageResponses];

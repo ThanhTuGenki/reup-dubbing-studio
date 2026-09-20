@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: Reup Dubbing Studio Worker Control API
+  version: 0.1.0
+servers: [{ url: 'http://localhost:3000/worker/v1' }]
+security: [{ workerBearer: [] }]
+paths:
+  /enroll:
+    post:
+      summary: Exchange enrollment token for a scoped credential and first session
+      operationId: enrollWorker
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SessionIdentity' } } } }
+      responses:
+        '201': { description: One-time credential and session., content: { application/json: { schema: { $ref: '#/components/schemas/EnrollmentEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /sessions:
+    post:
+      summary: Start a runtime session with an existing worker credential
+      operationId: startWorkerSession
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SessionIdentity' } } } }
+      responses:
+        '201': { description: Runtime session., content: { application/json: { schema: { $ref: '#/components/schemas/SessionEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /sessions/{sessionId}/heartbeat:
+    post:
+      summary: Update the latest capacity and safe telemetry snapshot
+      operationId: heartbeatWorkerSession
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Heartbeat' } } } }
+      responses:
+        '201': { description: Accepted sequence., content: { application/json: { schema: { $ref: '#/components/schemas/HeartbeatEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+components:
+  securitySchemes:
+    workerBearer: { type: http, scheme: bearer, bearerFormat: opaque }
+  schemas:
+    UuidV7: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' }
+    WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
+    SessionIdentity:
+      type: object
+      required: [sessionNonce, role, imageDigest, agentVersion, contractVersion, gpuInventory, cpuInventory, capacity]
+      properties:
+        sessionNonce: { $ref: '#/components/schemas/UuidV7' }
+        role: { $ref: '#/components/schemas/WorkerRole' }
+        imageDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
+        agentVersion: { type: string }
+        contractVersion: { type: integer, minimum: 1 }
+        gpuInventory: { type: array, maxItems: 16, items: { type: object, additionalProperties: true } }
+        cpuInventory: { type: object, additionalProperties: true }
+        capacity: { type: object, additionalProperties: true }
+    Heartbeat:
+      type: object
+      required: [sequence, sentAt, capacity, currentTaskCount, activeLeaseIds, telemetry, agentVersion, contractVersion]
+      properties:
+        sequence: { type: string, pattern: '^[0-9]+$' }
+        sentAt: { type: string, format: date-time }
+        capacity: { type: object, additionalProperties: true }
+        currentTaskCount: { type: integer, minimum: 0 }
+        activeLeaseIds: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/UuidV7' } }
+        telemetry: { type: object, additionalProperties: true }
+        agentVersion: { type: string }
+        contractVersion: { type: integer, minimum: 1 }
+    WorkerSession:
+      type: object
+      additionalProperties: true
+      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        sessionNonce: { $ref: '#/components/schemas/UuidV7' }
+        imageDigest: { type: string }
+        agentVersion: { type: string }
+        contractVersion: { type: integer }
+        capacity: { type: object, additionalProperties: true }
+        currentTaskCount: { type: integer }
+        lastHeartbeatSequence: { type: string }
+        startedAt: { type: string, format: date-time }
+        lastHeartbeatAt: { type: string, format: date-time }
+    Meta: { type: object, required: [requestId], properties: { requestId: { $ref: '#/components/schemas/UuidV7' } } }
+    EnrollmentEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { type: object, required: [credential, session, heartbeatIntervalSeconds, offlineTimeoutSeconds], properties: { credential: { type: string }, session: { $ref: '#/components/schemas/WorkerSession' }, heartbeatIntervalSeconds: { type: integer }, offlineTimeoutSeconds: { type: integer } } }
+        meta: { $ref: '#/components/schemas/Meta' }
+    SessionEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { type: object, required: [session, heartbeatIntervalSeconds, offlineTimeoutSeconds], properties: { session: { $ref: '#/components/schemas/WorkerSession' }, heartbeatIntervalSeconds: { type: integer }, offlineTimeoutSeconds: { type: integer } } }
+        meta: { $ref: '#/components/schemas/Meta' }
+    HeartbeatEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { type: object, required: [acceptedSequence, workerId, sessionId], properties: { acceptedSequence: { type: string }, workerId: { $ref: '#/components/schemas/UuidV7' }, sessionId: { $ref: '#/components/schemas/UuidV7' } } }
+        meta: { $ref: '#/components/schemas/Meta' }
+    ProblemDetails:
+      type: object
+      required: [type, title, status, code, requestId]
+      properties: { type: { type: string }, title: { type: string }, status: { type: integer }, detail: { type: string }, code: { type: string }, requestId: { $ref: '#/components/schemas/UuidV7' } }
+  responses:
+    Problem:
+      description: RFC 9457 error without secret detail.
+      content: { application/problem+json: { schema: { $ref: '#/components/schemas/ProblemDetails' } } }

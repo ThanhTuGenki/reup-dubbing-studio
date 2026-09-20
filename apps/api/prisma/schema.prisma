@@ -229,6 +229,48 @@ enum UserStatus {
   DISABLED
 }
 
+enum WorkerRole {
+  BATCH_MEDIA
+  INTERACTIVE_TTS
+}
+
+enum WorkerMode {
+  MANUAL_REGISTERED
+  API_PROVISIONED
+}
+
+enum WorkerDesiredStatus {
+  ACTIVE
+  DRAINING
+  REVOKED
+}
+
+enum WorkerObservedStatus {
+  PENDING
+  READY
+  BUSY
+  DRAINING
+  SAFE_TO_TERMINATE
+  OFFLINE
+  TERMINATED
+  ERROR
+}
+
+enum WorkerImageStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum WorkerSessionEndReason {
+  DRAINED
+  TERMINATED
+  REPLACED
+  CREDENTIAL_REVOKED
+  HEARTBEAT_TIMEOUT
+  VERSION_MISMATCH
+  ERROR
+}
+
 enum MediaCandidateRole {
   COVER
   COVER_169
@@ -713,6 +755,143 @@ model PipelineTask {
   @@map("pipeline_tasks")
 }
 
+model ApprovedWorkerImage {
+  id              String            @id @db.Uuid
+  role            WorkerRole
+  semanticVersion String            @map("semantic_version")
+  imageDigest     String            @map("image_digest")
+  registryRef     String            @map("registry_ref")
+  contractVersion Int               @map("contract_version")
+  status          WorkerImageStatus @default(ACTIVE)
+  approvedAt      DateTime          @default(now()) @map("approved_at") @db.Timestamptz(6)
+  revokedAt       DateTime?         @map("revoked_at") @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version         Int               @default(1)
+
+  workers  Worker[]
+  sessions WorkerSession[]
+
+  @@unique([role, imageDigest])
+  @@map("approved_worker_images")
+}
+
+model Worker {
+  id                  String               @id @db.Uuid
+  displayName         String               @map("display_name")
+  role                WorkerRole
+  provider            String
+  providerInstanceId  String?              @map("provider_instance_id")
+  mode                WorkerMode           @default(MANUAL_REGISTERED)
+  desiredStatus       WorkerDesiredStatus  @default(ACTIVE) @map("desired_status")
+  observedStatus      WorkerObservedStatus @default(PENDING) @map("observed_status")
+  expectedGpuModel    String?              @map("expected_gpu_model")
+  expectedVramMb      Int?                 @map("expected_vram_mb")
+  approvedImageId     String               @map("approved_image_id") @db.Uuid
+  lastErrorCode       String?              @map("last_error_code")
+  lastErrorDetailSafe String?              @map("last_error_detail_safe")
+  createdAt           DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version             Int                  @default(1)
+
+  approvedImage    ApprovedWorkerImage     @relation(fields: [approvedImageId], references: [id], onDelete: Restrict)
+  enrollmentTokens WorkerEnrollmentToken[]
+  credentials      WorkerCredential[]
+  sessions         WorkerSession[]
+  billingSessions  WorkerBillingSession[]
+
+  @@index([observedStatus, role, updatedAt, id])
+  @@map("workers")
+}
+
+model WorkerEnrollmentToken {
+  id          String    @id @db.Uuid
+  workerId    String    @map("worker_id") @db.Uuid
+  tokenPrefix String    @map("token_prefix")
+  tokenHash   String    @map("token_hash")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(6)
+  revokedAt   DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  worker Worker @relation(fields: [workerId], references: [id], onDelete: Restrict)
+
+  @@index([tokenPrefix])
+  @@map("worker_enrollment_tokens")
+}
+
+model WorkerCredential {
+  id               String    @id @db.Uuid
+  workerId         String    @map("worker_id") @db.Uuid
+  credentialPrefix String    @map("credential_prefix")
+  credentialHash   String    @map("credential_hash")
+  scopes           String[]
+  issuedAt         DateTime  @default(now()) @map("issued_at") @db.Timestamptz(6)
+  expiresAt        DateTime? @map("expires_at") @db.Timestamptz(6)
+  lastUsedAt       DateTime? @map("last_used_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  worker   Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  sessions WorkerSession[]
+
+  @@index([credentialPrefix])
+  @@map("worker_credentials")
+}
+
+model WorkerBillingSession {
+  id                     String    @id @db.Uuid
+  workerId               String    @map("worker_id") @db.Uuid
+  provider               String
+  providerInstanceId     String?   @map("provider_instance_id")
+  hourlyRateCp           Decimal   @map("hourly_rate_cp") @db.Decimal(20, 6)
+  paidVndPerCp           Decimal?  @map("paid_vnd_per_cp") @db.Decimal(20, 8)
+  billingStartedAt       DateTime  @map("billing_started_at") @db.Timestamptz(6)
+  billingEndedAt         DateTime? @map("billing_ended_at") @db.Timestamptz(6)
+  terminationConfirmedAt DateTime? @map("termination_confirmed_at") @db.Timestamptz(6)
+  estimatedCostCp        Decimal?  @map("estimated_cost_cp") @db.Decimal(24, 6)
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  worker   Worker          @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  sessions WorkerSession[]
+
+  @@map("worker_billing_sessions")
+}
+
+model WorkerSession {
+  id                    String                  @id @db.Uuid
+  workerId              String                  @map("worker_id") @db.Uuid
+  credentialId          String                  @map("credential_id") @db.Uuid
+  billingSessionId      String                  @map("billing_session_id") @db.Uuid
+  sessionNonce          String                  @map("session_nonce") @db.Uuid
+  imageId               String                  @map("image_id") @db.Uuid
+  imageDigest           String                  @map("image_digest")
+  agentVersion          String                  @map("agent_version")
+  contractVersion       Int                     @map("contract_version")
+  gpuInventory          Json                    @default("[]") @map("gpu_inventory")
+  cpuInventory          Json                    @default("{}") @map("cpu_inventory")
+  capacity              Json                    @default("{}")
+  telemetrySafe         Json                    @default("{}") @map("telemetry_safe")
+  currentTaskCount      Int                     @default(0) @map("current_task_count")
+  lastHeartbeatSequence BigInt                  @default(0) @map("last_heartbeat_sequence")
+  startedAt             DateTime                @default(now()) @map("started_at") @db.Timestamptz(6)
+  lastHeartbeatAt       DateTime                @default(now()) @map("last_heartbeat_at") @db.Timestamptz(6)
+  drainingAt            DateTime?               @map("draining_at") @db.Timestamptz(6)
+  endedAt               DateTime?               @map("ended_at") @db.Timestamptz(6)
+  endReason             WorkerSessionEndReason? @map("end_reason")
+
+  worker         Worker               @relation(fields: [workerId], references: [id], onDelete: Restrict)
+  credential     WorkerCredential     @relation(fields: [credentialId], references: [id], onDelete: Restrict)
+  billingSession WorkerBillingSession @relation(fields: [billingSessionId], references: [id], onDelete: Restrict)
+  image          ApprovedWorkerImage  @relation(fields: [imageId], references: [id], onDelete: Restrict)
+  taskAttempts   TaskAttempt[]
+  taskLeases     TaskLease[]
+
+  @@unique([workerId, sessionNonce])
+  @@index([lastHeartbeatAt])
+  @@map("worker_sessions")
+}
+
 model TaskAttempt {
   id                 String            @id @db.Uuid
   pipelineTaskId     String            @map("pipeline_task_id") @db.Uuid
@@ -734,6 +913,7 @@ model TaskAttempt {
   metricsSafe        Json              @default("{}") @map("metrics_safe")
 
   pipelineTask   PipelineTask    @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  workerSession  WorkerSession?  @relation(fields: [workerSessionId], references: [id], onDelete: Restrict)
   leases         TaskLease[]
   workflowEvents WorkflowEvent[]
 
@@ -756,8 +936,9 @@ model TaskLease {
   releasedAt         DateTime?        @map("released_at") @db.Timestamptz(6)
   releaseReason      String?          @map("release_reason")
 
-  pipelineTask PipelineTask @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
-  taskAttempt  TaskAttempt  @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+  pipelineTask  PipelineTask   @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  taskAttempt   TaskAttempt    @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+  workerSession WorkerSession? @relation(fields: [workerSessionId], references: [id], onDelete: Restrict)
 
   @@unique([pipelineTaskId, fencingToken])
   @@index([expiresAt])

@@ -12,7 +12,7 @@
     "test": "pnpm --recursive --if-present test",
     "test:e2e": "pnpm --recursive --if-present test:e2e",
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps/api/src apps/web/src",
-    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml",
+    "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml",
     "contract:generate": "pnpm --filter @reup-dubbing-studio/api-contract generate",
     "contract:check": "pnpm contract:lint && pnpm contract:generate && git diff --exit-code -- packages/api-contract/src/generated",
     "test:contract": "pnpm --filter @reup-dubbing-studio/api-contract test && pnpm --filter @reup-dubbing-studio/api-client test",

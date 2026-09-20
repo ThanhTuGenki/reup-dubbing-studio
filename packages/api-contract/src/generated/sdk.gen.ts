@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CancelDiscoveryRunData, CancelDiscoveryRunErrors, CancelDiscoveryRunResponses, CancelQueueJobData, CancelQueueJobErrors, CancelQueueJobResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateDiscoveryRunData, CreateDiscoveryRunErrors, CreateDiscoveryRunResponses, CreateIngestJobsData, CreateIngestJobsErrors, CreateIngestJobsResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateSourceAccountData, CreateSourceAccountErrors, CreateSourceAccountResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, CreateWatchlistData, CreateWatchlistErrors, CreateWatchlistResponses, DeleteWatchlistData, DeleteWatchlistErrors, DeleteWatchlistResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetDiscoveryRunData, GetDiscoveryRunErrors, GetDiscoveryRunResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetQueueJobData, GetQueueJobErrors, GetQueueJobResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, ImportSourceCredentialData, ImportSourceCredentialErrors, ImportSourceCredentialResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListDiscoveryCategoriesData, ListDiscoveryCategoriesErrors, ListDiscoveryCategoriesResponses, ListDiscoveryItemsData, ListDiscoveryItemsErrors, ListDiscoveryItemsResponses, ListQueueJobAttemptsData, ListQueueJobAttemptsErrors, ListQueueJobAttemptsResponses, ListQueueJobsData, ListQueueJobsErrors, ListQueueJobsResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListSourceAccountsData, ListSourceAccountsErrors, ListSourceAccountsResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, ListWatchlistsData, ListWatchlistsErrors, ListWatchlistsResponses, PreflightIngestJobsData, PreflightIngestJobsErrors, PreflightIngestJobsResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, RetryQueueJobData, RetryQueueJobErrors, RetryQueueJobResponses, RevokeSourceCredentialData, RevokeSourceCredentialErrors, RevokeSourceCredentialResponses, RunWatchlistData, RunWatchlistErrors, RunWatchlistResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses, UpdateWatchlistData, UpdateWatchlistErrors, UpdateWatchlistResponses, ValidateSourceAccountData, ValidateSourceAccountErrors, ValidateSourceAccountResponses } from './types.gen.js';
+import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CancelDiscoveryRunData, CancelDiscoveryRunErrors, CancelDiscoveryRunResponses, CancelQueueJobData, CancelQueueJobErrors, CancelQueueJobResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, ConfirmWorkerTerminationData, ConfirmWorkerTerminationErrors, ConfirmWorkerTerminationResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateDiscoveryRunData, CreateDiscoveryRunErrors, CreateDiscoveryRunResponses, CreateIngestJobsData, CreateIngestJobsErrors, CreateIngestJobsResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateSourceAccountData, CreateSourceAccountErrors, CreateSourceAccountResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, CreateWatchlistData, CreateWatchlistErrors, CreateWatchlistResponses, CreateWorkerData, CreateWorkerErrors, CreateWorkerImageData, CreateWorkerImageErrors, CreateWorkerImageResponses, CreateWorkerResponses, DeleteWatchlistData, DeleteWatchlistErrors, DeleteWatchlistResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, DrainWorkerData, DrainWorkerErrors, DrainWorkerResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetDiscoveryRunData, GetDiscoveryRunErrors, GetDiscoveryRunResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetQueueJobData, GetQueueJobErrors, GetQueueJobResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, GetWorkerData, GetWorkerErrors, GetWorkerResponses, ImportSourceCredentialData, ImportSourceCredentialErrors, ImportSourceCredentialResponses, IssueWorkerEnrollmentTokenData, IssueWorkerEnrollmentTokenErrors, IssueWorkerEnrollmentTokenResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListDiscoveryCategoriesData, ListDiscoveryCategoriesErrors, ListDiscoveryCategoriesResponses, ListDiscoveryItemsData, ListDiscoveryItemsErrors, ListDiscoveryItemsResponses, ListQueueJobAttemptsData, ListQueueJobAttemptsErrors, ListQueueJobAttemptsResponses, ListQueueJobsData, ListQueueJobsErrors, ListQueueJobsResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListSourceAccountsData, ListSourceAccountsErrors, ListSourceAccountsResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, ListWatchlistsData, ListWatchlistsErrors, ListWatchlistsResponses, ListWorkerImagesData, ListWorkerImagesErrors, ListWorkerImagesResponses, ListWorkersData, ListWorkersErrors, ListWorkersResponses, PreflightIngestJobsData, PreflightIngestJobsErrors, PreflightIngestJobsResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, RetryQueueJobData, RetryQueueJobErrors, RetryQueueJobResponses, RevokeSourceCredentialData, RevokeSourceCredentialErrors, RevokeSourceCredentialResponses, RevokeWorkerData, RevokeWorkerErrors, RevokeWorkerImageData, RevokeWorkerImageErrors, RevokeWorkerImageResponses, RevokeWorkerResponses, RunWatchlistData, RunWatchlistErrors, RunWatchlistResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses, UpdateWatchlistData, UpdateWatchlistErrors, UpdateWatchlistResponses, ValidateSourceAccountData, ValidateSourceAccountErrors, ValidateSourceAccountResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -720,5 +720,113 @@ export const retryQueueJob = <ThrowOnError extends boolean = false>(options: Opt
             'Content-Type': 'application/json',
             ...options.headers
         }
+    });
+};
+
+/**
+ * Liệt kê GPU Worker
+ */
+export const listWorkers = <ThrowOnError extends boolean = false>(options?: Options<ListWorkersData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListWorkersResponses, ListWorkersErrors, ThrowOnError>({
+        url: '/workers',
+        ...options
+    });
+};
+
+/**
+ * Đăng ký GPU Worker thủ công và phát enrollment token một lần
+ */
+export const createWorker = <ThrowOnError extends boolean = false>(options: Options<CreateWorkerData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateWorkerResponses, CreateWorkerErrors, ThrowOnError>({
+        url: '/workers',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc Worker, session, capacity và billing hiện tại
+ */
+export const getWorker = <ThrowOnError extends boolean = false>(options: Options<GetWorkerData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetWorkerResponses, GetWorkerErrors, ThrowOnError>({
+        url: '/workers/{workerId}',
+        ...options
+    });
+};
+
+/**
+ * Revoke token chưa dùng và phát token mới một lần
+ */
+export const issueWorkerEnrollmentToken = <ThrowOnError extends boolean = false>(options: Options<IssueWorkerEnrollmentTokenData, ThrowOnError>) => {
+    return (options.client ?? client).post<IssueWorkerEnrollmentTokenResponses, IssueWorkerEnrollmentTokenErrors, ThrowOnError>({
+        url: '/workers/{workerId}/enrollment-token',
+        ...options
+    });
+};
+
+/**
+ * Ngừng cấp lease mới và drain an toàn
+ */
+export const drainWorker = <ThrowOnError extends boolean = false>(options: Options<DrainWorkerData, ThrowOnError>) => {
+    return (options.client ?? client).post<DrainWorkerResponses, DrainWorkerErrors, ThrowOnError>({
+        url: '/workers/{workerId}/drain',
+        ...options
+    });
+};
+
+/**
+ * Thu hồi khẩn cấp credential Worker
+ */
+export const revokeWorker = <ThrowOnError extends boolean = false>(options: Options<RevokeWorkerData, ThrowOnError>) => {
+    return (options.client ?? client).post<RevokeWorkerResponses, RevokeWorkerErrors, ThrowOnError>({
+        url: '/workers/{workerId}/revoke',
+        ...options
+    });
+};
+
+/**
+ * Xác nhận người dùng đã xóa rental thủ công
+ */
+export const confirmWorkerTermination = <ThrowOnError extends boolean = false>(options: Options<ConfirmWorkerTerminationData, ThrowOnError>) => {
+    return (options.client ?? client).post<ConfirmWorkerTerminationResponses, ConfirmWorkerTerminationErrors, ThrowOnError>({
+        url: '/workers/{workerId}/confirm-termination',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê approved Worker image
+ */
+export const listWorkerImages = <ThrowOnError extends boolean = false>(options?: Options<ListWorkerImagesData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListWorkerImagesResponses, ListWorkerImagesErrors, ThrowOnError>({
+        url: '/worker-images',
+        ...options
+    });
+};
+
+/**
+ * Duyệt immutable Worker image digest
+ */
+export const createWorkerImage = <ThrowOnError extends boolean = false>(options: Options<CreateWorkerImageData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateWorkerImageResponses, CreateWorkerImageErrors, ThrowOnError>({
+        url: '/worker-images',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Revoke Worker image
+ */
+export const revokeWorkerImage = <ThrowOnError extends boolean = false>(options: Options<RevokeWorkerImageData, ThrowOnError>) => {
+    return (options.client ?? client).post<RevokeWorkerImageResponses, RevokeWorkerImageErrors, ThrowOnError>({
+        url: '/worker-images/{imageId}/revoke',
+        ...options
     });
 };
