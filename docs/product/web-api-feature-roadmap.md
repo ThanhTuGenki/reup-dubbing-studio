@@ -79,7 +79,7 @@
 ## 6. Hàng đợi xử lý
 
 - [ ] **Hoàn tất feature Queue.**
-  - [ ] Phân tích lifecycle job/task và các action được phép theo từng trạng thái.
+  - [x] Phân tích lifecycle job/task và các action được phép theo từng trạng thái.
   - [ ] API list/detail/filter job, progress, attempt/log an toàn, retry/cancel và
     SSE status update.
   - [ ] Web xây bảng queue, progress, filter, detail/drawer và action retry/cancel.
