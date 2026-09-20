@@ -267,15 +267,17 @@ Job cũ không đọc profile mutable để retry hoặc render lại.
 Profile module cung cấp `ProfilesService.snapshotForJob(channelProfileId,
 seriesProfileId?)` cho use case tạo Job. Reader dùng transaction PostgreSQL
 `REPEATABLE READ`, chỉ chấp nhận profile `ACTIVE` và `READY`, rồi trả snapshot
-typed có `schemaVersion: 1` gồm:
+typed có `schemaVersion: 2` gồm:
 
 - ID/version của Channel và Series;
 - effective pipeline, content, mask và destination metadata;
 - asset/link revision cùng storage backend, object key, checksum và asset version;
-- default voice ID/version;
+- default voice, sample asset và version tương ứng;
 - retention values cùng version của System Settings.
 
-Reader không tạo `pipeline_jobs`; feature Tạo Job sẽ lưu nguyên object này vào
+`schemaVersion: 2` là version hiện hành sau khi Voice Library bổ sung voice sample
+vào snapshot. Reader không tạo `pipeline_jobs`; feature Tạo Job sẽ lưu nguyên
+object này vào
 `pipeline_jobs.profile_snapshot`. Retry/render của Job phải đọc JSON đã lưu, không
 gọi lại Profile module. Khi cast sheet được triển khai cùng Voice Library, snapshot
 schema phải tăng version trước khi thêm cast voice/version vào contract.
