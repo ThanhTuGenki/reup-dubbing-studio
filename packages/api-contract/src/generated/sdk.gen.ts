@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses } from './types.gen.js';
+import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -259,6 +259,138 @@ export const previewSeriesProfileAsset = <ThrowOnError extends boolean = false>(
 export const detachSeriesProfileAsset = <ThrowOnError extends boolean = false>(options: Options<DetachSeriesProfileAssetData, ThrowOnError>) => {
     return (options.client ?? client).delete<DetachSeriesProfileAssetResponses, DetachSeriesProfileAssetErrors, ThrowOnError>({
         url: '/series-profiles/{seriesProfileId}/assets/{linkId}',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê Voice Profile
+ */
+export const listVoiceProfiles = <ThrowOnError extends boolean = false>(options?: Options<ListVoiceProfilesData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListVoiceProfilesResponses, ListVoiceProfilesErrors, ThrowOnError>({
+        url: '/voice-profiles',
+        ...options
+    });
+};
+
+/**
+ * Tạo Voice Profile draft
+ */
+export const createVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<CreateVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreateVoiceProfileResponses, CreateVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc Voice Profile
+ */
+export const getVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<GetVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetVoiceProfileResponses, GetVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật Voice Profile
+ */
+export const updateVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<UpdateVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdateVoiceProfileResponses, UpdateVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Activate Voice Profile sau readiness gate
+ */
+export const activateVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<ActivateVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<ActivateVoiceProfileResponses, ActivateVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/activate',
+        ...options
+    });
+};
+
+/**
+ * Archive Voice Profile
+ */
+export const archiveVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<ArchiveVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<ArchiveVoiceProfileResponses, ArchiveVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/archive',
+        ...options
+    });
+};
+
+/**
+ * Restore Voice Profile về draft
+ */
+export const restoreVoiceProfile = <ThrowOnError extends boolean = false>(options: Options<RestoreVoiceProfileData, ThrowOnError>) => {
+    return (options.client ?? client).post<RestoreVoiceProfileResponses, RestoreVoiceProfileErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/restore',
+        ...options
+    });
+};
+
+/**
+ * Xin presigned upload cho reference sample
+ */
+export const requestVoiceSampleUpload = <ThrowOnError extends boolean = false>(options: Options<RequestVoiceSampleUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RequestVoiceSampleUploadResponses, RequestVoiceSampleUploadErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/samples/uploads',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Cấp lại upload grant cho pending sample
+ */
+export const refreshVoiceSampleUpload = <ThrowOnError extends boolean = false>(options: Options<RefreshVoiceSampleUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<RefreshVoiceSampleUploadResponses, RefreshVoiceSampleUploadErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/samples/uploads/{assetId}/grant',
+        ...options
+    });
+};
+
+/**
+ * Verify và commit reference sample
+ */
+export const commitVoiceSampleUpload = <ThrowOnError extends boolean = false>(options: Options<CommitVoiceSampleUploadData, ThrowOnError>) => {
+    return (options.client ?? client).post<CommitVoiceSampleUploadResponses, CommitVoiceSampleUploadErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/samples/uploads/{assetId}/commit',
+        ...options
+    });
+};
+
+/**
+ * Xin presigned preview URL cho sample hiện tại
+ */
+export const previewVoiceSample = <ThrowOnError extends boolean = false>(options: Options<PreviewVoiceSampleData, ThrowOnError>) => {
+    return (options.client ?? client).get<PreviewVoiceSampleResponses, PreviewVoiceSampleErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/samples/{sampleId}/preview',
+        ...options
+    });
+};
+
+/**
+ * Detach current voice sample
+ */
+export const detachVoiceSample = <ThrowOnError extends boolean = false>(options: Options<DetachVoiceSampleData, ThrowOnError>) => {
+    return (options.client ?? client).delete<DetachVoiceSampleResponses, DetachVoiceSampleErrors, ThrowOnError>({
+        url: '/voice-profiles/{voiceProfileId}/samples/{sampleId}',
         ...options
     });
 };

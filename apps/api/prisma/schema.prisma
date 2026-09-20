@@ -51,6 +51,15 @@ enum VoiceProfileStatus {
   ARCHIVED
 }
 
+enum VoiceLicenseKind {
+  OWNED_RECORDING
+  AUTHORIZED_COMMERCIAL
+  CC_BY
+  CC_BY_NC
+  CUSTOM
+  UNKNOWN
+}
+
 enum AssetStorageBackend {
   LOCAL
   R2
@@ -132,8 +141,14 @@ model IdempotencyRecord {
 model VoiceProfile {
   id                   String             @id @db.Uuid
   name                 String
-  language             String
+  normalizedName       String             @unique @map("normalized_name")
+  primaryLanguage      String             @map("primary_language")
+  description          String?
+  tags                 String[]           @default([])
   status               VoiceProfileStatus @default(DRAFT)
+  licenseKind          VoiceLicenseKind   @default(UNKNOWN) @map("license_kind")
+  licenseReference     String?            @map("license_reference")
+  sourceReference      String?            @map("source_reference")
   commercialUseAllowed Boolean            @default(false) @map("commercial_use_allowed")
   version              Int                @default(1)
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
@@ -141,8 +156,31 @@ model VoiceProfile {
 
   channelDefaults ChannelProfile[] @relation("ChannelDefaultVoice")
   seriesOverrides SeriesProfile[]  @relation("SeriesOverrideVoice")
+  samples         VoiceProfileSample[]
 
+  @@index([status, primaryLanguage, createdAt, id])
+  @@index([tags], type: Gin)
   @@map("voice_profiles")
+}
+
+model VoiceProfileSample {
+  id             String   @id @db.Uuid
+  voiceProfileId String   @map("voice_profile_id") @db.Uuid
+  assetId        String   @map("asset_id") @db.Uuid
+  language       String
+  transcript     String
+  durationMs     Int      @map("duration_ms")
+  revision       Int
+  isCurrent      Boolean  @default(true) @map("is_current")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  voiceProfile VoiceProfile @relation(fields: [voiceProfileId], references: [id], onDelete: Restrict)
+  asset        Asset        @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([voiceProfileId, language, revision])
+  @@index([voiceProfileId, language, isCurrent])
+  @@index([assetId])
+  @@map("voice_profile_samples")
 }
 
 model ChannelProfile {
@@ -250,6 +288,7 @@ model Asset {
 
   channelLinks ChannelProfileAsset[]
   seriesLinks  SeriesProfileAsset[]
+  voiceSamples VoiceProfileSample[]
 
   @@unique([storageBackend, bucket, objectKey])
   @@index([status, createdAt])

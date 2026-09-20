@@ -50,6 +50,14 @@ describe('generated health contract', () => {
       | 'PROFILE_MASK_INVALID'
       | 'PROFILE_VOICE_NOT_READY'
       | 'PROFILE_VALIDATION_FAILED'
+      | 'VOICE_NOT_FOUND'
+      | 'VOICE_NAME_CONFLICT'
+      | 'VOICE_VERSION_CONFLICT'
+      | 'VOICE_VALIDATION_FAILED'
+      | 'VOICE_NOT_READY'
+      | 'VOICE_ARCHIVED'
+      | 'VOICE_IN_USE'
+      | 'VOICE_SAMPLE_NOT_AVAILABLE'
     >();
   });
 });

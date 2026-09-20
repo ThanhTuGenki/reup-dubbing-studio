@@ -12,6 +12,12 @@ export type ProfileReadiness = 'READY' | 'NEEDS_CONFIGURATION';
 
 export type ProfileReadinessIssue = 'DEFAULT_VOICE_REQUIRED' | 'DEFAULT_VOICE_NOT_READY' | 'OUTPUT_REQUIRED' | 'MASK_REQUIRED' | 'MASK_REFERENCE_ASSET_REQUIRED' | 'CAST_REQUIRED' | 'CAST_VOICE_NOT_READY' | 'PARENT_CHANNEL_NOT_ACTIVE';
 
+export type VoiceProfileStatus = 'DRAFT' | 'READY' | 'BLOCKED_LICENSE' | 'ARCHIVED';
+
+export type VoiceLicenseKind = 'OWNED_RECORDING' | 'AUTHORIZED_COMMERCIAL' | 'CC_BY' | 'CC_BY_NC' | 'CUSTOM' | 'UNKNOWN';
+
+export type VoiceReadinessIssue = 'VOICE_PRIMARY_SAMPLE_REQUIRED' | 'VOICE_SAMPLE_TRANSCRIPT_REQUIRED' | 'VOICE_SAMPLE_DURATION_INVALID' | 'VOICE_LICENSE_REFERENCE_REQUIRED' | 'VOICE_COMMERCIAL_USE_NOT_ALLOWED' | 'VOICE_SAMPLE_NOT_AVAILABLE';
+
 export type VoiceMode = 'SINGLE' | 'DUAL' | 'MULTI_AUTO';
 
 export type TimingPolicy = 'PRESERVE_SEGMENT' | 'FIT_SEGMENT' | 'ALLOW_DRIFT';
@@ -210,6 +216,92 @@ export type SeriesProfilePage = {
     nextCursor: string | null;
 };
 
+export type VoiceSample = {
+    id: UuidV7;
+    assetId: UuidV7;
+    language: string;
+    transcript: string;
+    durationMs: number;
+    fileName: string;
+    contentType: string;
+    byteSize: string;
+    revision: number;
+};
+
+export type VoiceReferencedBy = {
+    channelProfiles: number;
+    seriesProfiles: number;
+};
+
+export type VoiceProfile = {
+    id: UuidV7;
+    name: string;
+    primaryLanguage: string;
+    description: string | null;
+    tags: Array<string>;
+    status: VoiceProfileStatus;
+    licenseKind: VoiceLicenseKind;
+    licenseReference: string | null;
+    sourceReference: string | null;
+    commercialUseAllowed: boolean;
+    samples: Array<VoiceSample>;
+    readiness: ProfileReadiness;
+    readinessIssues: Array<VoiceReadinessIssue>;
+    referencedBy: VoiceReferencedBy;
+    version: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type CreateVoiceProfile = {
+    name: string;
+    primaryLanguage: string;
+    description?: string | null;
+    tags: Array<string>;
+    licenseKind: VoiceLicenseKind;
+    licenseReference?: string | null;
+    sourceReference?: string | null;
+    commercialUseAllowed: boolean;
+};
+
+export type UpdateVoiceProfile = {
+    name?: string;
+    primaryLanguage?: string;
+    description?: string | null;
+    tags?: Array<string>;
+    licenseKind?: VoiceLicenseKind;
+    licenseReference?: string | null;
+    sourceReference?: string | null;
+    commercialUseAllowed?: boolean;
+};
+
+export type VoiceProfilePage = {
+    items: Array<VoiceProfile>;
+    nextCursor: string | null;
+};
+
+export type VoiceSampleUploadRequest = {
+    language: string;
+    transcript: string;
+    durationMs: number;
+    fileName: string;
+    contentType: 'audio/wav' | 'audio/x-wav' | 'audio/flac' | 'audio/mpeg' | 'audio/webm';
+    byteSize: number;
+    checksumSha256?: string;
+};
+
+export type CommittedVoiceSample = {
+    sample: {
+        id: UuidV7;
+        assetId: UuidV7;
+        language: string;
+        transcript: string;
+        durationMs: number;
+        revision: number;
+    };
+    profileVersion: number;
+};
+
 export type ProfileAssetUploadRequest = {
     role: 'INTRO' | 'OUTRO' | 'LOGO' | 'WATERMARK' | 'MASK_REFERENCE_FRAME';
     fileName: string;
@@ -289,6 +381,21 @@ export type CommittedAssetEnvelope = {
 
 export type ProfileVersionEnvelope = {
     data: ProfileVersion;
+    meta: SuccessMeta;
+};
+
+export type VoiceProfileEnvelope = {
+    data: VoiceProfile;
+    meta: SuccessMeta;
+};
+
+export type VoiceProfileListEnvelope = {
+    data: VoiceProfilePage;
+    meta: SuccessMeta;
+};
+
+export type CommittedVoiceSampleEnvelope = {
+    data: CommittedVoiceSample;
     meta: SuccessMeta;
 };
 
@@ -427,13 +534,17 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE';
     requestId: RequestId;
 };
 
 export type ChannelProfileId = UuidV7;
 
 export type SeriesProfileId = UuidV7;
+
+export type VoiceProfileId = UuidV7;
+
+export type SampleId = UuidV7;
 
 export type AssetId = UuidV7;
 
@@ -445,6 +556,8 @@ export type ChannelIfMatch = string;
  * Strong effective ETag gồm version Series và parent Channel.
  */
 export type SeriesIfMatch = string;
+
+export type VoiceIfMatch = string;
 
 export type Cursor = string;
 
@@ -1212,6 +1325,408 @@ export type DetachSeriesProfileAssetResponses = {
 };
 
 export type DetachSeriesProfileAssetResponse = DetachSeriesProfileAssetResponses[keyof DetachSeriesProfileAssetResponses];
+
+export type ListVoiceProfilesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        query?: string;
+        status?: VoiceProfileStatus;
+        language?: string;
+        tag?: string;
+        commercialUseAllowed?: boolean;
+    };
+    url: '/voice-profiles';
+};
+
+export type ListVoiceProfilesErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListVoiceProfilesError = ListVoiceProfilesErrors[keyof ListVoiceProfilesErrors];
+
+export type ListVoiceProfilesResponses = {
+    /**
+     * Trang Voice Profile.
+     */
+    200: VoiceProfileListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListVoiceProfilesResponse = ListVoiceProfilesResponses[keyof ListVoiceProfilesResponses];
+
+export type CreateVoiceProfileData = {
+    body: CreateVoiceProfile;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/voice-profiles';
+};
+
+export type CreateVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateVoiceProfileError = CreateVoiceProfileErrors[keyof CreateVoiceProfileErrors];
+
+export type CreateVoiceProfileResponses = {
+    /**
+     * Voice Profile đã tạo.
+     */
+    201: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateVoiceProfileResponse = CreateVoiceProfileResponses[keyof CreateVoiceProfileResponses];
+
+export type GetVoiceProfileData = {
+    body?: never;
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}';
+};
+
+export type GetVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetVoiceProfileError = GetVoiceProfileErrors[keyof GetVoiceProfileErrors];
+
+export type GetVoiceProfileResponses = {
+    /**
+     * Voice Profile hiện tại.
+     */
+    200: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetVoiceProfileResponse = GetVoiceProfileResponses[keyof GetVoiceProfileResponses];
+
+export type UpdateVoiceProfileData = {
+    body: UpdateVoiceProfile;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}';
+};
+
+export type UpdateVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateVoiceProfileError = UpdateVoiceProfileErrors[keyof UpdateVoiceProfileErrors];
+
+export type UpdateVoiceProfileResponses = {
+    /**
+     * Voice Profile sau cập nhật.
+     */
+    200: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateVoiceProfileResponse = UpdateVoiceProfileResponses[keyof UpdateVoiceProfileResponses];
+
+export type ActivateVoiceProfileData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/activate';
+};
+
+export type ActivateVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ActivateVoiceProfileError = ActivateVoiceProfileErrors[keyof ActivateVoiceProfileErrors];
+
+export type ActivateVoiceProfileResponses = {
+    /**
+     * Voice đã activate hoặc bị license gate chặn.
+     */
+    200: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ActivateVoiceProfileResponse = ActivateVoiceProfileResponses[keyof ActivateVoiceProfileResponses];
+
+export type ArchiveVoiceProfileData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/archive';
+};
+
+export type ArchiveVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveVoiceProfileError = ArchiveVoiceProfileErrors[keyof ArchiveVoiceProfileErrors];
+
+export type ArchiveVoiceProfileResponses = {
+    /**
+     * Voice đã archive.
+     */
+    200: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ArchiveVoiceProfileResponse = ArchiveVoiceProfileResponses[keyof ArchiveVoiceProfileResponses];
+
+export type RestoreVoiceProfileData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/restore';
+};
+
+export type RestoreVoiceProfileErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreVoiceProfileError = RestoreVoiceProfileErrors[keyof RestoreVoiceProfileErrors];
+
+export type RestoreVoiceProfileResponses = {
+    /**
+     * Voice đã restore.
+     */
+    200: VoiceProfileEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RestoreVoiceProfileResponse = RestoreVoiceProfileResponses[keyof RestoreVoiceProfileResponses];
+
+export type RequestVoiceSampleUploadData = {
+    body: VoiceSampleUploadRequest;
+    path: {
+        voiceProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/samples/uploads';
+};
+
+export type RequestVoiceSampleUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestVoiceSampleUploadError = RequestVoiceSampleUploadErrors[keyof RequestVoiceSampleUploadErrors];
+
+export type RequestVoiceSampleUploadResponses = {
+    /**
+     * Purpose-scoped PUT grant.
+     */
+    201: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestVoiceSampleUploadResponse = RequestVoiceSampleUploadResponses[keyof RequestVoiceSampleUploadResponses];
+
+export type RefreshVoiceSampleUploadData = {
+    body?: never;
+    path: {
+        voiceProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/samples/uploads/{assetId}/grant';
+};
+
+export type RefreshVoiceSampleUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshVoiceSampleUploadError = RefreshVoiceSampleUploadErrors[keyof RefreshVoiceSampleUploadErrors];
+
+export type RefreshVoiceSampleUploadResponses = {
+    /**
+     * PUT grant mới.
+     */
+    200: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshVoiceSampleUploadResponse = RefreshVoiceSampleUploadResponses[keyof RefreshVoiceSampleUploadResponses];
+
+export type CommitVoiceSampleUploadData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/samples/uploads/{assetId}/commit';
+};
+
+export type CommitVoiceSampleUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitVoiceSampleUploadError = CommitVoiceSampleUploadErrors[keyof CommitVoiceSampleUploadErrors];
+
+export type CommitVoiceSampleUploadResponses = {
+    /**
+     * Sample revision đã commit.
+     */
+    200: CommittedVoiceSampleEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitVoiceSampleUploadResponse = CommitVoiceSampleUploadResponses[keyof CommitVoiceSampleUploadResponses];
+
+export type PreviewVoiceSampleData = {
+    body?: never;
+    path: {
+        voiceProfileId: UuidV7;
+        sampleId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/samples/{sampleId}/preview';
+};
+
+export type PreviewVoiceSampleErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewVoiceSampleError = PreviewVoiceSampleErrors[keyof PreviewVoiceSampleErrors];
+
+export type PreviewVoiceSampleResponses = {
+    /**
+     * GET grant năm phút.
+     */
+    200: PreviewGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewVoiceSampleResponse = PreviewVoiceSampleResponses[keyof PreviewVoiceSampleResponses];
+
+export type DetachVoiceSampleData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        voiceProfileId: UuidV7;
+        sampleId: UuidV7;
+    };
+    query?: never;
+    url: '/voice-profiles/{voiceProfileId}/samples/{sampleId}';
+};
+
+export type DetachVoiceSampleErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachVoiceSampleError = DetachVoiceSampleErrors[keyof DetachVoiceSampleErrors];
+
+export type DetachVoiceSampleResponses = {
+    /**
+     * Sample đã detach.
+     */
+    200: ProfileVersionEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DetachVoiceSampleResponse = DetachVoiceSampleResponses[keyof DetachVoiceSampleResponses];
 
 export type GetSettingsData = {
     body?: never;

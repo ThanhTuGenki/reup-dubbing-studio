@@ -17,6 +17,8 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
   let app: NestFastifyApplication;
   let prisma: PrismaClient;
   let voiceId: string;
+  let voiceSampleId: string;
+  let voiceAssetId: string;
   let channelId: string;
   let seriesId: string;
 
@@ -34,6 +36,7 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     await prisma.idempotencyRecord.deleteMany({ where: { scope: { contains: 'PROFILE' } } });
     await prisma.channelProfileAsset.deleteMany();
     await prisma.seriesProfileAsset.deleteMany();
+    await prisma.voiceProfileSample.deleteMany();
     await prisma.asset.deleteMany();
     await prisma.publishingDestination.deleteMany();
     await prisma.seriesProfile.deleteMany();
@@ -41,7 +44,19 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     await prisma.voiceProfile.deleteMany();
     voiceId = uuidV7();
     await prisma.voiceProfile.create({ data: {
-      id: voiceId, name: 'Vietnamese narrator', language: 'vi', status: 'READY', commercialUseAllowed: true,
+      id: voiceId, name: 'Vietnamese narrator', normalizedName: 'vietnamese narrator',
+      primaryLanguage: 'vi', status: 'READY', licenseKind: 'OWNED_RECORDING', commercialUseAllowed: true,
+    } });
+    voiceAssetId = uuidV7();
+    voiceSampleId = uuidV7();
+    await prisma.asset.create({ data: {
+      id: voiceAssetId, storageBackend: 'R2', bucket: 'profile-test', objectKey: `voices/${voiceId}/sample-v1.wav`,
+      fileName: 'sample-v1.wav', status: 'AVAILABLE', checksumSha256: 'a'.repeat(64), byteSize: 128,
+      contentType: 'audio/wav', uploadedAt: new Date(), verifiedAt: new Date(),
+    } });
+    await prisma.voiceProfileSample.create({ data: {
+      id: voiceSampleId, voiceProfileId: voiceId, assetId: voiceAssetId, language: 'vi',
+      transcript: 'Xin chào', durationMs: 5000, revision: 1,
     } });
     app = await createApplication(config);
   });
@@ -208,10 +223,14 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     const captured = await service.snapshotForJob(channelId, snapshotSeriesId);
     const persisted = JSON.parse(JSON.stringify(captured)) as typeof captured;
     expect(captured).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       profile: { channelProfileId: channelId, channelProfileVersion: 3, seriesProfileId: snapshotSeriesId, seriesProfileVersion: 2 },
       pipeline: { targetLanguage: 'vi', subtitleMaxLineLength: 50, ttsSpeed: 1.2 },
-      defaultVoice: { profileId: voiceId, version: 1 },
+      defaultVoice: {
+        profileId: voiceId, version: 1, sampleLinkId: voiceSampleId, sampleAssetId: voiceAssetId,
+        sampleRevision: 1, sampleLanguage: 'vi', requestedLanguage: 'vi', usedCrossLingualFallback: false,
+        assetVersion: 1, objectKey: `voices/${voiceId}/sample-v1.wav`, checksumSha256: 'a'.repeat(64),
+      },
       retention: { settingsVersion: 1, rawVideoDays: 7 },
     });
 
@@ -221,13 +240,30 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     await prisma.systemSetting.update({ where: { singletonKey: 'DEFAULT' }, data: {
       rawVideoDays: 14, version: { increment: 1 },
     } });
+    const replacementAssetId = uuidV7();
+    const replacementSampleId = uuidV7();
+    await prisma.$transaction([
+      prisma.asset.create({ data: {
+        id: replacementAssetId, storageBackend: 'R2', bucket: 'profile-test', objectKey: `voices/${voiceId}/sample-v2.wav`,
+        fileName: 'sample-v2.wav', status: 'AVAILABLE', checksumSha256: 'b'.repeat(64), byteSize: 256,
+        contentType: 'audio/wav', uploadedAt: new Date(), verifiedAt: new Date(),
+      } }),
+      prisma.voiceProfileSample.update({ where: { id: voiceSampleId }, data: { isCurrent: false } }),
+      prisma.voiceProfileSample.create({ data: {
+        id: replacementSampleId, voiceProfileId: voiceId, assetId: replacementAssetId, language: 'vi',
+        transcript: 'Xin chào lần hai', durationMs: 6000, revision: 2,
+      } }),
+      prisma.voiceProfile.update({ where: { id: voiceId }, data: { version: { increment: 1 } } }),
+    ]);
     const current = await service.snapshotForJob(channelId, snapshotSeriesId);
     expect(current).toMatchObject({
       profile: { channelProfileVersion: 4 }, pipeline: { subtitleLanguage: 'en', ttsSpeed: 1.2 },
+      defaultVoice: { version: 2, sampleLinkId: replacementSampleId, sampleAssetId: replacementAssetId, sampleRevision: 2 },
       retention: { settingsVersion: 2, rawVideoDays: 14 },
     });
     expect(persisted).toMatchObject({
       profile: { channelProfileVersion: 3 }, pipeline: { subtitleLanguage: 'vi', ttsSpeed: 1.2 },
+      defaultVoice: { version: 1, sampleLinkId: voiceSampleId, sampleAssetId: voiceAssetId, sampleRevision: 1 },
       retention: { settingsVersion: 1, rawVideoDays: 7 },
     });
   });

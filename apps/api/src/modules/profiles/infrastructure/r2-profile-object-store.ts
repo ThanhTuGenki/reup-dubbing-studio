@@ -5,7 +5,7 @@ import type { PrismaClient } from '@prisma/client';
 import type { AesGcmCredentialCipher } from '../../settings';
 import type { ProfileObjectStore } from '../application/asset-ports';
 import { ProfileError } from '../domain/profile-errors';
-import type { PendingProfileAsset } from '../domain/profile-assets';
+import type { StoredAssetObject } from '../application/asset-ports';
 
 const UPLOAD_TTL_SECONDS = 600;
 const PREVIEW_TTL_SECONDS = 300;
@@ -18,7 +18,7 @@ export class R2ProfileObjectStore implements ProfileObjectStore {
     return { bucket: settings.bucket };
   }
 
-  async createUploadGrant(asset: PendingProfileAsset) {
+  async createUploadGrant(asset: StoredAssetObject) {
     const settings = await this.settings();
     if (settings.bucket !== asset.bucket) unavailable('Storage target changed; request a new upload');
     const command = new PutObjectCommand({
@@ -32,7 +32,7 @@ export class R2ProfileObjectStore implements ProfileObjectStore {
     };
   }
 
-  async inspect(asset: PendingProfileAsset): Promise<{ byteSize: number; contentType: string }> {
+  async inspect(asset: StoredAssetObject): Promise<{ byteSize: number; contentType: string }> {
     const settings = await this.settings();
     try {
       const result = await settings.client.send(new HeadObjectCommand({ Bucket: asset.bucket, Key: asset.objectKey }));
@@ -44,7 +44,7 @@ export class R2ProfileObjectStore implements ProfileObjectStore {
     }
   }
 
-  async createPreviewGrant(asset: PendingProfileAsset) {
+  async createPreviewGrant(asset: StoredAssetObject) {
     const settings = await this.settings();
     if (settings.bucket !== asset.bucket) unavailable('Storage target changed; asset preview is unavailable');
     const command = new GetObjectCommand({ Bucket: asset.bucket, Key: asset.objectKey });
