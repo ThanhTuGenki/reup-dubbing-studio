@@ -18,14 +18,22 @@ import type {
   UpdateSeriesProfile,
 } from '../domain/profiles';
 
+const voiceSnapshotInclude = {
+  samples: {
+    where: { isCurrent: true, asset: { status: 'AVAILABLE' as const } },
+    include: { asset: true },
+    orderBy: { language: 'asc' as const },
+  },
+} satisfies Prisma.VoiceProfileInclude;
+
 const channelInclude = {
-  defaultVoice: true,
+  defaultVoice: { include: voiceSnapshotInclude },
   destinations: { orderBy: [{ platform: 'asc' as const }, { displayName: 'asc' as const }] },
   assets: { where: { isCurrent: true }, include: { asset: true }, orderBy: { createdAt: 'asc' as const } },
 } satisfies Prisma.ChannelProfileInclude;
 
 const seriesInclude = {
-  defaultVoiceOverride: true,
+  defaultVoiceOverride: { include: voiceSnapshotInclude },
   channelProfile: { include: channelInclude },
   assets: { where: { isCurrent: true }, include: { asset: true }, orderBy: { createdAt: 'asc' as const } },
 } satisfies Prisma.SeriesProfileInclude;
@@ -443,18 +451,30 @@ function jobSnapshot(
   const seriesView = series ? toSeriesView(series) : null;
   const voice = series?.defaultVoiceOverride ?? channel.defaultVoice;
   if (!voice) throw new ProfileError('PROFILE_NOT_READY', 'Profile has no default voice to snapshot');
+  const pipeline = seriesView?.effectiveConfig ?? channelView.pipeline;
+  const requestedLanguage = pipeline.targetLanguage;
+  const selectedSample = voice.samples.find((sample) => sample.language.toLowerCase() === requestedLanguage.toLowerCase())
+    ?? voice.samples.find((sample) => sample.language.toLowerCase() === voice.primaryLanguage.toLowerCase());
+  if (!selectedSample) throw new ProfileError('PROFILE_NOT_READY', 'Default voice has no available sample for the requested or primary language');
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     profile: {
       channelProfileId: channel.id, channelProfileVersion: channel.version,
       seriesProfileId: series?.id ?? null, seriesProfileVersion: series?.version ?? null,
     },
-    pipeline: seriesView?.effectiveConfig ?? channelView.pipeline,
+    pipeline,
     content: channelView.content,
     mask: seriesView?.mask ?? null,
     assets: [...channel.assets, ...(series?.assets ?? [])].map(assetSnapshot),
     destinations: channelView.destinations,
-    defaultVoice: { profileId: voice.id, version: voice.version },
+    defaultVoice: {
+      profileId: voice.id, version: voice.version,
+      sampleLinkId: selectedSample.id, sampleAssetId: selectedSample.assetId,
+      sampleRevision: selectedSample.revision, sampleLanguage: selectedSample.language,
+      requestedLanguage, usedCrossLingualFallback: selectedSample.language.toLowerCase() !== requestedLanguage.toLowerCase(),
+      assetVersion: selectedSample.asset.version, objectKey: selectedSample.asset.objectKey,
+      checksumSha256: selectedSample.asset.checksumSha256,
+    },
     retention: {
       settingsVersion: settings.version, rawVideoDays: settings.rawVideoDays,
       intermediateDays: settings.intermediateDays, taskLogDays: settings.taskLogDays,

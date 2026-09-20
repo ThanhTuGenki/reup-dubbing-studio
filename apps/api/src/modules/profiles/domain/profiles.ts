@@ -143,7 +143,7 @@ export type ProfileAssetSnapshot = ProfileAssetView & {
 };
 
 export type ProfileJobSnapshot = {
-  schemaVersion: 1;
+  schemaVersion: 2;
   profile: {
     channelProfileId: string;
     channelProfileVersion: number;
@@ -155,7 +155,19 @@ export type ProfileJobSnapshot = {
   mask: SubtitleMask | null;
   assets: ProfileAssetSnapshot[];
   destinations: DestinationView[];
-  defaultVoice: { profileId: string; version: number };
+  defaultVoice: {
+    profileId: string;
+    version: number;
+    sampleLinkId: string;
+    sampleAssetId: string;
+    sampleRevision: number;
+    sampleLanguage: string;
+    requestedLanguage: string;
+    usedCrossLingualFallback: boolean;
+    assetVersion: number;
+    objectKey: string;
+    checksumSha256: string | null;
+  };
   retention: {
     settingsVersion: number;
     rawVideoDays: number;

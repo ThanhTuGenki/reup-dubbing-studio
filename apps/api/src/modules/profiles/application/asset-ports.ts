@@ -16,7 +16,9 @@ export interface ProfileAssetRepository {
 
 export interface ProfileObjectStore {
   target(): Promise<{ bucket: string }>;
-  createUploadGrant(asset: PendingProfileAsset): Promise<{ url: string; headers: Record<string, string>; expiresAt: Date }>;
-  createPreviewGrant(asset: PendingProfileAsset): Promise<{ url: string; expiresAt: Date }>;
-  inspect(asset: PendingProfileAsset): Promise<{ byteSize: number; contentType: string }>;
+  createUploadGrant(asset: StoredAssetObject): Promise<{ url: string; headers: Record<string, string>; expiresAt: Date }>;
+  createPreviewGrant(asset: StoredAssetObject): Promise<{ url: string; expiresAt: Date }>;
+  inspect(asset: StoredAssetObject): Promise<{ byteSize: number; contentType: string }>;
 }
+
+export type StoredAssetObject = Pick<PendingProfileAsset, 'id' | 'bucket' | 'objectKey' | 'contentType' | 'byteSize'>;
