@@ -64,7 +64,7 @@
   - [x] Xác minh adapter Douyin theo tài liệu discovery và chốt contract/schema.
   - [x] API quản lý source credential, category/creator/watchlist, scan run,
     cursor, deduplication và danh sách source content.
-  - [ ] Web xây chọn nguồn, filter, scan, bảng kết quả, selection và watchlist.
+  - [x] Web xây chọn nguồn, filter, scan, bảng kết quả, selection và watchlist.
   - [ ] Kiểm thử cookie hết hạn, rate limit, partial result, cursor và chống trùng.
 
 ## 5. Tạo job ingest

@@ -4,10 +4,15 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
-  it.each(['/discovery', '/queue', '/library', '/library/video-1', '/publishing', '/workers'])('keeps the shell for reserved path %s', (route) => {
+  it.each(['/queue', '/library', '/library/video-1', '/publishing', '/workers'])('keeps the shell for reserved path %s', (route) => {
     renderApp(<AppRoutes />, { route });
     expect(screen.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+  });
+  it('renders Discovery inside the shell', async () => {
+    renderApp(<AppRoutes />, { route: '/discovery' });
+    expect(await screen.findByRole('heading', { name: 'Khám phá video' })).toBeInTheDocument();
+    expect(await screen.findByText('Mẹo học tiếng Trung')).toBeInTheDocument();
   });
   it('renders the Voice Library inside the shell', async () => {
     renderApp(<AppRoutes />, { route: '/voices' });

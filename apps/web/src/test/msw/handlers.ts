@@ -5,6 +5,7 @@ import {
   liveEnvelope,
   LIVENESS_PATH,
   readyEnvelope,
+  READY_REQUEST_ID,
   READINESS_PATH,
   SETTINGS_PATH,
   settingsEnvelope,
@@ -14,6 +15,10 @@ import {
   seriesProfilesEnvelope,
   voiceProfile,
   voiceProfilesEnvelope,
+  sourceAccount,
+  discoveryCategory,
+  discoveryItem,
+  discoveryWatchlist,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -53,4 +58,8 @@ export const handlers = [
     { data: voiceProfile, meta: { requestId: voiceProfilesEnvelope.meta.requestId } },
     { headers: { ETag: '"3"', 'X-Request-Id': voiceProfilesEnvelope.meta.requestId } },
   )),
+  http.get(`${CONTROL_PLANE_BASE_URL}/source-accounts`, () => HttpResponse.json({ data: { items: [sourceAccount] }, meta: { requestId: READY_REQUEST_ID } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/discovery/categories`, () => HttpResponse.json({ data: { items: [discoveryCategory] }, meta: { requestId: READY_REQUEST_ID } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/discovery/items`, () => HttpResponse.json({ data: { items: [discoveryItem], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/watchlists`, () => HttpResponse.json({ data: { items: [discoveryWatchlist] }, meta: { requestId: READY_REQUEST_ID } })),
 ];
