@@ -4,9 +4,15 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
-  it.each(['/library', '/library/video-1', '/publishing'])('keeps the shell for reserved path %s', (route) => {
+  it.each(['/publishing'])('keeps the shell for reserved path %s', (route) => {
     renderApp(<AppRoutes />, { route });
     expect(screen.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+  });
+  it.each(['/library', '/library/video-1'])('renders Library routes inside the shell %s', async (route) => {
+    renderApp(<AppRoutes />, { route });
+    if (route === '/library') expect(await screen.findByRole('heading', { name: 'Thư viện video' })).toBeInTheDocument();
+    else expect(screen.getByRole('main')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
   });
   it('renders Queue inside the shell', async () => {
