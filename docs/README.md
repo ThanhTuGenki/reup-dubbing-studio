@@ -14,7 +14,7 @@ thư mục mới.
 | Cài đặt hệ thống, credential và connection test          | [`architecture/system-settings.md`](architecture/system-settings.md) | `ACCEPTED`, triển khai theo vertical slice |
 | Channel/Series Profile, inheritance và effective config  | [`architecture/channel-series-profiles.md`](architecture/channel-series-profiles.md) | `ACCEPTED`, contract/schema MVP |
 | Mô hình dữ liệu và inventory bảng toàn hệ thống         | [`architecture/database-design.md`](architecture/database-design.md)  | `DRAFT`, review trước từng migration                 |
-| Discovery và ingest metadata từ Douyin                 | [`architecture/douyin-discovery.md`](architecture/douyin-discovery.md) | `DRAFT`, triển khai theo validation gate             |
+| Discovery và ingest metadata từ Douyin                 | [`architecture/douyin-discovery.md`](architecture/douyin-discovery.md) | `ACCEPTED`, contract/schema MVP; mode nâng cao giữ validation gate |
 | Thiết kế các stage của pipeline media                   | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)         | thiết kế `ACCEPTED`, triển khai `ARCHIVED`           |
 | Quyết định kiến trúc đơn lẻ                             | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR              |
 | **Contract giữa web ↔ api ↔ worker**                    | `contracts/openapi/*.yaml` ở **gốc repo**                              | draft theo slice; nguồn chuẩn sau khi `VERIFIED`     |
