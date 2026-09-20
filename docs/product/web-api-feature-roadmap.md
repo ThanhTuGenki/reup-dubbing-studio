@@ -55,7 +55,7 @@
 - [ ] **Hoàn tất feature Thư viện giọng.**
   - [x] Phân tích metadata giọng, sample và quy tắc sử dụng rồi chốt contract.
   - [x] API CRUD voice profile, quản lý sample asset và trạng thái khả dụng.
-  - [ ] Web xây danh sách, bộ lọc, form tạo/sửa và nghe sample.
+  - [x] Web xây danh sách, bộ lọc, form tạo/sửa và nghe sample.
   - [ ] Kiểm thử asset flow và các trạng thái thiếu/lỗi sample.
 
 ## 4. Discovery, nguồn và watchlist

@@ -12,6 +12,8 @@ import {
   channelProfilesEnvelope,
   seriesProfile,
   seriesProfilesEnvelope,
+  voiceProfile,
+  voiceProfilesEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -42,5 +44,13 @@ export const handlers = [
   http.get(`${CONTROL_PLANE_BASE_URL}/series-profiles/:seriesProfileId`, () => HttpResponse.json(
     { data: seriesProfile, meta: { requestId: seriesProfilesEnvelope.meta.requestId } },
     { headers: { ETag: '"2:3"', 'X-Request-Id': seriesProfilesEnvelope.meta.requestId } },
+  )),
+  http.get(`${CONTROL_PLANE_BASE_URL}/voice-profiles`, () => HttpResponse.json(
+    voiceProfilesEnvelope,
+    { headers: { 'X-Request-Id': voiceProfilesEnvelope.meta.requestId } },
+  )),
+  http.get(`${CONTROL_PLANE_BASE_URL}/voice-profiles/:voiceProfileId`, () => HttpResponse.json(
+    { data: voiceProfile, meta: { requestId: voiceProfilesEnvelope.meta.requestId } },
+    { headers: { ETag: '"3"', 'X-Request-Id': voiceProfilesEnvelope.meta.requestId } },
   )),
 ];
