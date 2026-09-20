@@ -1,9 +1,9 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { renderApp } from '@/test/test-utils';
-import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, sourceAccount } from '@/test/fixtures/control-plane';
+import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, discoveryItem, ingestJobId, sourceAccount } from '@/test/fixtures/control-plane';
 import { server } from '@/test/msw/server';
 import { DiscoveryPage } from './discovery-page';
 
@@ -30,6 +30,39 @@ describe('DiscoveryPage', () => {
     renderApp(<DiscoveryPage />);
     expect(await screen.findByText('EXPIRED')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bắt đầu quét' })).toBeDisabled();
+  });
+
+  it('preflights selected videos and creates only ready download jobs', async () => {
+    let createBody: unknown;
+    let idempotencyKey: string | null = null;
+    server.use(http.post(`${CONTROL_PLANE_BASE_URL}/ingest/jobs`, async ({ request }) => {
+      createBody = await request.json();
+      idempotencyKey = request.headers.get('Idempotency-Key');
+      return HttpResponse.json({ data: { summary: { total: 1, created: 1, reused: 0, skipped: 0 }, items: [{ sourceContentId: discoveryItem.sourceContent.id, result: 'CREATED', videoId: '0191f3d2-7f5b-7abc-8b2e-123456789af7', jobId: ingestJobId, taskId: '0191f3d2-7f5b-7abc-8b2e-123456789af9', jobStatus: 'QUEUED', videoStatus: 'INGEST_QUEUED', issues: [] }] }, meta: { requestId: READY_REQUEST_ID } }, { status: 201 });
+    }));
+    const user = userEvent.setup(); renderApp(<DiscoveryPage />);
+    await user.click(await screen.findByRole('checkbox', { name: 'Chọn Mẹo học tiếng Trung' }));
+    await user.click(screen.getByRole('button', { name: 'Tạo job từ 1 video' }));
+    expect(await screen.findByRole('dialog', { name: 'Tạo job ingest' })).toBeInTheDocument();
+    expect(screen.getByText('Chưa bắt đầu xử lý GPU')).toBeInTheDocument();
+    const preflight = await screen.findByRole('button', { name: 'Kiểm tra lựa chọn' });
+    expect(preflight).toBeEnabled();
+    await user.click(preflight);
+    const create = await screen.findByRole('button', { name: 'Tạo 1 job tải' });
+    expect(create).toBeEnabled();
+    await user.click(create);
+    await waitFor(() => expect(createBody).toMatchObject({ sourceAccountId: sourceAccount.id, sourceContentIds: [discoveryItem.sourceContent.id], channelProfileId: expect.any(String), seriesProfileId: null }));
+    expect(idempotencyKey).toMatch(/[0-9a-f-]{36}/u);
+  });
+
+  it('shows duplicate items and does not allow creating them again', async () => {
+    server.use(http.post(`${CONTROL_PLANE_BASE_URL}/ingest/preflight`, () => HttpResponse.json({ data: { summary: { total: 1, ready: 0, blocked: 1 }, items: [{ sourceContentId: discoveryItem.sourceContent.id, disposition: 'ALREADY_QUEUED', existingVideoId: '0191f3d2-7f5b-7abc-8b2e-123456789af7', existingJobId: ingestJobId, issues: [] }] }, meta: { requestId: READY_REQUEST_ID } })));
+    const user = userEvent.setup(); renderApp(<DiscoveryPage />);
+    await user.click(await screen.findByRole('checkbox', { name: 'Chọn Mẹo học tiếng Trung' }));
+    await user.click(screen.getByRole('button', { name: 'Tạo job từ 1 video' }));
+    await user.click(await screen.findByRole('button', { name: 'Kiểm tra lựa chọn' }));
+    expect(await screen.findByText('Đã xếp hàng')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tạo 0 job tải' })).toBeDisabled();
   });
 
   it('keeps partial results visible and explains a rate limit safely', async () => {
