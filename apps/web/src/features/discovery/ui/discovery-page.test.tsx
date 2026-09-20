@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { renderApp } from '@/test/test-utils';
-import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, discoveryItem, ingestJobId, sourceAccount } from '@/test/fixtures/control-plane';
+import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, discoveryItem, ingestCreateEnvelope, ingestJobId, sourceAccount } from '@/test/fixtures/control-plane';
 import { server } from '@/test/msw/server';
 import { DiscoveryPage } from './discovery-page';
 
@@ -63,6 +63,26 @@ describe('DiscoveryPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Kiểm tra lựa chọn' }));
     expect(await screen.findByText('Đã xếp hàng')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Tạo 0 job tải' })).toBeDisabled();
+  });
+
+  it('reuses the idempotency key when the user retries a failed create request', async () => {
+    const keys: Array<string | null> = [];
+    server.use(http.post(`${CONTROL_PLANE_BASE_URL}/ingest/jobs`, ({ request }) => {
+      keys.push(request.headers.get('Idempotency-Key'));
+      if (keys.length === 1) return HttpResponse.json({ type: 'about:blank', title: 'Unavailable', status: 503, detail: 'Control Plane tạm thời không khả dụng.', code: 'INTERNAL_ERROR', requestId: READY_REQUEST_ID }, { status: 503 });
+      return HttpResponse.json(ingestCreateEnvelope, { status: 201 });
+    }));
+    const user = userEvent.setup(); renderApp(<DiscoveryPage />);
+    await user.click(await screen.findByRole('checkbox', { name: 'Chọn Mẹo học tiếng Trung' }));
+    await user.click(screen.getByRole('button', { name: 'Tạo job từ 1 video' }));
+    await user.click(await screen.findByRole('button', { name: 'Kiểm tra lựa chọn' }));
+    const create = await screen.findByRole('button', { name: 'Tạo 1 job tải' });
+    await user.click(create);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Control Plane tạm thời không khả dụng.');
+    await user.click(create);
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toMatch(/[0-9a-f-]{36}/u);
+    expect(keys[1]).toBe(keys[0]);
   });
 
   it('keeps partial results visible and explains a rate limit safely', async () => {

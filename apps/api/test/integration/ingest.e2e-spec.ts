@@ -14,6 +14,7 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
   let channelId: string;
   let readySourceId: string;
   let blockedSourceId: string;
+  let bulkSourceIds: string[];
 
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
@@ -49,6 +50,7 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
     const runId = uuidV7();
     readySourceId = uuidV7();
     blockedSourceId = uuidV7();
+    bulkSourceIds = [uuidV7(), uuidV7()];
     const observedAt = new Date();
     await prisma.sourceAccount.create({ data: {
       id: accountId, platform: 'DOUYIN', displayName: 'Ingest source', status: 'ACTIVE',
@@ -72,10 +74,18 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
         contentType: 'NOTE', title: 'Không hỗ trợ', availability: 'AVAILABLE',
         isIngestEligible: false, firstSeenAt: observedAt, lastSeenAt: observedAt,
       },
+      ...bulkSourceIds.map((id, index) => ({
+        id, platform: 'DOUYIN' as const, externalId: `bulk-${id}`, contentType: 'VIDEO' as const,
+        title: `Video bulk ${index + 1}`, availability: 'AVAILABLE' as const,
+        isIngestEligible: true, firstSeenAt: observedAt, lastSeenAt: observedAt,
+      })),
     ] });
     await prisma.discoveryItem.createMany({ data: [
       { id: uuidV7(), discoveryRunId: runId, sourceContentId: readySourceId, rank: 1, pageIndex: 0, discoveredAt: observedAt },
       { id: uuidV7(), discoveryRunId: runId, sourceContentId: blockedSourceId, rank: 2, pageIndex: 0, discoveredAt: observedAt },
+      ...bulkSourceIds.map((sourceContentId, index) => ({
+        id: uuidV7(), discoveryRunId: runId, sourceContentId, rank: index + 3, pageIndex: 0, discoveredAt: observedAt,
+      })),
     ] });
 
     const config: AppConfig = {
@@ -157,5 +167,22 @@ describeWithDatabase('Ingest job API with PostgreSQL', () => {
     });
     expect(changed.statusCode).toBe(409);
     expect(changed.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED' });
+  });
+
+  it('creates one video, job and DOWNLOAD task for every ready item in a bulk request', async () => {
+    const response = await app.inject({
+      method: 'POST', url: '/v1/ingest/jobs', headers: { 'idempotency-key': 'ingest-api-bulk-0003' },
+      payload: { sourceAccountId: accountId, sourceContentIds: bulkSourceIds, channelProfileId: channelId },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.json().data).toMatchObject({
+      summary: { total: 2, created: 2, reused: 0, skipped: 0 },
+      items: bulkSourceIds.map((sourceContentId) => ({ sourceContentId, result: 'CREATED', jobStatus: 'QUEUED' })),
+    });
+    const videos = await prisma.video.findMany({ where: { sourceContentId: { in: bulkSourceIds }, channelProfileId: channelId } });
+    expect(videos).toHaveLength(2);
+    expect(await prisma.pipelineJob.count({ where: { videoId: { in: videos.map(({ id }) => id) }, kind: 'INGEST' } })).toBe(2);
+    expect(await prisma.pipelineTask.count({ where: { pipelineJob: { videoId: { in: videos.map(({ id }) => id) } }, taskType: 'DOWNLOAD' } })).toBe(2);
   });
 });
