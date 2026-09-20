@@ -4,6 +4,93 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type VideoOutputReadiness = 'NONE' | 'PARTIAL' | 'READY' | 'CLEANED';
+
+export type GrantRequest = {
+    purpose?: 'preview' | 'download';
+};
+
+export type DownloadGrantEnvelope = {
+    data: {
+        method: 'GET';
+        url: string;
+        expiresAt: string;
+        fileName: string;
+        contentType?: string | null;
+        byteSize?: string | null;
+    };
+};
+
+export type VideoListEnvelope = {
+    data: {
+        items: Array<Video>;
+        nextCursor: string | null;
+    };
+};
+
+export type VideoEnvelope = {
+    data: Video;
+};
+
+export type Video = {
+    id: UuidV7;
+    version: number;
+    displayTitle: string | null;
+    status: string;
+    sourceLanguage: string;
+    targetLanguage: string;
+    source: {
+        platform: string;
+        externalId: string;
+        canonicalUrl: string | null;
+        durationMs: number | null;
+        creatorName: string | null;
+    };
+    profile: {
+        channelProfileId: UuidV7;
+        channelProfileName: string;
+        seriesProfileId: UuidV7 | null;
+        seriesProfileName: string | null;
+    };
+    latestJob: {
+        id: UuidV7;
+        kind: string;
+        status: string;
+        progress: number;
+        currentTask: string | null;
+        failure: {
+            code: string;
+            detail: string | null;
+        } | null;
+        updatedAt: string;
+    } | null;
+    reviewStatus: 'NOT_REQUIRED' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED';
+    outputSummary: {
+        readiness: VideoOutputReadiness;
+        requiredVariants: Array<string>;
+        availableVariants: Array<string>;
+        warnings: Array<string>;
+    };
+    thumbnail: {
+        [key: string]: unknown;
+    } | null;
+    outputs: Array<{
+        [key: string]: unknown;
+    }>;
+    assets: Array<{
+        [key: string]: unknown;
+    }>;
+    createdAt: string;
+    updatedAt: string;
+    ingestedAt: string | null;
+    archivedAt: string | null;
+    capabilities: {
+        canOpenStudio: boolean;
+        canOpenPublishing: boolean;
+        canArchive: boolean;
+    };
+};
+
 export type WorkerRole = 'BATCH_MEDIA' | 'INTERACTIVE_TTS';
 
 export type WorkerDesiredStatus = 'ACTIVE' | 'DRAINING' | 'REVOKED';
@@ -1037,6 +1124,8 @@ export type ProblemDetails = {
     code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED';
     requestId: RequestId;
 };
+
+export type VideoId = UuidV7;
 
 export type ChannelProfileId = UuidV7;
 
@@ -3485,3 +3574,140 @@ export type RevokeWorkerImageResponses = {
 };
 
 export type RevokeWorkerImageResponse = RevokeWorkerImageResponses[keyof RevokeWorkerImageResponses];
+
+export type ListVideosData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        status?: string;
+        platform?: string;
+        channelProfileId?: UuidV7;
+        seriesProfileId?: UuidV7;
+        outputReadiness?: VideoOutputReadiness;
+        updatedFrom?: string;
+        updatedTo?: string;
+        query?: string;
+        includeArchived?: boolean;
+    };
+    url: '/videos';
+};
+
+export type ListVideosErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListVideosError = ListVideosErrors[keyof ListVideosErrors];
+
+export type ListVideosResponses = {
+    /**
+     * Video list
+     */
+    200: VideoListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListVideosResponse = ListVideosResponses[keyof ListVideosResponses];
+
+export type GetVideoData = {
+    body?: never;
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}';
+};
+
+export type GetVideoErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetVideoError = GetVideoErrors[keyof GetVideoErrors];
+
+export type GetVideoResponses = {
+    /**
+     * Video detail
+     */
+    200: VideoEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetVideoResponse = GetVideoResponses[keyof GetVideoResponses];
+
+export type GrantVideoAssetData = {
+    body?: GrantRequest;
+    path: {
+        videoId: UuidV7;
+        videoAssetId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/assets/{videoAssetId}/grant';
+};
+
+export type GrantVideoAssetErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantVideoAssetError = GrantVideoAssetErrors[keyof GrantVideoAssetErrors];
+
+export type GrantVideoAssetResponses = {
+    /**
+     * Download grant
+     */
+    200: DownloadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantVideoAssetResponse = GrantVideoAssetResponses[keyof GrantVideoAssetResponses];
+
+export type GrantVideoOutputData = {
+    body?: GrantRequest;
+    path: {
+        videoId: UuidV7;
+        renderOutputId: UuidV7;
+        part: 'video' | 'subtitle' | 'thumbnail';
+    };
+    query?: never;
+    url: '/videos/{videoId}/outputs/{renderOutputId}/{part}/grant';
+};
+
+export type GrantVideoOutputErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantVideoOutputError = GrantVideoOutputErrors[keyof GrantVideoOutputErrors];
+
+export type GrantVideoOutputResponses = {
+    /**
+     * Download grant
+     */
+    200: DownloadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantVideoOutputResponse = GrantVideoOutputResponses[keyof GrantVideoOutputResponses];
