@@ -1,0 +1,27 @@
+import { cancelQueueJob, createClient, getQueueJob, listQueueJobAttempts, listQueueJobs, retryQueueJob, type QueueAttempt, type QueueJob, type QueueJobDetail } from '@reup-dubbing-studio/api-client';
+import { z } from 'zod';
+import { getSafeRequestId } from '@/shared/api/problem-details';
+import { readRuntimeConfig } from '@/shared/config/runtime-config';
+
+const uuid = z.string().uuid();
+const task = z.object({ id: uuid, taskType: z.string(), resourceClass: z.string(), status: z.string(), progressPercent: z.number().int().min(0).max(100), progressDetail: z.string().nullable(), attemptCount: z.number().int(), maxAttempts: z.number().int(), readyAt: z.string().datetime().nullable(), version: z.number().int(), createdAt: z.string().datetime(), updatedAt: z.string().datetime() });
+const job = z.object({ id: uuid, videoId: uuid, kind: z.string(), status: z.string(), version: z.number().int(), title: z.string().nullable(), channelProfileId: uuid, channelProfileName: z.string().nullable(), seriesProfileId: uuid.nullable(), seriesProfileName: z.string().nullable(), currentTask: task.nullable(), progress: z.object({ percent: z.number().int(), completedTasks: z.number().int(), totalTasks: z.number().int() }), failure: z.object({ code: z.string(), detail: z.string().nullable() }).nullable(), actions: z.object({ canRetry: z.boolean(), canCancel: z.boolean() }), startedAt: z.string().datetime().nullable(), finishedAt: z.string().datetime().nullable(), createdAt: z.string().datetime(), updatedAt: z.string().datetime() });
+const timeline = z.object({ id: uuid, eventType: z.string(), fromStatus: z.string().nullable(), toStatus: z.string().nullable(), message: z.string().nullable(), occurredAt: z.string().datetime() });
+const detail = job.extend({ tasks: z.array(task), timeline: z.array(timeline) });
+const attempt = z.object({ id: uuid, taskId: uuid, taskType: z.string(), attemptNumber: z.number().int(), executorKind: z.string(), status: z.string(), startedAt: z.string().datetime(), finishedAt: z.string().datetime().nullable(), executionMs: z.string().nullable(), errorCode: z.string().nullable(), errorDetail: z.string().nullable() });
+const meta = z.object({ requestId: uuid });
+const envelope = <T extends z.ZodTypeAny>(schema: T) => z.object({ data: schema, meta });
+
+export type QueueFilters = { status?: string; kind?: string; resourceClass?: string; query?: string; createdFrom?: string; cursor?: string; limit?: number };
+export class QueueApiError extends Error { override readonly name = 'QueueApiError'; constructor(message: string, readonly code?: string, readonly requestId?: string) { super(message); } }
+function apiClient() { return createClient({ baseUrl: readRuntimeConfig().controlPlaneUrl }); }
+export function queueEventsUrl() { return `${readRuntimeConfig().controlPlaneUrl}/queue/events`; }
+export async function fetchQueueJobs(filters: QueueFilters, signal?: AbortSignal) { return parse(await listQueueJobs({ client: apiClient(), query: filters, signal: requestSignal(signal) }), envelope(z.object({ items: z.array(job), nextCursor: z.string().nullable() })), 'Không thể tải hàng đợi.').data as { items: QueueJob[]; nextCursor: string | null }; }
+export async function fetchQueueJob(id: string, signal?: AbortSignal) { return parse(await getQueueJob({ client: apiClient(), path: { queueJobId: id }, signal: requestSignal(signal) }), envelope(detail), 'Không thể tải chi tiết job.').data as QueueJobDetail; }
+export async function fetchQueueAttempts(id: string, signal?: AbortSignal) { return parse(await listQueueJobAttempts({ client: apiClient(), path: { queueJobId: id }, query: { limit: 100 }, signal: requestSignal(signal) }), envelope(z.object({ items: z.array(attempt), nextCursor: z.string().nullable() })), 'Không thể tải lịch sử attempt.').data.items as QueueAttempt[]; }
+export async function cancelJob(jobValue: QueueJobDetail, idempotencyKey: string, reason?: string) { return parse(await cancelQueueJob({ client: apiClient(), path: { queueJobId: jobValue.id }, headers: { 'If-Match': `"${jobValue.version}"`, 'Idempotency-Key': idempotencyKey }, body: { ...(reason ? { reason } : {}) } }), envelope(detail), 'Không thể hủy job.').data as QueueJobDetail; }
+export async function retryJob(jobValue: QueueJobDetail, idempotencyKey: string) { return parse(await retryQueueJob({ client: apiClient(), path: { queueJobId: jobValue.id }, headers: { 'If-Match': `"${jobValue.version}"`, 'Idempotency-Key': idempotencyKey }, body: {} }), envelope(detail), 'Không thể retry job.').data as QueueJobDetail; }
+type ApiResult = { data?: unknown; error?: unknown; response: Response };
+function parse<T>(result: ApiResult, schema: z.ZodType<T>, fallback: string): T { if (result.error) throw apiError(result.error, result.response, fallback); const parsed = schema.safeParse(result.data); if (!parsed.success) throw new QueueApiError('Control Plane trả về dữ liệu Queue không hợp lệ.'); return parsed.data; }
+function apiError(value: unknown, response: Response, fallback: string) { const problem = value as { code?: unknown; detail?: unknown }; return new QueueApiError(typeof problem.detail === 'string' ? problem.detail : fallback, typeof problem.code === 'string' ? problem.code : undefined, getSafeRequestId(value, response.headers.get('X-Request-Id'))); }
+function requestSignal(signal?: AbortSignal) { if (!signal) return null; try { new Request('about:blank', { signal }); return signal; } catch { return null; } }

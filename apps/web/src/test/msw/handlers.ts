@@ -21,6 +21,8 @@ import {
   discoveryWatchlist,
   ingestCreateEnvelope,
   ingestPreflightEnvelope,
+  queueDetailEnvelope,
+  queueListEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -66,4 +68,9 @@ export const handlers = [
   http.get(`${CONTROL_PLANE_BASE_URL}/watchlists`, () => HttpResponse.json({ data: { items: [discoveryWatchlist] }, meta: { requestId: READY_REQUEST_ID } })),
   http.post(`${CONTROL_PLANE_BASE_URL}/ingest/preflight`, () => HttpResponse.json(ingestPreflightEnvelope)),
   http.post(`${CONTROL_PLANE_BASE_URL}/ingest/jobs`, () => HttpResponse.json(ingestCreateEnvelope, { status: 201 })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs`, () => HttpResponse.json(queueListEnvelope)),
+  http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId`, () => HttpResponse.json(queueDetailEnvelope, { headers: { ETag: '"1"' } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/attempts`, () => HttpResponse.json({ data: { items: [], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } })),
+  http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/cancel`, () => HttpResponse.json({ ...queueDetailEnvelope, data: { ...queueDetailEnvelope.data, status: 'CANCELLED', version: 2, actions: { canRetry: false, canCancel: false } } })),
+  http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/retry`, () => HttpResponse.json(queueDetailEnvelope)),
 ];
