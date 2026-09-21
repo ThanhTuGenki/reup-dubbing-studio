@@ -109,7 +109,7 @@
 - [ ] **Hoàn tất feature Studio.**
   - [x] Phân tích player, transcript, cast, revision, review và render flow rồi
     chốt contract/schema.
-  - [ ] API đọc/sửa segment, gán voice/cast, tạo preview/re-gen request, lưu review
+  - [x] API đọc/sửa segment, gán voice/cast, tạo preview/re-gen request, lưu review
     decision và yêu cầu render.
   - [ ] Web xây player, segment editor, cast sheet, audio preview, dirty state và
     review/render actions.

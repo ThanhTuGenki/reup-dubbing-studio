@@ -104,6 +104,59 @@ enum RenderOutputStatus {
   SUPERSEDED
 }
 
+enum CastSheetStatus {
+  DRAFT
+  APPROVED
+  NEEDS_REVIEW
+}
+
+enum CastRoleKind {
+  NARRATOR
+  CHARACTER
+  OTHER
+}
+
+enum TranscriptMethod {
+  OCR
+  ASR
+  MERGED
+  MANUAL_IMPORT
+}
+
+enum TranscriptRunStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SELECTED
+}
+
+enum SegmentRevisionStatus {
+  DRAFT
+  APPROVED
+  SUPERSEDED
+}
+
+enum SegmentAudioStatus {
+  GENERATING
+  READY
+  SELECTED
+  REJECTED
+  FAILED
+}
+
+enum ReviewScope {
+  CAST
+  SCRIPT
+  TTS
+  RENDER
+}
+
+enum ReviewDecisionKind {
+  APPROVED
+  CHANGES_REQUESTED
+  REJECTED
+}
+
 enum ChannelProfileAssetRole {
   INTRO
   OUTRO
@@ -387,9 +440,11 @@ model VoiceProfile {
   createdAt            DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  channelDefaults ChannelProfile[]     @relation("ChannelDefaultVoice")
-  seriesOverrides SeriesProfile[]      @relation("SeriesOverrideVoice")
-  samples         VoiceProfileSample[]
+  channelDefaults  ChannelProfile[]     @relation("ChannelDefaultVoice")
+  seriesOverrides  SeriesProfile[]      @relation("SeriesOverrideVoice")
+  samples          VoiceProfileSample[]
+  castEntries      CastSheetEntry[]
+  segmentRevisions SegmentRevision[]
 
   @@index([status, primaryLanguage, createdAt, id])
   @@index([tags], type: Gin)
@@ -497,6 +552,7 @@ model SeriesProfile {
   defaultVoiceOverride VoiceProfile?        @relation("SeriesOverrideVoice", fields: [defaultVoiceProfileOverrideId], references: [id], onDelete: Restrict)
   assets               SeriesProfileAsset[]
   videos               Video[]
+  castSheet            CastSheet?
 
   @@index([channelProfileId, status, createdAt, id])
   @@map("series_profiles")
@@ -525,11 +581,13 @@ model Asset {
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  channelLinks     ChannelProfileAsset[]
-  seriesLinks      SeriesProfileAsset[]
-  voiceSamples     VoiceProfileSample[]
-  videoAssets      VideoAsset[]
-  createdByAttempt TaskAttempt?          @relation(fields: [createdByAttemptId], references: [id], onDelete: Restrict)
+  channelLinks          ChannelProfileAsset[]
+  seriesLinks           SeriesProfileAsset[]
+  voiceSamples          VoiceProfileSample[]
+  videoAssets           VideoAsset[]
+  createdByAttempt      TaskAttempt?           @relation(fields: [createdByAttemptId], references: [id], onDelete: Restrict)
+  transcriptRuns        TranscriptRun[]
+  segmentAudioRevisions SegmentAudioRevision[]
 
   @@unique([storageBackend, bucket, objectKey])
   @@index([status, createdAt])
@@ -704,6 +762,9 @@ model User {
   videos                Video[]
   jobs                  PipelineJob[]
   approvedRenderOutputs RenderOutput[]
+  approvedCastSheets    CastSheet[]
+  segmentRevisions      SegmentRevision[]
+  reviewDecisions       ReviewDecision[]
 
   @@map("users")
 }
@@ -724,14 +785,17 @@ model Video {
   updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
   version          Int         @default(1)
 
-  sourceContent  SourceContent   @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
-  channelProfile ChannelProfile  @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
-  seriesProfile  SeriesProfile?  @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
-  createdBy      User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  jobs           PipelineJob[]
-  workflowEvents WorkflowEvent[]
-  assets         VideoAsset[]
-  renderOutputs  RenderOutput[]
+  sourceContent   SourceContent    @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  channelProfile  ChannelProfile   @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  seriesProfile   SeriesProfile?   @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+  createdBy       User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  jobs            PipelineJob[]
+  workflowEvents  WorkflowEvent[]
+  assets          VideoAsset[]
+  renderOutputs   RenderOutput[]
+  transcriptRuns  TranscriptRun[]
+  segments        VideoSegment[]
+  reviewDecisions ReviewDecision[]
 
   @@unique([sourceContentId, channelProfileId])
   @@index([status, updatedAt, id])
@@ -785,6 +849,168 @@ model RenderOutput {
   @@map("render_outputs")
 }
 
+model CastSheet {
+  id              String           @id @db.Uuid
+  seriesProfileId String           @unique @map("series_profile_id") @db.Uuid
+  status          CastSheetStatus  @default(DRAFT)
+  approvedBy      String?          @map("approved_by") @db.Uuid
+  approvedAt      DateTime?        @map("approved_at") @db.Timestamptz(6)
+  version         Int              @default(1)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  seriesProfile   SeriesProfile    @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+  approvedUser    User?            @relation(fields: [approvedBy], references: [id], onDelete: Restrict)
+  entries         CastSheetEntry[]
+
+  @@map("cast_sheets")
+}
+
+model CastSheetEntry {
+  id               String            @id @db.Uuid
+  castSheetId      String            @map("cast_sheet_id") @db.Uuid
+  characterKey     String            @map("character_key")
+  displayName      String            @map("display_name")
+  aliases          String[]          @default([])
+  roleKind         CastRoleKind      @map("role_kind")
+  voiceProfileId   String            @map("voice_profile_id") @db.Uuid
+  notes            String?
+  version          Int               @default(1)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  castSheet        CastSheet         @relation(fields: [castSheetId], references: [id], onDelete: Restrict)
+  voiceProfile     VoiceProfile      @relation(fields: [voiceProfileId], references: [id], onDelete: Restrict)
+  segmentRevisions SegmentRevision[]
+
+  @@unique([castSheetId, characterKey])
+  @@map("cast_sheet_entries")
+}
+
+model TranscriptRun {
+  id                String              @id @db.Uuid
+  videoId           String              @map("video_id") @db.Uuid
+  method            TranscriptMethod
+  status            TranscriptRunStatus
+  language          String
+  modelName         String?             @map("model_name")
+  modelVersion      String?             @map("model_version")
+  taskAttemptId     String?             @map("task_attempt_id") @db.Uuid
+  averageConfidence Decimal?            @map("average_confidence") @db.Decimal(6, 5)
+  rawAssetId        String?             @map("raw_asset_id") @db.Uuid
+  selectedAt        DateTime?           @map("selected_at") @db.Timestamptz(6)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  video             Video               @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  taskAttempt       TaskAttempt?        @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+  rawAsset          Asset?              @relation(fields: [rawAssetId], references: [id], onDelete: Restrict)
+  segments          TranscriptSegment[]
+
+  @@index([videoId, status, createdAt])
+  @@map("transcript_runs")
+}
+
+model TranscriptSegment {
+  id                String         @id @db.Uuid
+  transcriptRunId   String         @map("transcript_run_id") @db.Uuid
+  ordinal           Int
+  startMs           Int            @map("start_ms")
+  endMs             Int            @map("end_ms")
+  text              String
+  confidence        Decimal?       @db.Decimal(6, 5)
+  bbox              Json?
+  metadata          Json           @default("{}")
+  transcriptRun     TranscriptRun  @relation(fields: [transcriptRunId], references: [id], onDelete: Restrict)
+  canonicalSegments VideoSegment[]
+
+  @@unique([transcriptRunId, ordinal])
+  @@map("transcript_segments")
+}
+
+model VideoSegment {
+  id                String                 @id @db.Uuid
+  videoId           String                 @map("video_id") @db.Uuid
+  ordinal           Int
+  sourceStartMs     Int                    @map("source_start_ms")
+  sourceEndMs       Int                    @map("source_end_ms")
+  sourceSegmentId   String?                @map("source_segment_id") @db.Uuid
+  currentRevisionId String?                @unique @map("current_revision_id") @db.Uuid
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  video             Video                  @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  sourceSegment     TranscriptSegment?     @relation(fields: [sourceSegmentId], references: [id], onDelete: Restrict)
+  currentRevision   SegmentRevision?       @relation("CurrentSegmentRevision", fields: [currentRevisionId], references: [id], onDelete: Restrict)
+  revisions         SegmentRevision[]      @relation("SegmentRevisions")
+  audioRevisions    SegmentAudioRevision[]
+
+  @@unique([videoId, ordinal])
+  @@map("video_segments")
+}
+
+model SegmentRevision {
+  id               String                 @id @db.Uuid
+  videoSegmentId   String                 @map("video_segment_id") @db.Uuid
+  revision         Int
+  sourceText       String                 @map("source_text")
+  translatedText   String                 @map("translated_text")
+  castSheetEntryId String?                @map("cast_sheet_entry_id") @db.Uuid
+  voiceProfileId   String                 @map("voice_profile_id") @db.Uuid
+  targetStartMs    Int                    @map("target_start_ms")
+  targetEndMs      Int                    @map("target_end_ms")
+  speechRate       Decimal                @default(1) @map("speech_rate") @db.Decimal(5, 3)
+  status           SegmentRevisionStatus  @default(DRAFT)
+  editReason       String?                @map("edit_reason")
+  createdBy        String?                @map("created_by") @db.Uuid
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  segment          VideoSegment           @relation("SegmentRevisions", fields: [videoSegmentId], references: [id], onDelete: Restrict)
+  currentFor       VideoSegment?          @relation("CurrentSegmentRevision")
+  castSheetEntry   CastSheetEntry?        @relation(fields: [castSheetEntryId], references: [id], onDelete: Restrict)
+  voiceProfile     VoiceProfile           @relation(fields: [voiceProfileId], references: [id], onDelete: Restrict)
+  createdByUser    User?                  @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  audioRevisions   SegmentAudioRevision[]
+
+  @@unique([videoSegmentId, revision])
+  @@map("segment_revisions")
+}
+
+model SegmentAudioRevision {
+  id                String             @id @db.Uuid
+  videoSegmentId    String             @map("video_segment_id") @db.Uuid
+  segmentRevisionId String             @map("segment_revision_id") @db.Uuid
+  assetId           String?            @map("asset_id") @db.Uuid
+  taskAttemptId     String?            @map("task_attempt_id") @db.Uuid
+  revision          Int
+  modelName         String             @map("model_name")
+  modelVersion      String             @map("model_version")
+  targetDurationMs  Int                @map("target_duration_ms")
+  actualDurationMs  Int?               @map("actual_duration_ms")
+  atempoFactor      Decimal?           @map("atempo_factor") @db.Decimal(6, 4)
+  status            SegmentAudioStatus @default(GENERATING)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  segment           VideoSegment       @relation(fields: [videoSegmentId], references: [id], onDelete: Restrict)
+  segmentRevision   SegmentRevision    @relation(fields: [segmentRevisionId], references: [id], onDelete: Restrict)
+  asset             Asset?             @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  taskAttempt       TaskAttempt?       @relation(fields: [taskAttemptId], references: [id], onDelete: Restrict)
+
+  @@unique([segmentRevisionId, revision])
+  @@index([videoSegmentId, status])
+  @@map("segment_audio_revisions")
+}
+
+model ReviewDecision {
+  id             String             @id @db.Uuid
+  videoId        String             @map("video_id") @db.Uuid
+  pipelineJobId  String?            @map("pipeline_job_id") @db.Uuid
+  scope          ReviewScope
+  subjectVersion String             @map("subject_version")
+  decision       ReviewDecisionKind
+  note           String?
+  decidedBy      String             @map("decided_by") @db.Uuid
+  decidedAt      DateTime           @default(now()) @map("decided_at") @db.Timestamptz(6)
+  video          Video              @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  pipelineJob    PipelineJob?       @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  decidedByUser  User               @relation(fields: [decidedBy], references: [id], onDelete: Restrict)
+
+  @@index([videoId, scope, decidedAt])
+  @@map("review_decisions")
+}
+
 model PipelineJob {
   id                String            @id @db.Uuid
   videoId           String            @map("video_id") @db.Uuid
@@ -803,11 +1029,12 @@ model PipelineJob {
   updatedAt         DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
   version           Int               @default(1)
 
-  video          Video           @relation(fields: [videoId], references: [id], onDelete: Restrict)
-  createdBy      User?           @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  tasks          PipelineTask[]
-  workflowEvents WorkflowEvent[]
-  renderOutputs  RenderOutput[]
+  video           Video            @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  createdBy       User?            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  tasks           PipelineTask[]
+  workflowEvents  WorkflowEvent[]
+  renderOutputs   RenderOutput[]
+  reviewDecisions ReviewDecision[]
 
   @@index([status, priority, createdAt])
   @@index([videoId, status])
@@ -999,11 +1226,13 @@ model TaskAttempt {
   errorDetailSafe    String?           @map("error_detail_safe")
   metricsSafe        Json              @default("{}") @map("metrics_safe")
 
-  pipelineTask   PipelineTask    @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
-  workerSession  WorkerSession?  @relation(fields: [workerSessionId], references: [id], onDelete: Restrict)
-  leases         TaskLease[]
-  workflowEvents WorkflowEvent[]
-  createdAssets  Asset[]
+  pipelineTask          PipelineTask           @relation(fields: [pipelineTaskId], references: [id], onDelete: Restrict)
+  workerSession         WorkerSession?         @relation(fields: [workerSessionId], references: [id], onDelete: Restrict)
+  leases                TaskLease[]
+  workflowEvents        WorkflowEvent[]
+  createdAssets         Asset[]
+  transcriptRuns        TranscriptRun[]
+  segmentAudioRevisions SegmentAudioRevision[]
 
   @@unique([pipelineTaskId, attemptNumber])
   @@index([pipelineTaskId, startedAt])
