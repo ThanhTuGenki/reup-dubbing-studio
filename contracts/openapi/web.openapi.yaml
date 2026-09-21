@@ -1053,6 +1053,56 @@ paths:
       responses:
         '200': { description: Download grant, content: { application/json: { schema: { $ref: '#/components/schemas/DownloadGrantEnvelope' } } } }
         default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/studio:
+    get:
+      summary: Đọc dữ liệu Studio
+      operationId: getStudio
+      parameters: [{ $ref: '#/components/parameters/VideoId' }]
+      responses:
+        '200': { description: Studio detail, headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/StudioEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/segments/{segmentId}:
+    patch:
+      summary: Tạo revision mới cho segment
+      operationId: updateStudioSegment
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { name: segmentId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }, { $ref: '#/components/parameters/IfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/StudioSegmentPatch' } } } }
+      responses:
+        '200': { description: Segment revision, content: { application/json: { schema: { $ref: '#/components/schemas/StudioMutationEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/segments/{segmentId}/preview:
+    post:
+      summary: Xin preview audio của segment
+      operationId: previewStudioSegment
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { name: segmentId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }]
+      responses:
+        '200': { description: Preview metadata, content: { application/json: { schema: { $ref: '#/components/schemas/StudioAssetEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/segments/{segmentId}/regenerate:
+    post:
+      summary: Tạo request regenerate segment
+      operationId: regenerateStudioSegment
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { name: segmentId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }, { $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '202': { description: Regenerate queued, content: { application/json: { schema: { $ref: '#/components/schemas/StudioMutationEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/review-decisions:
+    post:
+      summary: Lưu review decision
+      operationId: createStudioReviewDecision
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { $ref: '#/components/parameters/IfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/StudioReviewRequest' } } } }
+      responses:
+        '200': { description: Review decision, content: { application/json: { schema: { $ref: '#/components/schemas/StudioMutationEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/render-requests:
+    post:
+      summary: Yêu cầu render output
+      operationId: requestStudioRender
+      parameters: [{ $ref: '#/components/parameters/VideoId' }, { $ref: '#/components/parameters/IfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '202': { description: Render queued, content: { application/json: { schema: { $ref: '#/components/schemas/StudioMutationEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
 
 components:
   parameters:
@@ -1287,6 +1337,26 @@ components:
         ingestedAt: { type: [string, 'null'], format: date-time }
         archivedAt: { type: [string, 'null'], format: date-time }
         capabilities: { type: object, required: [canOpenStudio, canOpenPublishing, canArchive], properties: { canOpenStudio: { type: boolean }, canOpenPublishing: { type: boolean }, canArchive: { type: boolean } } }
+    StudioSegmentPatch:
+      type: object
+      minProperties: 1
+      properties: { translatedText: { type: string, maxLength: 5000 }, castSheetEntryId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }, voiceProfileId: { $ref: '#/components/schemas/UuidV7' }, targetStartMs: { type: integer, minimum: 0 }, targetEndMs: { type: integer, minimum: 1 }, speechRate: { type: number, minimum: 0.5, maximum: 2 }, editReason: { type: string, maxLength: 500 } }
+    StudioReviewRequest:
+      type: object
+      required: [scope, subjectVersion, decision]
+      properties: { scope: { type: string, enum: [CAST, SCRIPT, TTS, RENDER] }, subjectVersion: { type: string }, decision: { type: string, enum: [APPROVED, CHANGES_REQUESTED, REJECTED] }, note: { type: string, maxLength: 2000 } }
+    StudioMutationEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { type: object, additionalProperties: true } }
+    StudioAssetEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { type: object, additionalProperties: true } }
+    StudioEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { type: object, additionalProperties: true } }
     WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
     WorkerDesiredStatus: { type: string, enum: [ACTIVE, DRAINING, REVOKED] }
     WorkerObservedStatus: { type: string, enum: [PENDING, READY, BUSY, DRAINING, SAFE_TO_TERMINATE, OFFLINE, TERMINATED, ERROR] }

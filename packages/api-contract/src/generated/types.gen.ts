@@ -91,6 +91,41 @@ export type Video = {
     };
 };
 
+export type StudioSegmentPatch = {
+    translatedText?: string;
+    castSheetEntryId?: UuidV7 | null;
+    voiceProfileId?: UuidV7;
+    targetStartMs?: number;
+    targetEndMs?: number;
+    speechRate?: number;
+    editReason?: string;
+};
+
+export type StudioReviewRequest = {
+    scope: 'CAST' | 'SCRIPT' | 'TTS' | 'RENDER';
+    subjectVersion: string;
+    decision: 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
+    note?: string;
+};
+
+export type StudioMutationEnvelope = {
+    data: {
+        [key: string]: unknown;
+    };
+};
+
+export type StudioAssetEnvelope = {
+    data: {
+        [key: string]: unknown;
+    };
+};
+
+export type StudioEnvelope = {
+    data: {
+        [key: string]: unknown;
+    };
+};
+
 export type WorkerRole = 'BATCH_MEDIA' | 'INTERACTIVE_TTS';
 
 export type WorkerDesiredStatus = 'ACTIVE' | 'DRAINING' | 'REVOKED';
@@ -3711,3 +3746,218 @@ export type GrantVideoOutputResponses = {
 };
 
 export type GrantVideoOutputResponse = GrantVideoOutputResponses[keyof GrantVideoOutputResponses];
+
+export type GetStudioData = {
+    body?: never;
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/studio';
+};
+
+export type GetStudioErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetStudioError = GetStudioErrors[keyof GetStudioErrors];
+
+export type GetStudioResponses = {
+    /**
+     * Studio detail
+     */
+    200: StudioEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetStudioResponse = GetStudioResponses[keyof GetStudioResponses];
+
+export type UpdateStudioSegmentData = {
+    body: StudioSegmentPatch;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc Settings gần nhất.
+         */
+        'If-Match': string;
+    };
+    path: {
+        videoId: UuidV7;
+        segmentId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/segments/{segmentId}';
+};
+
+export type UpdateStudioSegmentErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateStudioSegmentError = UpdateStudioSegmentErrors[keyof UpdateStudioSegmentErrors];
+
+export type UpdateStudioSegmentResponses = {
+    /**
+     * Segment revision
+     */
+    200: StudioMutationEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateStudioSegmentResponse = UpdateStudioSegmentResponses[keyof UpdateStudioSegmentResponses];
+
+export type PreviewStudioSegmentData = {
+    body?: never;
+    path: {
+        videoId: UuidV7;
+        segmentId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/segments/{segmentId}/preview';
+};
+
+export type PreviewStudioSegmentErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewStudioSegmentError = PreviewStudioSegmentErrors[keyof PreviewStudioSegmentErrors];
+
+export type PreviewStudioSegmentResponses = {
+    /**
+     * Preview metadata
+     */
+    200: StudioAssetEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PreviewStudioSegmentResponse = PreviewStudioSegmentResponses[keyof PreviewStudioSegmentResponses];
+
+export type RegenerateStudioSegmentData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc Settings gần nhất.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        videoId: UuidV7;
+        segmentId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/segments/{segmentId}/regenerate';
+};
+
+export type RegenerateStudioSegmentErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RegenerateStudioSegmentError = RegenerateStudioSegmentErrors[keyof RegenerateStudioSegmentErrors];
+
+export type RegenerateStudioSegmentResponses = {
+    /**
+     * Regenerate queued
+     */
+    202: StudioMutationEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RegenerateStudioSegmentResponse = RegenerateStudioSegmentResponses[keyof RegenerateStudioSegmentResponses];
+
+export type CreateStudioReviewDecisionData = {
+    body: StudioReviewRequest;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc Settings gần nhất.
+         */
+        'If-Match': string;
+    };
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/review-decisions';
+};
+
+export type CreateStudioReviewDecisionErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateStudioReviewDecisionError = CreateStudioReviewDecisionErrors[keyof CreateStudioReviewDecisionErrors];
+
+export type CreateStudioReviewDecisionResponses = {
+    /**
+     * Review decision
+     */
+    200: StudioMutationEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreateStudioReviewDecisionResponse = CreateStudioReviewDecisionResponses[keyof CreateStudioReviewDecisionResponses];
+
+export type RequestStudioRenderData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc Settings gần nhất.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/render-requests';
+};
+
+export type RequestStudioRenderErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestStudioRenderError = RequestStudioRenderErrors[keyof RequestStudioRenderErrors];
+
+export type RequestStudioRenderResponses = {
+    /**
+     * Render queued
+     */
+    202: StudioMutationEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestStudioRenderResponse = RequestStudioRenderResponses[keyof RequestStudioRenderResponses];
