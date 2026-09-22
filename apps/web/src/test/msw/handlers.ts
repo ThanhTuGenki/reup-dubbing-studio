@@ -29,6 +29,8 @@ import {
   safeWorker,
   workerImagesEnvelope,
   workerListEnvelope,
+  publicationListEnvelope,
+  publicationDetailEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
@@ -103,6 +105,8 @@ export const handlers = [
   http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs`, () => HttpResponse.json(queueListEnvelope)),
   http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId`, () => HttpResponse.json(queueDetailEnvelope, { headers: { ETag: '"1"' } })),
   http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/attempts`, () => HttpResponse.json({ data: { items: [], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } })),
+  http.get(`${CONTROL_PLANE_BASE_URL}/publication-tasks`, () => HttpResponse.json(publicationListEnvelope)),
+  http.get(`${CONTROL_PLANE_BASE_URL}/publication-tasks/:publicationTaskId`, () => HttpResponse.json(publicationDetailEnvelope, { headers: { ETag: '"3"' } })),
   http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/cancel`, () => HttpResponse.json({ ...queueDetailEnvelope, data: { ...queueDetailEnvelope.data, status: 'CANCELLED', version: 2, actions: { canRetry: false, canCancel: false } } })),
   http.post(`${CONTROL_PLANE_BASE_URL}/queue/jobs/:queueJobId/retry`, () => HttpResponse.json(queueDetailEnvelope)),
   http.get(`${CONTROL_PLANE_BASE_URL}/workers`, () => HttpResponse.json(workerListEnvelope)),

@@ -4,9 +4,10 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
-  it.each(['/publishing'])('keeps the shell for reserved path %s', (route) => {
-    renderApp(<AppRoutes />, { route });
-    expect(screen.getByRole('heading', { name: 'Tính năng chưa khả dụng' })).toBeInTheDocument();
+  it('renders Publishing inside the shell', async () => {
+    renderApp(<AppRoutes />, { route: '/publishing' });
+    expect(await screen.findByRole('heading', { name: 'Bàn đăng bài' })).toBeInTheDocument();
+    expect((await screen.findAllByText('YouTube Việt hóa')).length).toBeGreaterThan(0);
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
   });
   it.each(['/library', '/library/video-1'])('renders Library routes inside the shell %s', async (route) => {
