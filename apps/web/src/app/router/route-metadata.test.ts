@@ -10,6 +10,7 @@ describe('route metadata', () => {
     ['/', 'Tổng quan'],
     ['/discovery', 'Khám phá video'],
     ['/library/video-1', 'Chi tiết video'],
+    ['/library/video-1/studio', 'Studio biên tập'],
     ['/settings', 'Cài đặt'],
     ['/unknown', 'Không tìm thấy trang'],
   ])('resolves %s to %s', (pathname, label) => {
