@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page, type Route } from '@playwright/test';
+import type { PublicationTask } from '@reup-dubbing-studio/api-client';
 
 const requestId = '0191f3d2-7f5b-7abc-8b2e-123456789abd';
 const taskId = '0191f3d2-7f5b-7abc-8b2e-123456789c01';
@@ -39,6 +40,32 @@ async function mockPublishing(page: Page) {
   await page.route(`**/v1/publication-tasks/${taskId}`, (route) => fulfill(route, task));
 }
 
+async function mockPublishingFlow(page: Page) {
+  let current: PublicationTask = structuredClone(task) as PublicationTask;
+  const mutationHeaders: Array<{ etag: string | null; idempotencyKey: string | null }> = [];
+  await page.route('**/v1/publication-tasks**', async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const method = request.method();
+    if (method === 'GET' && url.pathname === '/v1/publication-tasks') return fulfill(route, { items: [listItem], nextCursor: null });
+    if (method === 'GET' && url.pathname === `/v1/publication-tasks/${taskId}`) return fulfill(route, current);
+
+    mutationHeaders.push({ etag: request.headers()['if-match'] ?? null, idempotencyKey: request.headers()['idempotency-key'] ?? null });
+    const nextVersion = current.version + 1;
+    if (url.pathname.endsWith('/approve-content')) current = { ...current, status: 'READY_TO_PUBLISH', version: nextVersion };
+    else if (url.pathname.includes('/checklist/')) current = { ...current, version: nextVersion, checklist: current.checklist.map((item) => ({ ...item, status: 'COMPLETED', completedAt: '2026-09-22T11:00:00.000Z' })) };
+    else if (url.pathname.endsWith('/start-manual-posting')) current = { ...current, status: 'POSTING_MANUAL', version: nextVersion };
+    else if (url.pathname.endsWith('/proofs')) {
+      const body = request.postDataJSON() as { publicUrl: string | null; platformPostId: string | null };
+      expect(body).toEqual({ publicUrl: 'https://youtube.com/watch?v=published-123', platformPostId: 'published-123' });
+      current = { ...current, status: 'PUBLISHED', publishedAt: '2026-09-22T11:05:00.000Z', version: nextVersion, proofs: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789c09', attemptNumber: 1, platformPostId: body.platformPostId, publicUrl: body.publicUrl, verificationStatus: 'PENDING', submittedAt: '2026-09-22T11:05:00.000Z', verifiedAt: null, verificationDetail: null }] };
+    } else if (url.pathname.endsWith('/verify')) current = { ...current, status: 'VERIFIED', version: nextVersion, proofs: current.proofs.map((proof) => ({ ...proof, verificationStatus: 'VERIFIED', verifiedAt: '2026-09-22T11:10:00.000Z' })) };
+    else return route.abort();
+    return fulfill(route, current);
+  });
+  return { mutationHeaders };
+}
+
 test('opens the Publishing workspace with accessible task details', async ({ page }) => {
   await mockPublishing(page);
   await page.goto('/publishing');
@@ -49,6 +76,26 @@ test('opens the Publishing workspace with accessible task details', async ({ pag
   await expect(page.getByText('Publication proof')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
+});
+
+test('completes the manual flow from approved content to verified proof', async ({ page }) => {
+  const flow = await mockPublishingFlow(page);
+  await page.goto('/publishing');
+  await page.getByRole('button', { name: 'Mở task' }).first().click();
+  await page.getByRole('button', { name: 'Duyệt nội dung' }).click();
+  await expect(page.getByText('Sẵn sàng đăng').last()).toBeVisible();
+  await page.getByRole('checkbox', { name: /Tải video lên/ }).click();
+  await expect(page.getByText(/Đã xong/)).toBeVisible();
+  await page.getByRole('button', { name: 'Bắt đầu đăng thủ công' }).click();
+  await expect(page.getByText('Đang đăng thủ công').last()).toBeVisible();
+  await page.getByLabel('Public URL').fill('https://youtube.com/watch?v=published-123');
+  await page.getByLabel('Platform post ID').fill('published-123');
+  await page.getByRole('button', { name: 'Ghi nhận proof' }).click();
+  await expect(page.getByText('Chờ xác minh')).toBeVisible();
+  await page.getByRole('button', { name: 'Xác minh' }).click();
+  await expect(page.getByText('Đã xác minh').last()).toBeVisible();
+  expect(flow.mutationHeaders.map(({ etag }) => etag)).toEqual(['"3"', '"4"', '"5"', '"6"', '"7"']);
+  expect(flow.mutationHeaders.filter(({ idempotencyKey }) => idempotencyKey).length).toBe(4);
 });
 
 test('Publishing uses mobile cards without horizontal page overflow', async ({ page }) => {
