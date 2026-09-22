@@ -110,20 +110,123 @@ export type StudioReviewRequest = {
 
 export type StudioMutationEnvelope = {
     data: {
-        [key: string]: unknown;
+        videoId?: UuidV7;
+        segmentId?: UuidV7;
+        revisionId?: UuidV7;
+        revision?: number;
+        jobId?: UuidV7;
+        taskId?: UuidV7;
+        id?: UuidV7;
+        scope?: string;
+        subjectVersion?: string;
+        decision?: string;
+        note?: string | null;
+        decidedAt?: string;
+        version: number;
     };
 };
 
 export type StudioAssetEnvelope = {
     data: {
-        [key: string]: unknown;
+        method: 'GET';
+        url: string;
+        expiresAt: string;
+        fileName: string;
+        contentType: string | null;
+        byteSize: string | null;
     };
 };
 
 export type StudioEnvelope = {
     data: {
-        [key: string]: unknown;
+        video: StudioVideo;
+        transcriptRuns: Array<StudioTranscriptRun>;
+        cast: StudioCastSheet | null;
+        segments: Array<StudioSegment>;
+        reviews: Array<StudioReviewDecision>;
+        capabilities: StudioCapabilities;
     };
+};
+
+export type StudioVideo = {
+    id: UuidV7;
+    version: number;
+    title: string | null;
+    status: string;
+    sourceDurationMs: number | null;
+};
+
+export type StudioTranscriptRun = {
+    id: UuidV7;
+    method: string;
+    status: string;
+    language: string;
+    averageConfidence: string | null;
+    selectedAt: string | null;
+};
+
+export type StudioCastSheet = {
+    id: UuidV7;
+    status: string;
+    version: number;
+    entries: Array<StudioCastEntry>;
+};
+
+export type StudioCastEntry = {
+    id: UuidV7;
+    characterKey: string;
+    displayName: string;
+    roleKind: string;
+    voice: {
+        id: UuidV7;
+        name: string;
+    };
+};
+
+export type StudioSegment = {
+    id: UuidV7;
+    ordinal: number;
+    sourceStartMs: number;
+    sourceEndMs: number;
+    revision: StudioSegmentRevision | null;
+};
+
+export type StudioSegmentRevision = {
+    id: UuidV7;
+    revision: number;
+    sourceText: string;
+    translatedText: string;
+    targetStartMs: number;
+    targetEndMs: number;
+    speechRate: number;
+    status: string;
+    castSheetEntryId: UuidV7 | null;
+    voice: {
+        id: UuidV7;
+        name: string;
+    };
+    preview: StudioPreview | null;
+};
+
+export type StudioPreview = {
+    id: UuidV7;
+    status: string;
+    durationMs: number | null;
+};
+
+export type StudioReviewDecision = {
+    id: UuidV7;
+    scope: string;
+    subjectVersion: string;
+    decision: string;
+    note: string | null;
+    decidedAt: string;
+};
+
+export type StudioCapabilities = {
+    canEdit: boolean;
+    canRegenerate: boolean;
+    canRender: boolean;
 };
 
 export type WorkerRole = 'BATCH_MEDIA' | 'INTERACTIVE_TTS';

@@ -1,5 +1,5 @@
 export const paths = {
-  foundation: '/', discovery: '/discovery', queue: '/queue', library: '/library', libraryVideo: '/library/:videoId',
+  foundation: '/', discovery: '/discovery', queue: '/queue', library: '/library', libraryVideo: '/library/:videoId', studio: '/library/:videoId/studio',
   publishing: '/publishing', workers: '/workers', channelProfiles: '/channel-profiles', voices: '/voices', settings: '/settings',
 } as const;
 

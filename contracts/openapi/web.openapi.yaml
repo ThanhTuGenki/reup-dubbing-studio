@@ -1348,15 +1348,130 @@ components:
     StudioMutationEnvelope:
       type: object
       required: [data]
-      properties: { data: { type: object, additionalProperties: true } }
+      properties:
+        data:
+          type: object
+          required: [version]
+          properties:
+            videoId: { $ref: '#/components/schemas/UuidV7' }
+            segmentId: { $ref: '#/components/schemas/UuidV7' }
+            revisionId: { $ref: '#/components/schemas/UuidV7' }
+            revision: { type: integer, minimum: 1 }
+            jobId: { $ref: '#/components/schemas/UuidV7' }
+            taskId: { $ref: '#/components/schemas/UuidV7' }
+            id: { $ref: '#/components/schemas/UuidV7' }
+            scope: { type: string }
+            subjectVersion: { type: string }
+            decision: { type: string }
+            note: { type: [string, 'null'] }
+            decidedAt: { type: string, format: date-time }
+            version: { type: integer, minimum: 1 }
     StudioAssetEnvelope:
       type: object
       required: [data]
-      properties: { data: { type: object, additionalProperties: true } }
+      properties:
+        data:
+          type: object
+          required: [method, url, expiresAt, fileName, contentType, byteSize]
+          properties:
+            method: { type: string, enum: [GET] }
+            url: { type: string, format: uri }
+            expiresAt: { type: string, format: date-time }
+            fileName: { type: string }
+            contentType: { type: [string, 'null'] }
+            byteSize: { type: [string, 'null'] }
     StudioEnvelope:
       type: object
       required: [data]
-      properties: { data: { type: object, additionalProperties: true } }
+      properties:
+        data:
+          type: object
+          required: [video, transcriptRuns, cast, segments, reviews, capabilities]
+          properties:
+            video: { $ref: '#/components/schemas/StudioVideo' }
+            transcriptRuns: { type: array, items: { $ref: '#/components/schemas/StudioTranscriptRun' } }
+            cast: { oneOf: [{ $ref: '#/components/schemas/StudioCastSheet' }, { type: 'null' }] }
+            segments: { type: array, items: { $ref: '#/components/schemas/StudioSegment' } }
+            reviews: { type: array, items: { $ref: '#/components/schemas/StudioReviewDecision' } }
+            capabilities: { $ref: '#/components/schemas/StudioCapabilities' }
+    StudioVideo:
+      type: object
+      required: [id, version, title, status, sourceDurationMs]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        version: { type: integer, minimum: 1 }
+        title: { type: [string, 'null'] }
+        status: { type: string }
+        sourceDurationMs: { type: [integer, 'null'], minimum: 1 }
+    StudioTranscriptRun:
+      type: object
+      required: [id, method, status, language, averageConfidence, selectedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        method: { type: string }
+        status: { type: string }
+        language: { type: string }
+        averageConfidence: { type: [string, 'null'] }
+        selectedAt: { type: [string, 'null'], format: date-time }
+    StudioCastSheet:
+      type: object
+      required: [id, status, version, entries]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        status: { type: string }
+        version: { type: integer, minimum: 1 }
+        entries: { type: array, items: { $ref: '#/components/schemas/StudioCastEntry' } }
+    StudioCastEntry:
+      type: object
+      required: [id, characterKey, displayName, roleKind, voice]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        characterKey: { type: string }
+        displayName: { type: string }
+        roleKind: { type: string }
+        voice:
+          type: object
+          required: [id, name]
+          properties: { id: { $ref: '#/components/schemas/UuidV7' }, name: { type: string } }
+    StudioSegment:
+      type: object
+      required: [id, ordinal, sourceStartMs, sourceEndMs, revision]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        ordinal: { type: integer, minimum: 1 }
+        sourceStartMs: { type: integer, minimum: 0 }
+        sourceEndMs: { type: integer, minimum: 1 }
+        revision: { oneOf: [{ $ref: '#/components/schemas/StudioSegmentRevision' }, { type: 'null' }] }
+    StudioSegmentRevision:
+      type: object
+      required: [id, revision, sourceText, translatedText, targetStartMs, targetEndMs, speechRate, status, castSheetEntryId, voice, preview]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        revision: { type: integer, minimum: 1 }
+        sourceText: { type: string }
+        translatedText: { type: string }
+        targetStartMs: { type: integer, minimum: 0 }
+        targetEndMs: { type: integer, minimum: 1 }
+        speechRate: { type: number, minimum: 0.5, maximum: 2 }
+        status: { type: string }
+        castSheetEntryId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
+        voice:
+          type: object
+          required: [id, name]
+          properties: { id: { $ref: '#/components/schemas/UuidV7' }, name: { type: string } }
+        preview: { oneOf: [{ $ref: '#/components/schemas/StudioPreview' }, { type: 'null' }] }
+    StudioPreview:
+      type: object
+      required: [id, status, durationMs]
+      properties: { id: { $ref: '#/components/schemas/UuidV7' }, status: { type: string }, durationMs: { type: [integer, 'null'] } }
+    StudioReviewDecision:
+      type: object
+      required: [id, scope, subjectVersion, decision, note, decidedAt]
+      properties: { id: { $ref: '#/components/schemas/UuidV7' }, scope: { type: string }, subjectVersion: { type: string }, decision: { type: string }, note: { type: [string, 'null'] }, decidedAt: { type: string, format: date-time } }
+    StudioCapabilities:
+      type: object
+      required: [canEdit, canRegenerate, canRender]
+      properties: { canEdit: { type: boolean }, canRegenerate: { type: boolean }, canRender: { type: boolean } }
     WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
     WorkerDesiredStatus: { type: string, enum: [ACTIVE, DRAINING, REVOKED] }
     WorkerObservedStatus: { type: string, enum: [PENDING, READY, BUSY, DRAINING, SAFE_TO_TERMINATE, OFFLINE, TERMINATED, ERROR] }
