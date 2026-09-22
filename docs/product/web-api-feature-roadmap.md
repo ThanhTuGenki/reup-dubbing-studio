@@ -106,7 +106,7 @@
 
 ## 9. Chi tiết video và Studio biên tập
 
-- [ ] **Hoàn tất feature Studio.**
+- [x] **Hoàn tất feature Studio.**
   - [x] Phân tích player, transcript, cast, revision, review và render flow rồi
     chốt contract/schema.
   - [x] API đọc/sửa segment, gán voice/cast, tạo preview/re-gen request, lưu review
@@ -114,7 +114,7 @@
   - [x] Web xây player, segment editor, cast sheet, audio preview, dirty state và
     review/render actions.
   - [x] Tích hợp SSE/polling cho preview và render status mà không triển khai Worker.
-  - [ ] Kiểm thử conflict khi sửa, retry, unsaved changes và accessibility editor.
+  - [x] Kiểm thử conflict khi sửa, retry, unsaved changes và accessibility editor.
 
 ## 10. Chính sách tự động hóa và điểm duyệt
 

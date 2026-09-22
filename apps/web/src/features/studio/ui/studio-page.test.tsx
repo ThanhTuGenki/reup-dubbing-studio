@@ -48,4 +48,48 @@ describe('StudioPage', () => {
     await waitFor(() => expect(requests).toBeGreaterThan(1));
     expect(await screen.findByText('Version 5', { exact: false })).toBeInTheDocument();
   });
+
+  it('keeps the draft and retries against the refreshed version after a conflict', async () => {
+    const user = userEvent.setup(); let reads = 0; const matches: Array<string | null> = [];
+    server.use(
+      http.get(`${CONTROL_PLANE_BASE_URL}/videos/:videoId/studio`, () => { reads += 1; return HttpResponse.json({ ...studioEnvelope, data: { ...studioEnvelope.data, video: { ...studioEnvelope.data.video, version: reads > 1 ? 5 : 4 } } }); }),
+      http.patch(`${CONTROL_PLANE_BASE_URL}/videos/:videoId/segments/:segmentId`, ({ request }) => { matches.push(request.headers.get('If-Match')); if (matches.length === 1) return HttpResponse.json({ type: 'about:blank', title: 'Conflict', status: 412, code: 'VERSION_CONFLICT', detail: 'Studio version is stale' }, { status: 412 }); return HttpResponse.json({ data: { version: 6, revision: 3 } }); }),
+    );
+    renderStudio();
+    const translation = await screen.findByLabelText('Bản dịch segment'); await user.clear(translation); await user.type(translation, 'Giữ bản nháp này');
+    await user.click(screen.getByRole('button', { name: 'Lưu revision' }));
+    expect(await screen.findByText(/bản nháp của bạn vẫn được giữ/u)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Version 5', { exact: false })).toBeInTheDocument());
+    expect(translation).toHaveValue('Giữ bản nháp này');
+    await user.click(screen.getByRole('button', { name: 'Thử lưu lại' }));
+    await waitFor(() => expect(matches).toEqual(['"4"', '"5"']));
+  });
+
+  it('reuses the regenerate idempotency key when retrying a transient failure', async () => {
+    const user = userEvent.setup(); const keys: Array<string | null> = [];
+    server.use(
+      http.get(`${CONTROL_PLANE_BASE_URL}/videos/:videoId/studio`, () => HttpResponse.json(studioEnvelope)),
+      http.post(`${CONTROL_PLANE_BASE_URL}/videos/:videoId/segments/:segmentId/regenerate`, ({ request }) => { keys.push(request.headers.get('Idempotency-Key')); if (keys.length === 1) return HttpResponse.json({ type: 'about:blank', title: 'Unavailable', status: 503, code: 'INTERNAL_ERROR', detail: 'Tạm thời chưa thể tạo audio' }, { status: 503 }); return HttpResponse.json({ data: { version: 5, jobId: videoId, taskId: segmentId } }, { status: 202 }); }),
+    );
+    renderStudio();
+    await user.click(await screen.findByRole('button', { name: 'Re-generate' }));
+    await user.click(await screen.findByRole('button', { name: 'Thử re-generate lại' }));
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toBe(keys[1]);
+  });
+
+  it('warns before leaving with an unsaved accessible editor draft', async () => {
+    const user = userEvent.setup(); const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/videos/:videoId/studio`, () => HttpResponse.json(studioEnvelope)));
+    renderStudio();
+    expect(await screen.findByRole('navigation', { name: 'Danh sách segment' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /01.*Xin chào.*DRAFT/u })).toHaveAttribute('aria-current', 'true');
+    await user.type(screen.getByLabelText('Bản dịch segment'), ' chưa lưu');
+    const unload = new Event('beforeunload', { cancelable: true }); window.dispatchEvent(unload); expect(unload.defaultPrevented).toBe(true);
+    await user.click(screen.getByRole('link', { name: 'Chi tiết video' }));
+    expect(confirm).toHaveBeenCalledOnce(); expect(screen.getByRole('heading', { name: 'Tập phim Studio' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Quyết định review')).toBeInTheDocument(); expect(screen.getByLabelText('Ghi chú review')).toBeInTheDocument();
+  });
 });
+
+function renderStudio() { return renderApp(<Routes><Route path="/library/:videoId/studio" element={<StudioPage />} /></Routes>, { route: `/library/${videoId}/studio` }); }
