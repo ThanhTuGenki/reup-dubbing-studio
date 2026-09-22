@@ -27,6 +27,7 @@ export class StudioApiError extends Error {
 }
 
 function client() { return createClient({ baseUrl: readRuntimeConfig().controlPlaneUrl }); }
+export function studioWorkflowEventsUrl() { return `${readRuntimeConfig().controlPlaneUrl}/queue/events`; }
 
 export async function fetchStudio(videoId: string): Promise<Studio> {
   const result = await getStudio({ client: client(), path: { videoId } });
