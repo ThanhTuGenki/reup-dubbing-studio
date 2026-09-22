@@ -118,11 +118,11 @@
 
 ## 10. Chính sách tự động hóa và điểm duyệt
 
-- [ ] **Hoàn tất feature Review policy.**
+- [x] **Hoàn tất feature Review policy.**
   - [x] Phân tích policy inheritance và các approval gate cần hỗ trợ.
   - [x] API đọc/cập nhật policy có version và snapshot policy vào workflow.
   - [x] Web xây form policy, mô tả tác động và validation phụ thuộc.
-  - [ ] Kiểm thử thay đổi policy không làm đổi job đang chạy.
+  - [x] Kiểm thử thay đổi policy không làm đổi job đang chạy.
 
 ## 11. Bàn đăng bài
 
