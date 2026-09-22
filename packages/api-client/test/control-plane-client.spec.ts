@@ -10,8 +10,12 @@ import {
   testStorageConnection,
   listChannelProfiles,
   createChannelProfile,
+  getChannelReviewPolicy,
+  updateChannelReviewPolicy,
   listSeriesProfiles,
   createSeriesProfile,
+  getSeriesReviewPolicy,
+  updateSeriesReviewPolicy,
   previewChannelProfileAsset,
   previewSeriesProfileAsset,
   listVoiceProfiles,
@@ -44,8 +48,12 @@ describe('Control Plane client public API', () => {
     expect(testStorageConnection).toBeTypeOf('function');
     expect(listChannelProfiles).toBeTypeOf('function');
     expect(createChannelProfile).toBeTypeOf('function');
+    expect(getChannelReviewPolicy).toBeTypeOf('function');
+    expect(updateChannelReviewPolicy).toBeTypeOf('function');
     expect(listSeriesProfiles).toBeTypeOf('function');
     expect(createSeriesProfile).toBeTypeOf('function');
+    expect(getSeriesReviewPolicy).toBeTypeOf('function');
+    expect(updateSeriesReviewPolicy).toBeTypeOf('function');
     expect(previewChannelProfileAsset).toBeTypeOf('function');
     expect(previewSeriesProfileAsset).toBeTypeOf('function');
     expect(listVoiceProfiles).toBeTypeOf('function');

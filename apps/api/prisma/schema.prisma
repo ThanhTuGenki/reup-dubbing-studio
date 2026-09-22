@@ -149,6 +149,12 @@ enum ReviewScope {
   SCRIPT
   TTS
   RENDER
+  PUBLISH_CONTENT
+}
+
+enum ReviewGateMode {
+  MANUAL_REQUIRED
+  NOT_REQUIRED
 }
 
 enum ReviewDecisionKind {
@@ -499,6 +505,7 @@ model ChannelProfile {
   series       SeriesProfile[]
   assets       ChannelProfileAsset[]
   videos       Video[]
+  reviewPolicy ReviewPolicy?
 
   @@index([status, createdAt, id])
   @@map("channel_profiles")
@@ -553,6 +560,7 @@ model SeriesProfile {
   assets               SeriesProfileAsset[]
   videos               Video[]
   castSheet            CastSheet?
+  reviewPolicy         ReviewPolicy?
 
   @@index([channelProfileId, status, createdAt, id])
   @@map("series_profiles")
@@ -1009,6 +1017,26 @@ model ReviewDecision {
 
   @@index([videoId, scope, decidedAt])
   @@map("review_decisions")
+}
+
+model ReviewPolicy {
+  id                 String          @id @db.Uuid
+  channelProfileId   String?         @unique @map("channel_profile_id") @db.Uuid
+  seriesProfileId    String?         @unique @map("series_profile_id") @db.Uuid
+  castGate           ReviewGateMode? @map("cast_gate")
+  scriptGate         ReviewGateMode? @map("script_gate")
+  ttsGate            ReviewGateMode? @map("tts_gate")
+  renderGate         ReviewGateMode? @map("render_gate")
+  publishContentGate ReviewGateMode? @map("publish_content_gate")
+  autoRequestRender  Boolean?        @map("auto_request_render")
+  version            Int             @default(1)
+  createdAt          DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  channelProfile ChannelProfile? @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  seriesProfile  SeriesProfile?  @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
+
+  @@map("review_policies")
 }
 
 model PipelineJob {

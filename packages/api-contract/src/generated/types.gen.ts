@@ -4,6 +4,68 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type ReviewGateMode = 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+
+export type ReviewPolicyValues = {
+    castGate: ReviewGateMode;
+    scriptGate: ReviewGateMode;
+    ttsGate: ReviewGateMode;
+    renderGate: ReviewGateMode;
+    publishContentGate: ReviewGateMode;
+    autoRequestRender: boolean;
+};
+
+export type StoredReviewPolicyValues = {
+    castGate: ReviewGateMode | null;
+    scriptGate: ReviewGateMode | null;
+    ttsGate: ReviewGateMode | null;
+    renderGate: ReviewGateMode | null;
+    publishContentGate: ReviewGateMode | null;
+    autoRequestRender: boolean | null;
+};
+
+export type ReviewPolicyInheritance = {
+    castGate: 'CHANNEL' | 'SERIES';
+    scriptGate: 'CHANNEL' | 'SERIES';
+    ttsGate: 'CHANNEL' | 'SERIES';
+    renderGate: 'CHANNEL' | 'SERIES';
+    publishContentGate: 'CHANNEL' | 'SERIES';
+    autoRequestRender: 'CHANNEL' | 'SERIES';
+};
+
+export type ReviewPolicy = {
+    ownerType: 'CHANNEL' | 'SERIES';
+    ownerProfileId: UuidV7;
+    stored: StoredReviewPolicyValues;
+    effective: ReviewPolicyValues;
+    inheritance: ReviewPolicyInheritance;
+    version: number;
+    parentPolicyVersion: number | null;
+    updatedAt: string;
+};
+
+export type ReviewPolicyEnvelope = {
+    data: ReviewPolicy;
+};
+
+export type UpdateChannelReviewPolicy = {
+    castGate?: ReviewGateMode;
+    scriptGate?: ReviewGateMode;
+    ttsGate?: ReviewGateMode;
+    renderGate?: ReviewGateMode;
+    publishContentGate?: ReviewGateMode;
+    autoRequestRender?: boolean;
+};
+
+export type UpdateSeriesReviewPolicy = {
+    castGate?: ReviewGateMode | null;
+    scriptGate?: ReviewGateMode | null;
+    ttsGate?: ReviewGateMode | null;
+    renderGate?: ReviewGateMode | null;
+    publishContentGate?: ReviewGateMode | null;
+    autoRequestRender?: boolean | null;
+};
+
 export type VideoOutputReadiness = 'NONE' | 'PARTIAL' | 'READY' | 'CLEANED';
 
 export type GrantRequest = {
@@ -1296,6 +1358,16 @@ export type ChannelIfMatch = string;
  */
 export type SeriesIfMatch = string;
 
+/**
+ * Strong ETag của policy Channel.
+ */
+export type ChannelReviewPolicyIfMatch = string;
+
+/**
+ * Strong ETag gồm version policy Series và policy Channel cha.
+ */
+export type SeriesReviewPolicyIfMatch = string;
+
 export type VoiceIfMatch = string;
 
 export type DiscoveryIfMatch = string;
@@ -1456,6 +1528,75 @@ export type UpdateChannelProfileResponses = {
 };
 
 export type UpdateChannelProfileResponse = UpdateChannelProfileResponses[keyof UpdateChannelProfileResponses];
+
+export type GetChannelReviewPolicyData = {
+    body?: never;
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/review-policy';
+};
+
+export type GetChannelReviewPolicyErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetChannelReviewPolicyError = GetChannelReviewPolicyErrors[keyof GetChannelReviewPolicyErrors];
+
+export type GetChannelReviewPolicyResponses = {
+    /**
+     * Policy nền đầy đủ của Channel.
+     */
+    200: ReviewPolicyEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetChannelReviewPolicyResponse = GetChannelReviewPolicyResponses[keyof GetChannelReviewPolicyResponses];
+
+export type UpdateChannelReviewPolicyData = {
+    body: UpdateChannelReviewPolicy;
+    headers: {
+        /**
+         * Strong ETag của policy Channel.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        channelProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/channel-profiles/{channelProfileId}/review-policy';
+};
+
+export type UpdateChannelReviewPolicyErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateChannelReviewPolicyError = UpdateChannelReviewPolicyErrors[keyof UpdateChannelReviewPolicyErrors];
+
+export type UpdateChannelReviewPolicyResponses = {
+    /**
+     * Policy Channel sau cập nhật.
+     */
+    200: ReviewPolicyEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateChannelReviewPolicyResponse = UpdateChannelReviewPolicyResponses[keyof UpdateChannelReviewPolicyResponses];
 
 export type ArchiveChannelProfileData = {
     body?: never;
@@ -1826,6 +1967,75 @@ export type UpdateSeriesProfileResponses = {
 };
 
 export type UpdateSeriesProfileResponse = UpdateSeriesProfileResponses[keyof UpdateSeriesProfileResponses];
+
+export type GetSeriesReviewPolicyData = {
+    body?: never;
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/review-policy';
+};
+
+export type GetSeriesReviewPolicyErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSeriesReviewPolicyError = GetSeriesReviewPolicyErrors[keyof GetSeriesReviewPolicyErrors];
+
+export type GetSeriesReviewPolicyResponses = {
+    /**
+     * Policy Series cùng nguồn inheritance từng field.
+     */
+    200: ReviewPolicyEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetSeriesReviewPolicyResponse = GetSeriesReviewPolicyResponses[keyof GetSeriesReviewPolicyResponses];
+
+export type UpdateSeriesReviewPolicyData = {
+    body: UpdateSeriesReviewPolicy;
+    headers: {
+        /**
+         * Strong ETag gồm version policy Series và policy Channel cha.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        seriesProfileId: UuidV7;
+    };
+    query?: never;
+    url: '/series-profiles/{seriesProfileId}/review-policy';
+};
+
+export type UpdateSeriesReviewPolicyErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSeriesReviewPolicyError = UpdateSeriesReviewPolicyErrors[keyof UpdateSeriesReviewPolicyErrors];
+
+export type UpdateSeriesReviewPolicyResponses = {
+    /**
+     * Policy Series sau cập nhật.
+     */
+    200: ReviewPolicyEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdateSeriesReviewPolicyResponse = UpdateSeriesReviewPolicyResponses[keyof UpdateSeriesReviewPolicyResponses];
 
 export type ArchiveSeriesProfileData = {
     body?: never;

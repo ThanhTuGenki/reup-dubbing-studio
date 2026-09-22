@@ -39,6 +39,7 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     await prisma.voiceProfileSample.deleteMany();
     await prisma.asset.deleteMany();
     await prisma.publishingDestination.deleteMany();
+    await prisma.reviewPolicy.deleteMany();
     await prisma.seriesProfile.deleteMany();
     await prisma.channelProfile.deleteMany();
     await prisma.voiceProfile.deleteMany();
@@ -232,6 +233,10 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
         assetVersion: 1, objectKey: `voices/${voiceId}/sample-v1.wav`, checksumSha256: 'a'.repeat(64),
       },
       retention: { settingsVersion: 1, rawVideoDays: 7 },
+      reviewPolicy: {
+        schemaVersion: 1, channelPolicyVersion: 1, seriesPolicyVersion: 1,
+        effective: { castGate: 'NOT_REQUIRED', scriptGate: 'MANUAL_REQUIRED', autoRequestRender: false },
+      },
     });
 
     await prisma.channelProfile.update({ where: { id: channelId }, data: {

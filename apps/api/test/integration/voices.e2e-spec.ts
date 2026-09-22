@@ -15,7 +15,7 @@ describeWithDatabase('Voice Library API with PostgreSQL', () => {
     const config: AppConfig = { nodeEnv: 'test', port: 3000, logLevel: 'error', corsOrigins: ['http://localhost:5173'], rateLimitMax: 100, rateLimitWindowMs: 60_000, healthRateLimitMax: 100, trustProxy: false, databaseUrl: databaseUrl!, settingsEncryptionKey: Buffer.alloc(32, 7).toString('base64') };
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
     await prisma.channelProfileAsset.deleteMany(); await prisma.seriesProfileAsset.deleteMany();
-    await prisma.publishingDestination.deleteMany(); await prisma.seriesProfile.deleteMany(); await prisma.channelProfile.deleteMany();
+    await prisma.publishingDestination.deleteMany(); await prisma.reviewPolicy.deleteMany(); await prisma.seriesProfile.deleteMany(); await prisma.channelProfile.deleteMany();
     await prisma.voiceProfileSample.deleteMany(); await prisma.asset.deleteMany(); await prisma.voiceProfile.deleteMany();
     await prisma.idempotencyRecord.deleteMany({ where: { scope: { contains: 'VOICE' } } });
     app = await createApplication(config);

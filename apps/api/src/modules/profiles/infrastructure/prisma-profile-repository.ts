@@ -17,6 +17,8 @@ import type {
   UpdateChannelProfile,
   UpdateSeriesProfile,
 } from '../domain/profiles';
+import { resolveReviewPolicySnapshot } from '../../review-policy/infrastructure/prisma-review-policy-repository';
+import type { ReviewPolicySnapshot } from '../../review-policy/domain/review-policy';
 
 const voiceSnapshotInclude = {
   samples: {
@@ -77,6 +79,13 @@ export class PrismaProfileRepository implements ProfileRepository {
           id: uuidV7(), name: input.name.trim(), normalizedName: normalize(input.name),
           ...channelPipelineData(input.pipeline), ...channelContentData(input.content),
           destinations: { create: input.destinations.map(destinationCreate) },
+          reviewPolicy: { create: {
+            id: uuidV7(),
+            castGate: input.pipeline.voiceMode === 'MULTI_AUTO' ? 'MANUAL_REQUIRED' : 'NOT_REQUIRED',
+            scriptGate: 'MANUAL_REQUIRED', ttsGate: 'MANUAL_REQUIRED',
+            renderGate: 'MANUAL_REQUIRED', publishContentGate: 'MANUAL_REQUIRED',
+            autoRequestRender: false,
+          } },
         },
         include: channelInclude,
       });
@@ -171,6 +180,7 @@ export class PrismaProfileRepository implements ProfileRepository {
           id: uuidV7(), channelProfileId: input.channelProfileId,
           name: input.name.trim(), normalizedName: normalize(input.name),
           ...seriesOverrideData(input.overrides), ...maskData(input.mask),
+          reviewPolicy: { create: { id: uuidV7() } },
         }, include: seriesInclude,
       });
       return toSeriesView(row);
@@ -226,12 +236,14 @@ export class PrismaProfileRepository implements ProfileRepository {
       const row = await tx.seriesProfile.findUnique({ where: { id: input.seriesProfileId }, include: seriesInclude });
       if (!row || row.channelProfileId !== input.channelProfileId) notFound();
       ensureJobReady(toSeriesView(row));
-      return jobSnapshot(row.channelProfile, row, settings);
+      const reviewPolicy = await resolveReviewPolicySnapshot(tx, input);
+      return jobSnapshot(row.channelProfile, row, settings, reviewPolicy);
     }
     const row = await tx.channelProfile.findUnique({ where: { id: input.channelProfileId }, include: channelInclude });
     if (!row) notFound();
     ensureJobReady(toChannelView(row));
-    return jobSnapshot(row, null, settings);
+    const reviewPolicy = await resolveReviewPolicySnapshot(tx, input);
+    return jobSnapshot(row, null, settings, reviewPolicy);
   }
 
   private changeSeriesStatus(id: string, version: number, parentVersion: number, status: 'DRAFT' | 'ARCHIVED') {
@@ -454,6 +466,7 @@ function jobSnapshot(
   channel: ChannelRow,
   series: SeriesRow | null,
   settings: { version: number; rawVideoDays: number; intermediateDays: number; taskLogDays: number; finalOutputDays: number },
+  reviewPolicy: ReviewPolicySnapshot,
 ): ProfileJobSnapshot {
   const channelView = toChannelView(channel);
   const seriesView = series ? toSeriesView(series) : null;
@@ -488,6 +501,7 @@ function jobSnapshot(
       intermediateDays: settings.intermediateDays, taskLogDays: settings.taskLogDays,
       finalOutputDays: settings.finalOutputDays,
     },
+    reviewPolicy,
   };
 }
 
