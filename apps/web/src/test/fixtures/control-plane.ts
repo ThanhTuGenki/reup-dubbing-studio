@@ -19,6 +19,8 @@ import type {
   Worker,
   WorkerImage,
   ReviewPolicy,
+  PublicationTask,
+  PublicationTaskListEnvelope,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -131,6 +133,22 @@ export const queueJob = { id: ingestJobId, videoId: ingestVideoId, kind: 'INGEST
 export const queueJobDetail = { ...queueJob, tasks: [queueTask], timeline: [] } satisfies QueueJobDetail;
 export const queueListEnvelope = { data: { items: [queueJob], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } };
 export const queueDetailEnvelope = { data: queueJobDetail, meta: { requestId: READY_REQUEST_ID } };
+
+export const publicationTask = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789c01', packageId: '0191f3d2-7f5b-7abc-8b2e-123456789c02', videoId: ingestVideoId,
+  destinationId: channelProfile.destinations[0]!.id, renderOutputId: '0191f3d2-7f5b-7abc-8b2e-123456789c03', platform: 'YOUTUBE', destinationName: 'YouTube Việt hóa',
+  status: 'CONTENT_GENERATED', isRequired: true, scheduledAt: '2026-09-23T02:00:00.000Z', deadlineAt: '2026-09-23T03:00:00.000Z', version: 3, updatedAt: '2026-09-22T10:00:00.000Z',
+  notes: 'Kiểm tra visibility trước khi đăng', publishedAt: null,
+  contentSubjectVersion: 'publication-task:test:fields:test',
+  fields: [
+    { id: '0191f3d2-7f5b-7abc-8b2e-123456789c04', key: 'title', isLocked: false, version: 1, currentRevision: { id: '0191f3d2-7f5b-7abc-8b2e-123456789c05', revision: 1, value: 'Tiêu đề YouTube mẫu', origin: 'USER_EDITED', createdAt: '2026-09-22T09:00:00.000Z' }, revisions: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789c05', revision: 1, value: 'Tiêu đề YouTube mẫu', origin: 'USER_EDITED', createdAt: '2026-09-22T09:00:00.000Z' }] },
+    { id: '0191f3d2-7f5b-7abc-8b2e-123456789c06', key: 'description', isLocked: false, version: 1, currentRevision: { id: '0191f3d2-7f5b-7abc-8b2e-123456789c07', revision: 1, value: 'Mô tả video mẫu', origin: 'USER_EDITED', createdAt: '2026-09-22T09:00:00.000Z' }, revisions: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789c07', revision: 1, value: 'Mô tả video mẫu', origin: 'USER_EDITED', createdAt: '2026-09-22T09:00:00.000Z' }] },
+  ],
+  checklist: [{ id: '0191f3d2-7f5b-7abc-8b2e-123456789c08', key: 'uploadVideo', label: 'Tải video lên', isRequired: true, status: 'PENDING', ordinal: 0, completedAt: null }],
+  proofs: [], siblingTasks: [], assetAvailability: { VIDEO: true, SUBTITLE: true, THUMBNAIL: false },
+} satisfies PublicationTask;
+export const publicationListEnvelope = { data: { items: [{ id: publicationTask.id, packageId: publicationTask.packageId, videoId: publicationTask.videoId, destinationId: publicationTask.destinationId, renderOutputId: publicationTask.renderOutputId, platform: publicationTask.platform, destinationName: publicationTask.destinationName, status: publicationTask.status, isRequired: publicationTask.isRequired, scheduledAt: publicationTask.scheduledAt, deadlineAt: publicationTask.deadlineAt, version: publicationTask.version, updatedAt: publicationTask.updatedAt }], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies PublicationTaskListEnvelope;
+export const publicationDetailEnvelope = { data: publicationTask, meta: { requestId: READY_REQUEST_ID } };
 
 export const workerImage = {
   id: '0191f3d2-7f5b-7abc-8b2e-123456789b01', role: 'BATCH_MEDIA', semanticVersion: '1.8.2',

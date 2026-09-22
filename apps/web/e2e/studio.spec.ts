@@ -14,7 +14,9 @@ test('edits Studio transcript with accessible controls', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Tập phim Studio' })).toBeVisible();
   await page.getByLabel('Bản dịch segment').fill('Chào bạn');
   await expect(page.getByText('Chưa lưu thay đổi')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Lưu revision' })).toBeEnabled();
+  const saveButton = page.getByRole('button', { name: 'Lưu revision' });
+  await expect(saveButton).toBeEnabled();
+  await expect(saveButton).toHaveCSS('opacity', '1');
   await expect(page.getByRole('button', { name: 'Yêu cầu render' })).toBeDisabled();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
