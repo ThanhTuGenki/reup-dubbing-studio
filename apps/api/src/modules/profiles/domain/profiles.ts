@@ -175,4 +175,17 @@ export type ProfileJobSnapshot = {
     taskLogDays: number;
     finalOutputDays: number;
   };
+  reviewPolicy: {
+    schemaVersion: 1;
+    channelPolicyVersion: number;
+    seriesPolicyVersion: number | null;
+    effective: {
+      castGate: 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+      scriptGate: 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+      ttsGate: 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+      renderGate: 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+      publishContentGate: 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
+      autoRequestRender: boolean;
+    };
+  };
 };

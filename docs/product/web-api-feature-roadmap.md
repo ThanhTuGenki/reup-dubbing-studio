@@ -120,7 +120,7 @@
 
 - [ ] **Hoàn tất feature Review policy.**
   - [x] Phân tích policy inheritance và các approval gate cần hỗ trợ.
-  - [ ] API đọc/cập nhật policy có version và snapshot policy vào workflow.
+  - [x] API đọc/cập nhật policy có version và snapshot policy vào workflow.
   - [ ] Web xây form policy, mô tả tác động và validation phụ thuộc.
   - [ ] Kiểm thử thay đổi policy không làm đổi job đang chạy.
 

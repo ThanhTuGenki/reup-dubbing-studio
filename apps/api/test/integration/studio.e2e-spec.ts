@@ -36,6 +36,7 @@ describeWithDatabase('Studio API with PostgreSQL', () => {
     await prisma?.videoSegment.delete({ where: { id: segmentId } });
     await prisma?.video.delete({ where: { id: videoId } });
     await prisma?.sourceContent.delete({ where: { id: sourceId } });
+    await prisma?.reviewPolicy.deleteMany({ where: { channelProfileId: channelId } });
     await prisma?.channelProfile.delete({ where: { id: channelId } });
     await prisma?.voiceProfileSample.deleteMany({ where: { voiceProfileId: voiceId } });
     await prisma?.voiceProfile.delete({ where: { id: voiceId } });
@@ -52,6 +53,8 @@ describeWithDatabase('Studio API with PostgreSQL', () => {
     const response = await app.inject({ method: 'POST', url: `/v1/videos/${videoId}/segments/${segmentId}/regenerate`, headers: { 'if-match': '"2"', 'idempotency-key': 'studio-regen-test-0001' } }); expect(response.statusCode).toBe(202); const body = response.json().data;
     const replay = await app.inject({ method: 'POST', url: `/v1/videos/${videoId}/segments/${segmentId}/regenerate`, headers: { 'if-match': '"2"', 'idempotency-key': 'studio-regen-test-0001' } }); expect(replay.json().data.jobId).toBe(body.jobId);
     const task = await prisma.pipelineTask.findUniqueOrThrow({ where: { id: body.taskId } }); expect(task).toMatchObject({ taskType: 'REGENERATE_SEGMENT', resourceClass: 'GPU_TTS_INTERACTIVE', status: 'READY' }); expect(await prisma.taskAttempt.count({ where: { pipelineTaskId: task.id } })).toBe(0);
+    const job = await prisma.pipelineJob.findUniqueOrThrow({ where: { id: body.jobId } });
+    expect(job.profileSnapshot).toMatchObject({ reviewPolicy: { schemaVersion: 1, channelPolicyVersion: 1, effective: { scriptGate: 'MANUAL_REQUIRED' } } });
   });
   it('rejects preview when no available selected audio exists', async () => { const response = await app.inject({ method: 'POST', url: `/v1/videos/${videoId}/segments/${segmentId}/preview` }); expect(response.statusCode).toBe(409); expect(response.json().code).toBe('PREVIEW_NOT_AVAILABLE'); });
 });

@@ -14,10 +14,11 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
   const digest = `sha256:${'a'.repeat(64)}`;
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
+    await cleanWorkerFixtures();
     const config: AppConfig = { nodeEnv: 'test', port: 3000, logLevel: 'error', corsOrigins: ['http://localhost:5173'], rateLimitMax: 100, rateLimitWindowMs: 60_000, healthRateLimitMax: 100, trustProxy: false, databaseUrl: databaseUrl!, settingsEncryptionKey: Buffer.alloc(32, 8).toString('base64') };
     app = await createApplication(config);
   });
-  afterAll(async () => { await app?.close(); await prisma?.$disconnect(); });
+  afterAll(async () => { await app?.close(); await cleanWorkerFixtures(); await prisma?.$disconnect(); });
 
   it('registers, enrolls, heartbeats and drains without persisting bearer secrets', async () => {
     const imageResponse = await app.inject({ method: 'POST', url: '/v1/worker-images', headers: { 'idempotency-key': 'worker-image-create-0001' }, payload: { role: 'BATCH_MEDIA', semanticVersion: '1.0.0', imageDigest: digest, registryRef: 'ghcr.io/example/media@sha256:aaaaaaaa', contractVersion: 1 } });
@@ -122,5 +123,15 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
 
   function heartbeat(worker: Awaited<ReturnType<typeof registeredWorker>>, overrides: Record<string, unknown>) {
     return app.inject({ method: 'POST', url: `/worker/v1/sessions/${worker.sessionId}/heartbeat`, headers: { authorization: `Bearer ${worker.credential}`, 'idempotency-key': randomUUID() }, payload: { sequence: '1', sentAt: new Date().toISOString(), capacity: { totalSlots: 1, availableSlots: 1 }, currentTaskCount: 0, activeLeaseIds: [], telemetry: { gpuUtilPercent: 0 }, agentVersion: worker.identity.agentVersion, contractVersion: worker.identity.contractVersion, ...overrides } });
+  }
+
+  async function cleanWorkerFixtures() {
+    await prisma.workerSession.deleteMany();
+    await prisma.workerCredential.deleteMany();
+    await prisma.workerEnrollmentToken.deleteMany();
+    await prisma.workerBillingSession.deleteMany();
+    await prisma.worker.deleteMany();
+    await prisma.approvedWorkerImage.deleteMany();
+    await prisma.idempotencyRecord.deleteMany({ where: { scope: { startsWith: 'WORKER_' } } });
   }
 });

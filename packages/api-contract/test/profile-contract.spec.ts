@@ -2,10 +2,12 @@ import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import {
   createClient,
+  getChannelReviewPolicy,
   listChannelProfiles,
   previewSeriesProfileAsset,
   type ChannelProfileEnvelope,
   type PreviewGrant,
+  type ReviewPolicy,
   type SeriesProfile,
 } from '../src';
 
@@ -28,5 +30,8 @@ describe('generated Profile contract', () => {
     expectTypeOf<SeriesProfile['inheritance']['targetLanguage']>().toEqualTypeOf<'CHANNEL' | 'SERIES'>();
     expectTypeOf<PreviewGrant['method']>().toEqualTypeOf<'GET'>();
     expect(previewSeriesProfileAsset).toBeTypeOf('function');
+    expect(getChannelReviewPolicy).toBeTypeOf('function');
+    expectTypeOf<ReviewPolicy['effective']['renderGate']>().toEqualTypeOf<'MANUAL_REQUIRED' | 'NOT_REQUIRED'>();
+    expectTypeOf<ReviewPolicy['stored']['renderGate']>().toEqualTypeOf<'MANUAL_REQUIRED' | 'NOT_REQUIRED' | null>();
   });
 });

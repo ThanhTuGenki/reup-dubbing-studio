@@ -80,6 +80,41 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ChannelProfileEnvelope' }
         default: { $ref: '#/components/responses/Problem' }
+  /channel-profiles/{channelProfileId}/review-policy:
+    parameters:
+      - $ref: '#/components/parameters/ChannelProfileId'
+    get:
+      summary: Đọc Review Policy của Channel Profile
+      operationId: getChannelReviewPolicy
+      responses:
+        '200':
+          description: Policy nền đầy đủ của Channel.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelReviewPolicyEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPolicyEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    patch:
+      summary: Cập nhật Review Policy của Channel Profile
+      operationId: updateChannelReviewPolicy
+      parameters:
+        - $ref: '#/components/parameters/ChannelReviewPolicyIfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateChannelReviewPolicy' }
+      responses:
+        '200':
+          description: Policy Channel sau cập nhật.
+          headers:
+            ETag: { $ref: '#/components/headers/ChannelReviewPolicyEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPolicyEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
   /channel-profiles/{channelProfileId}/archive:
     post:
       summary: Archive Channel Profile
@@ -263,6 +298,41 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SeriesProfileEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+  /series-profiles/{seriesProfileId}/review-policy:
+    parameters:
+      - $ref: '#/components/parameters/SeriesProfileId'
+    get:
+      summary: Đọc override và effective Review Policy của Series Profile
+      operationId: getSeriesReviewPolicy
+      responses:
+        '200':
+          description: Policy Series cùng nguồn inheritance từng field.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesReviewPolicyEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPolicyEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
+    patch:
+      summary: Cập nhật override Review Policy của Series Profile
+      operationId: updateSeriesReviewPolicy
+      parameters:
+        - $ref: '#/components/parameters/SeriesReviewPolicyIfMatch'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateSeriesReviewPolicy' }
+      responses:
+        '200':
+          description: Policy Series sau cập nhật.
+          headers:
+            ETag: { $ref: '#/components/headers/SeriesReviewPolicyEtag' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReviewPolicyEnvelope' }
         default: { $ref: '#/components/responses/Problem' }
   /series-profiles/{seriesProfileId}/archive:
     post:
@@ -1182,6 +1252,18 @@ components:
       required: true
       description: Strong effective ETag gồm version Series và parent Channel.
       schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
+    ChannelReviewPolicyIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag của policy Channel.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    SeriesReviewPolicyIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag gồm version policy Series và policy Channel cha.
+      schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
     VoiceIfMatch:
       name: If-Match
       in: header
@@ -1265,6 +1347,12 @@ components:
     SeriesProfileEtag:
       description: Strong ETag của effective Series, gồm version Series và parent.
       schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
+    ChannelReviewPolicyEtag:
+      description: Strong ETag của policy Channel.
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    SeriesReviewPolicyEtag:
+      description: Strong ETag của policy Series và policy Channel cha.
+      schema: { type: string, pattern: '^"[1-9][0-9]*:[1-9][0-9]*"$' }
     VoiceProfileEtag:
       description: Strong ETag của Voice Profile và current sample set.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
@@ -1275,6 +1363,83 @@ components:
       description: Strong ETag của Worker.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    ReviewGateMode:
+      type: string
+      enum: [MANUAL_REQUIRED, NOT_REQUIRED]
+    ReviewPolicyValues:
+      type: object
+      additionalProperties: false
+      required: [castGate, scriptGate, ttsGate, renderGate, publishContentGate, autoRequestRender]
+      properties:
+        castGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        scriptGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        ttsGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        renderGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        publishContentGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        autoRequestRender: { type: boolean }
+    StoredReviewPolicyValues:
+      type: object
+      additionalProperties: false
+      required: [castGate, scriptGate, ttsGate, renderGate, publishContentGate, autoRequestRender]
+      properties:
+        castGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        scriptGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        ttsGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        renderGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        publishContentGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        autoRequestRender: { type: [boolean, 'null'] }
+    ReviewPolicyInheritance:
+      type: object
+      additionalProperties: false
+      required: [castGate, scriptGate, ttsGate, renderGate, publishContentGate, autoRequestRender]
+      properties:
+        castGate: { type: string, enum: [CHANNEL, SERIES] }
+        scriptGate: { type: string, enum: [CHANNEL, SERIES] }
+        ttsGate: { type: string, enum: [CHANNEL, SERIES] }
+        renderGate: { type: string, enum: [CHANNEL, SERIES] }
+        publishContentGate: { type: string, enum: [CHANNEL, SERIES] }
+        autoRequestRender: { type: string, enum: [CHANNEL, SERIES] }
+    ReviewPolicy:
+      type: object
+      additionalProperties: false
+      required: [ownerType, ownerProfileId, stored, effective, inheritance, version, parentPolicyVersion, updatedAt]
+      properties:
+        ownerType: { type: string, enum: [CHANNEL, SERIES] }
+        ownerProfileId: { $ref: '#/components/schemas/UuidV7' }
+        stored: { $ref: '#/components/schemas/StoredReviewPolicyValues' }
+        effective: { $ref: '#/components/schemas/ReviewPolicyValues' }
+        inheritance: { $ref: '#/components/schemas/ReviewPolicyInheritance' }
+        version: { type: integer, minimum: 1 }
+        parentPolicyVersion: { type: [integer, 'null'], minimum: 1 }
+        updatedAt: { type: string, format: date-time }
+    ReviewPolicyEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data: { $ref: '#/components/schemas/ReviewPolicy' }
+    UpdateChannelReviewPolicy:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        castGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        scriptGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        ttsGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        renderGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        publishContentGate: { $ref: '#/components/schemas/ReviewGateMode' }
+        autoRequestRender: { type: boolean }
+    UpdateSeriesReviewPolicy:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        castGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        scriptGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        ttsGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        renderGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        publishContentGate: { oneOf: [{ $ref: '#/components/schemas/ReviewGateMode' }, { type: 'null' }] }
+        autoRequestRender: { type: [boolean, 'null'] }
     VideoOutputReadiness:
       type: string
       enum: [NONE, PARTIAL, READY, CLEANED]
