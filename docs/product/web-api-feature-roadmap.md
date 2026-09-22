@@ -111,7 +111,7 @@
     chốt contract/schema.
   - [x] API đọc/sửa segment, gán voice/cast, tạo preview/re-gen request, lưu review
     decision và yêu cầu render.
-  - [ ] Web xây player, segment editor, cast sheet, audio preview, dirty state và
+  - [x] Web xây player, segment editor, cast sheet, audio preview, dirty state và
     review/render actions.
   - [ ] Tích hợp SSE/polling cho preview và render status mà không triển khai Worker.
   - [ ] Kiểm thử conflict khi sửa, retry, unsaved changes và accessibility editor.

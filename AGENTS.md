@@ -125,3 +125,16 @@ Các điểm sau đã được kiểm tra ngày 2026-09-19 và phải được n
 OpenDesign export hiện có đủ manifest path và 12 prototype chính đã pass kiểm tra
 JavaScript/tag balance. Điều đó không thay thế visual regression, accessibility,
 responsive và production integration tests của `apps/web`.
+
+## API contract source of truth
+
+`contracts/openapi/*.yaml` là nguồn chuẩn duy nhất cho mọi wire model giữa Web
+và API. Mỗi endpoint mới phải khai báo request/response schema đầy đủ trong
+OpenAPI trước khi consumer được triển khai; chạy `pnpm contract:generate` để
+generate `packages/api-contract/src/generated` và chỉ import type/client từ
+`packages/api-client` trong Web/API. Không viết lại response schema bằng Zod,
+TypeScript interface hoặc object type riêng theo từng feature. Runtime parsing
+nếu cần chỉ được bổ sung khi có lý do bảo mật/không tin cậy cụ thể và phải bám
+theo generated contract, không tạo một model thứ hai. Generated files không được
+sửa tay. Khi contract thay đổi, regenerate và commit đồng thời OpenAPI,
+generated artifacts, consumer tests và implementation liên quan.
