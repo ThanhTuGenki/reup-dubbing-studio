@@ -22,6 +22,7 @@ describeWithDatabase('Review Policy API with PostgreSQL', () => {
   const sourceId = uuidV7();
   const videoId = uuidV7();
   const jobId = uuidV7();
+  const nextJobId = uuidV7();
 
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
@@ -74,7 +75,7 @@ describeWithDatabase('Review Policy API with PostgreSQL', () => {
 
   afterAll(async () => {
     await app?.close();
-    await prisma?.pipelineJob.deleteMany({ where: { id: jobId } });
+    await prisma?.pipelineJob.deleteMany({ where: { id: { in: [jobId, nextJobId] } } });
     await prisma?.video.deleteMany({ where: { id: videoId } });
     await prisma?.sourceContent.deleteMany({ where: { id: sourceId } });
     await prisma?.reviewPolicy.deleteMany({ where: { OR: [{ channelProfileId: channelId }, { seriesProfileId: seriesId }] } });
@@ -183,6 +184,22 @@ describeWithDatabase('Review Policy API with PostgreSQL', () => {
     const current = await profiles.snapshotForJob(channelId, seriesId);
     expect(current.reviewPolicy).toMatchObject({
       channelPolicyVersion: 3, seriesPolicyVersion: 3, effective: { ttsGate: 'NOT_REQUIRED' },
+    });
+    await prisma.pipelineJob.update({ where: { id: jobId }, data: { status: 'SUCCEEDED', finishedAt: new Date() } });
+    await prisma.pipelineJob.create({ data: {
+      id: nextJobId, videoId, kind: 'RERENDER', status: 'QUEUED', pipelineVersion: 'review-policy-test-v1',
+      profileSnapshot: current as unknown as Prisma.InputJsonValue, requestedOutputs: {}, createdById: userId,
+    } });
+
+    const [existingJob, newJob] = await Promise.all([
+      prisma.pipelineJob.findUniqueOrThrow({ where: { id: jobId } }),
+      prisma.pipelineJob.findUniqueOrThrow({ where: { id: nextJobId } }),
+    ]);
+    expect(existingJob.profileSnapshot).toMatchObject({
+      reviewPolicy: { channelPolicyVersion: 2, effective: { ttsGate: 'MANUAL_REQUIRED' } },
+    });
+    expect(newJob.profileSnapshot).toMatchObject({
+      reviewPolicy: { channelPolicyVersion: 3, effective: { ttsGate: 'NOT_REQUIRED' } },
     });
   });
 });
