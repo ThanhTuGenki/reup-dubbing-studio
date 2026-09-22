@@ -126,13 +126,13 @@
 
 ## 11. Bàn đăng bài
 
-- [ ] **Hoàn tất feature Publishing.**
+- [x] **Hoàn tất feature Publishing.**
   - [x] Phân tích publish package/task/field/checklist/proof và chốt contract/schema.
   - [x] API quản lý package, metadata field, checklist, asset download và nhiều lần
     ghi nhận publication proof.
   - [x] Web xây calendar/list, package detail, copy field, download asset, checklist
     và form xác nhận URL/post ID.
-  - [ ] Kiểm thử manual publishing flow, validation proof và trạng thái hoàn tất.
+  - [x] Kiểm thử manual publishing flow, validation proof và trạng thái hoàn tất.
 
 ## 12. Tổng quan
 
