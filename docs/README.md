@@ -19,6 +19,7 @@ thư mục mới.
 | Video Library aggregate, output, asset và filter       | [`architecture/video-library.md`](architecture/video-library.md) | `ACCEPTED`, read model/API boundary |
 | Studio editor, transcript, segment, cast và review     | [`architecture/studio-domain-analysis.md`](architecture/studio-domain-analysis.md) | `ACCEPTED`, API/schema boundary trước implementation |
 | Review policy, inheritance và approval gates           | [`architecture/review-policy.md`](architecture/review-policy.md) | `ACCEPTED`, policy/snapshot boundary MVP |
+| Manual Publishing package, task, content và proof      | [`architecture/manual-publishing.md`](architecture/manual-publishing.md) | `ACCEPTED`, contract/schema boundary MVP |
 | Thiết kế các stage của pipeline media                   | [`architecture/mvp-pipeline.md`](architecture/mvp-pipeline.md)         | thiết kế `ACCEPTED`, triển khai `ARCHIVED`           |
 | Quyết định kiến trúc đơn lẻ                             | [`architecture/decisions/README.md`](architecture/decisions/README.md) | chỉ mục, quy trình và link tới từng ADR              |
 | **Contract giữa web ↔ api ↔ worker**                    | `contracts/openapi/*.yaml` ở **gốc repo**                              | draft theo slice; nguồn chuẩn sau khi `VERIFIED`     |

@@ -1030,6 +1030,10 @@ schema đầu tiên để không đo sai đơn vị.
 
 ## 12. Content Agent và publishing
 
+> **SUPERSEDED cho slice Publishing MVP:** [`manual-publishing.md`](manual-publishing.md)
+> là nguồn chuẩn đã accepted cho aggregate, lifecycle, schema và API boundary.
+> Phần dưới giữ vai trò inventory lịch sử; khi có khác biệt, dùng tài liệu mới.
+
 ### 12.1 `publish_packages` (`CORE`)
 
 ```text
