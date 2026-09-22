@@ -3,7 +3,7 @@
 import type { Client, Options as Options2, TDataShape } from '@hey-api/client-fetch';
 
 import { client } from './client.gen.js';
-import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CancelDiscoveryRunData, CancelDiscoveryRunErrors, CancelDiscoveryRunResponses, CancelQueueJobData, CancelQueueJobErrors, CancelQueueJobResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, ConfirmWorkerTerminationData, ConfirmWorkerTerminationErrors, ConfirmWorkerTerminationResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateDiscoveryRunData, CreateDiscoveryRunErrors, CreateDiscoveryRunResponses, CreateIngestJobsData, CreateIngestJobsErrors, CreateIngestJobsResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateSourceAccountData, CreateSourceAccountErrors, CreateSourceAccountResponses, CreateStudioReviewDecisionData, CreateStudioReviewDecisionErrors, CreateStudioReviewDecisionResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, CreateWatchlistData, CreateWatchlistErrors, CreateWatchlistResponses, CreateWorkerData, CreateWorkerErrors, CreateWorkerImageData, CreateWorkerImageErrors, CreateWorkerImageResponses, CreateWorkerResponses, DeleteWatchlistData, DeleteWatchlistErrors, DeleteWatchlistResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, DrainWorkerData, DrainWorkerErrors, DrainWorkerResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetChannelReviewPolicyData, GetChannelReviewPolicyErrors, GetChannelReviewPolicyResponses, GetDiscoveryRunData, GetDiscoveryRunErrors, GetDiscoveryRunResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetQueueJobData, GetQueueJobErrors, GetQueueJobResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSeriesReviewPolicyData, GetSeriesReviewPolicyErrors, GetSeriesReviewPolicyResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetStudioData, GetStudioErrors, GetStudioResponses, GetVideoData, GetVideoErrors, GetVideoResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, GetWorkerData, GetWorkerErrors, GetWorkerResponses, GrantVideoAssetData, GrantVideoAssetErrors, GrantVideoAssetResponses, GrantVideoOutputData, GrantVideoOutputErrors, GrantVideoOutputResponses, ImportSourceCredentialData, ImportSourceCredentialErrors, ImportSourceCredentialResponses, IssueWorkerEnrollmentTokenData, IssueWorkerEnrollmentTokenErrors, IssueWorkerEnrollmentTokenResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListDiscoveryCategoriesData, ListDiscoveryCategoriesErrors, ListDiscoveryCategoriesResponses, ListDiscoveryItemsData, ListDiscoveryItemsErrors, ListDiscoveryItemsResponses, ListQueueJobAttemptsData, ListQueueJobAttemptsErrors, ListQueueJobAttemptsResponses, ListQueueJobsData, ListQueueJobsErrors, ListQueueJobsResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListSourceAccountsData, ListSourceAccountsErrors, ListSourceAccountsResponses, ListVideosData, ListVideosErrors, ListVideosResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, ListWatchlistsData, ListWatchlistsErrors, ListWatchlistsResponses, ListWorkerImagesData, ListWorkerImagesErrors, ListWorkerImagesResponses, ListWorkersData, ListWorkersErrors, ListWorkersResponses, PreflightIngestJobsData, PreflightIngestJobsErrors, PreflightIngestJobsResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewStudioSegmentData, PreviewStudioSegmentErrors, PreviewStudioSegmentResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RegenerateStudioSegmentData, RegenerateStudioSegmentErrors, RegenerateStudioSegmentResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestStudioRenderData, RequestStudioRenderErrors, RequestStudioRenderResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, RetryQueueJobData, RetryQueueJobErrors, RetryQueueJobResponses, RevokeSourceCredentialData, RevokeSourceCredentialErrors, RevokeSourceCredentialResponses, RevokeWorkerData, RevokeWorkerErrors, RevokeWorkerImageData, RevokeWorkerImageErrors, RevokeWorkerImageResponses, RevokeWorkerResponses, RunWatchlistData, RunWatchlistErrors, RunWatchlistResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateChannelReviewPolicyData, UpdateChannelReviewPolicyErrors, UpdateChannelReviewPolicyResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSeriesReviewPolicyData, UpdateSeriesReviewPolicyErrors, UpdateSeriesReviewPolicyResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateStudioSegmentData, UpdateStudioSegmentErrors, UpdateStudioSegmentResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses, UpdateWatchlistData, UpdateWatchlistErrors, UpdateWatchlistResponses, ValidateSourceAccountData, ValidateSourceAccountErrors, ValidateSourceAccountResponses } from './types.gen.js';
+import type { ActivateVoiceProfileData, ActivateVoiceProfileErrors, ActivateVoiceProfileResponses, ApprovePublicationContentData, ApprovePublicationContentErrors, ApprovePublicationContentResponses, ArchiveChannelProfileData, ArchiveChannelProfileErrors, ArchiveChannelProfileResponses, ArchiveSeriesProfileData, ArchiveSeriesProfileErrors, ArchiveSeriesProfileResponses, ArchiveVoiceProfileData, ArchiveVoiceProfileErrors, ArchiveVoiceProfileResponses, CancelDiscoveryRunData, CancelDiscoveryRunErrors, CancelDiscoveryRunResponses, CancelQueueJobData, CancelQueueJobErrors, CancelQueueJobResponses, CommitChannelProfileAssetUploadData, CommitChannelProfileAssetUploadErrors, CommitChannelProfileAssetUploadResponses, CommitSeriesProfileAssetUploadData, CommitSeriesProfileAssetUploadErrors, CommitSeriesProfileAssetUploadResponses, CommitVoiceSampleUploadData, CommitVoiceSampleUploadErrors, CommitVoiceSampleUploadResponses, ConfirmWorkerTerminationData, ConfirmWorkerTerminationErrors, ConfirmWorkerTerminationResponses, CreateChannelProfileData, CreateChannelProfileErrors, CreateChannelProfileResponses, CreateDiscoveryRunData, CreateDiscoveryRunErrors, CreateDiscoveryRunResponses, CreateIngestJobsData, CreateIngestJobsErrors, CreateIngestJobsResponses, CreatePublicationProofData, CreatePublicationProofErrors, CreatePublicationProofResponses, CreatePublishPackageData, CreatePublishPackageErrors, CreatePublishPackageResponses, CreateSeriesProfileData, CreateSeriesProfileErrors, CreateSeriesProfileResponses, CreateSourceAccountData, CreateSourceAccountErrors, CreateSourceAccountResponses, CreateStudioReviewDecisionData, CreateStudioReviewDecisionErrors, CreateStudioReviewDecisionResponses, CreateVoiceProfileData, CreateVoiceProfileErrors, CreateVoiceProfileResponses, CreateWatchlistData, CreateWatchlistErrors, CreateWatchlistResponses, CreateWorkerData, CreateWorkerErrors, CreateWorkerImageData, CreateWorkerImageErrors, CreateWorkerImageResponses, CreateWorkerResponses, DeleteWatchlistData, DeleteWatchlistErrors, DeleteWatchlistResponses, DetachChannelProfileAssetData, DetachChannelProfileAssetErrors, DetachChannelProfileAssetResponses, DetachSeriesProfileAssetData, DetachSeriesProfileAssetErrors, DetachSeriesProfileAssetResponses, DetachVoiceSampleData, DetachVoiceSampleErrors, DetachVoiceSampleResponses, DrainWorkerData, DrainWorkerErrors, DrainWorkerResponses, GeneratePublicationContentData, GeneratePublicationContentErrors, GeneratePublicationContentResponses, GetChannelProfileData, GetChannelProfileErrors, GetChannelProfileResponses, GetChannelReviewPolicyData, GetChannelReviewPolicyErrors, GetChannelReviewPolicyResponses, GetDiscoveryRunData, GetDiscoveryRunErrors, GetDiscoveryRunResponses, GetLivenessData, GetLivenessErrors, GetLivenessResponses, GetPublicationTaskData, GetPublicationTaskErrors, GetPublicationTaskResponses, GetPublishPackageData, GetPublishPackageErrors, GetPublishPackageResponses, GetQueueJobData, GetQueueJobErrors, GetQueueJobResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetSeriesProfileData, GetSeriesProfileErrors, GetSeriesProfileResponses, GetSeriesReviewPolicyData, GetSeriesReviewPolicyErrors, GetSeriesReviewPolicyResponses, GetSettingsData, GetSettingsErrors, GetSettingsResponses, GetStudioData, GetStudioErrors, GetStudioResponses, GetVideoData, GetVideoErrors, GetVideoResponses, GetVoiceProfileData, GetVoiceProfileErrors, GetVoiceProfileResponses, GetWorkerData, GetWorkerErrors, GetWorkerResponses, GrantPublicationAssetDownloadData, GrantPublicationAssetDownloadErrors, GrantPublicationAssetDownloadResponses, GrantVideoAssetData, GrantVideoAssetErrors, GrantVideoAssetResponses, GrantVideoOutputData, GrantVideoOutputErrors, GrantVideoOutputResponses, ImportSourceCredentialData, ImportSourceCredentialErrors, ImportSourceCredentialResponses, IssueWorkerEnrollmentTokenData, IssueWorkerEnrollmentTokenErrors, IssueWorkerEnrollmentTokenResponses, ListChannelProfilesData, ListChannelProfilesErrors, ListChannelProfilesResponses, ListDiscoveryCategoriesData, ListDiscoveryCategoriesErrors, ListDiscoveryCategoriesResponses, ListDiscoveryItemsData, ListDiscoveryItemsErrors, ListDiscoveryItemsResponses, ListPublicationTasksData, ListPublicationTasksErrors, ListPublicationTasksResponses, ListQueueJobAttemptsData, ListQueueJobAttemptsErrors, ListQueueJobAttemptsResponses, ListQueueJobsData, ListQueueJobsErrors, ListQueueJobsResponses, ListSeriesProfilesData, ListSeriesProfilesErrors, ListSeriesProfilesResponses, ListSourceAccountsData, ListSourceAccountsErrors, ListSourceAccountsResponses, ListVideosData, ListVideosErrors, ListVideosResponses, ListVoiceProfilesData, ListVoiceProfilesErrors, ListVoiceProfilesResponses, ListWatchlistsData, ListWatchlistsErrors, ListWatchlistsResponses, ListWorkerImagesData, ListWorkerImagesErrors, ListWorkerImagesResponses, ListWorkersData, ListWorkersErrors, ListWorkersResponses, LockPublicationFieldData, LockPublicationFieldErrors, LockPublicationFieldResponses, PlanPublicationTaskData, PlanPublicationTaskErrors, PlanPublicationTaskResponses, PreflightIngestJobsData, PreflightIngestJobsErrors, PreflightIngestJobsResponses, PreviewChannelProfileAssetData, PreviewChannelProfileAssetErrors, PreviewChannelProfileAssetResponses, PreviewSeriesProfileAssetData, PreviewSeriesProfileAssetErrors, PreviewSeriesProfileAssetResponses, PreviewStudioSegmentData, PreviewStudioSegmentErrors, PreviewStudioSegmentResponses, PreviewVoiceSampleData, PreviewVoiceSampleErrors, PreviewVoiceSampleResponses, RefreshChannelProfileAssetUploadData, RefreshChannelProfileAssetUploadErrors, RefreshChannelProfileAssetUploadResponses, RefreshSeriesProfileAssetUploadData, RefreshSeriesProfileAssetUploadErrors, RefreshSeriesProfileAssetUploadResponses, RefreshVoiceSampleUploadData, RefreshVoiceSampleUploadErrors, RefreshVoiceSampleUploadResponses, RegeneratePublicationFieldData, RegeneratePublicationFieldErrors, RegeneratePublicationFieldResponses, RegenerateStudioSegmentData, RegenerateStudioSegmentErrors, RegenerateStudioSegmentResponses, RequestChannelProfileAssetUploadData, RequestChannelProfileAssetUploadErrors, RequestChannelProfileAssetUploadResponses, RequestPublicationRevisionData, RequestPublicationRevisionErrors, RequestPublicationRevisionResponses, RequestSeriesProfileAssetUploadData, RequestSeriesProfileAssetUploadErrors, RequestSeriesProfileAssetUploadResponses, RequestStudioRenderData, RequestStudioRenderErrors, RequestStudioRenderResponses, RequestVoiceSampleUploadData, RequestVoiceSampleUploadErrors, RequestVoiceSampleUploadResponses, RestoreChannelProfileData, RestoreChannelProfileErrors, RestoreChannelProfileResponses, RestoreSeriesProfileData, RestoreSeriesProfileErrors, RestoreSeriesProfileResponses, RestoreVoiceProfileData, RestoreVoiceProfileErrors, RestoreVoiceProfileResponses, RetryQueueJobData, RetryQueueJobErrors, RetryQueueJobResponses, RevokeSourceCredentialData, RevokeSourceCredentialErrors, RevokeSourceCredentialResponses, RevokeWorkerData, RevokeWorkerErrors, RevokeWorkerImageData, RevokeWorkerImageErrors, RevokeWorkerImageResponses, RevokeWorkerResponses, RunWatchlistData, RunWatchlistErrors, RunWatchlistResponses, StartManualPostingData, StartManualPostingErrors, StartManualPostingResponses, TestContentAgentConnectionData, TestContentAgentConnectionErrors, TestContentAgentConnectionResponses, TestStorageConnectionData, TestStorageConnectionErrors, TestStorageConnectionResponses, UpdateChannelProfileData, UpdateChannelProfileErrors, UpdateChannelProfileResponses, UpdateChannelReviewPolicyData, UpdateChannelReviewPolicyErrors, UpdateChannelReviewPolicyResponses, UpdatePublicationChecklistData, UpdatePublicationChecklistErrors, UpdatePublicationChecklistResponses, UpdatePublicationFieldData, UpdatePublicationFieldErrors, UpdatePublicationFieldResponses, UpdateSeriesProfileData, UpdateSeriesProfileErrors, UpdateSeriesProfileResponses, UpdateSeriesReviewPolicyData, UpdateSeriesReviewPolicyErrors, UpdateSeriesReviewPolicyResponses, UpdateSettingsData, UpdateSettingsErrors, UpdateSettingsResponses, UpdateStudioSegmentData, UpdateStudioSegmentErrors, UpdateStudioSegmentResponses, UpdateVoiceProfileData, UpdateVoiceProfileErrors, UpdateVoiceProfileResponses, UpdateWatchlistData, UpdateWatchlistErrors, UpdateWatchlistResponses, ValidateSourceAccountData, ValidateSourceAccountErrors, ValidateSourceAccountResponses, VerifyPublicationProofData, VerifyPublicationProofErrors, VerifyPublicationProofResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -991,6 +991,194 @@ export const createStudioReviewDecision = <ThrowOnError extends boolean = false>
 export const requestStudioRender = <ThrowOnError extends boolean = false>(options: Options<RequestStudioRenderData, ThrowOnError>) => {
     return (options.client ?? client).post<RequestStudioRenderResponses, RequestStudioRenderErrors, ThrowOnError>({
         url: '/videos/{videoId}/render-requests',
+        ...options
+    });
+};
+
+/**
+ * Liệt kê task đăng thủ công
+ */
+export const listPublicationTasks = <ThrowOnError extends boolean = false>(options?: Options<ListPublicationTasksData, ThrowOnError>) => {
+    return (options?.client ?? client).get<ListPublicationTasksResponses, ListPublicationTasksErrors, ThrowOnError>({
+        url: '/publication-tasks',
+        ...options
+    });
+};
+
+/**
+ * Tạo package và các destination task
+ */
+export const createPublishPackage = <ThrowOnError extends boolean = false>(options: Options<CreatePublishPackageData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreatePublishPackageResponses, CreatePublishPackageErrors, ThrowOnError>({
+        url: '/videos/{videoId}/publish-packages',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Đọc package cùng sibling task
+ */
+export const getPublishPackage = <ThrowOnError extends boolean = false>(options: Options<GetPublishPackageData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetPublishPackageResponses, GetPublishPackageErrors, ThrowOnError>({
+        url: '/publish-packages/{publishPackageId}',
+        ...options
+    });
+};
+
+/**
+ * Đọc publication task
+ */
+export const getPublicationTask = <ThrowOnError extends boolean = false>(options: Options<GetPublicationTaskData, ThrowOnError>) => {
+    return (options.client ?? client).get<GetPublicationTaskResponses, GetPublicationTaskErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}',
+        ...options
+    });
+};
+
+/**
+ * Yêu cầu Content Agent sinh toàn bộ metadata
+ */
+export const generatePublicationContent = <ThrowOnError extends boolean = false>(options: Options<GeneratePublicationContentData, ThrowOnError>) => {
+    return (options.client ?? client).post<GeneratePublicationContentResponses, GeneratePublicationContentErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/generate-content',
+        ...options
+    });
+};
+
+/**
+ * Tạo revision thủ công cho metadata field
+ */
+export const updatePublicationField = <ThrowOnError extends boolean = false>(options: Options<UpdatePublicationFieldData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdatePublicationFieldResponses, UpdatePublicationFieldErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Yêu cầu Content Agent sinh lại một field
+ */
+export const regeneratePublicationField = <ThrowOnError extends boolean = false>(options: Options<RegeneratePublicationFieldData, ThrowOnError>) => {
+    return (options.client ?? client).post<RegeneratePublicationFieldResponses, RegeneratePublicationFieldErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}/regenerate',
+        ...options
+    });
+};
+
+/**
+ * Khoá hoặc mở khoá metadata field
+ */
+export const lockPublicationField = <ThrowOnError extends boolean = false>(options: Options<LockPublicationFieldData, ThrowOnError>) => {
+    return (options.client ?? client).patch<LockPublicationFieldResponses, LockPublicationFieldErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}/lock',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Duyệt metadata theo policy PUBLISH_CONTENT
+ */
+export const approvePublicationContent = <ThrowOnError extends boolean = false>(options: Options<ApprovePublicationContentData, ThrowOnError>) => {
+    return (options.client ?? client).post<ApprovePublicationContentResponses, ApprovePublicationContentErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/approve-content',
+        ...options
+    });
+};
+
+/**
+ * Cập nhật lịch, deadline và ghi chú
+ */
+export const planPublicationTask = <ThrowOnError extends boolean = false>(options: Options<PlanPublicationTaskData, ThrowOnError>) => {
+    return (options.client ?? client).patch<PlanPublicationTaskResponses, PlanPublicationTaskErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/plan',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Cập nhật checklist snapshot
+ */
+export const updatePublicationChecklist = <ThrowOnError extends boolean = false>(options: Options<UpdatePublicationChecklistData, ThrowOnError>) => {
+    return (options.client ?? client).patch<UpdatePublicationChecklistResponses, UpdatePublicationChecklistErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/checklist/{itemKey}',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Bắt đầu đăng thủ công
+ */
+export const startManualPosting = <ThrowOnError extends boolean = false>(options: Options<StartManualPostingData, ThrowOnError>) => {
+    return (options.client ?? client).post<StartManualPostingResponses, StartManualPostingErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/start-manual-posting',
+        ...options
+    });
+};
+
+/**
+ * Ghi nhận một publication proof mới
+ */
+export const createPublicationProof = <ThrowOnError extends boolean = false>(options: Options<CreatePublicationProofData, ThrowOnError>) => {
+    return (options.client ?? client).post<CreatePublicationProofResponses, CreatePublicationProofErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/proofs',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Xác minh publication proof hiện hành
+ */
+export const verifyPublicationProof = <ThrowOnError extends boolean = false>(options: Options<VerifyPublicationProofData, ThrowOnError>) => {
+    return (options.client ?? client).post<VerifyPublicationProofResponses, VerifyPublicationProofErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/proofs/{proofId}/verify',
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...options.headers
+        }
+    });
+};
+
+/**
+ * Mở revision content mới
+ */
+export const requestPublicationRevision = <ThrowOnError extends boolean = false>(options: Options<RequestPublicationRevisionData, ThrowOnError>) => {
+    return (options.client ?? client).post<RequestPublicationRevisionResponses, RequestPublicationRevisionErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/request-revision',
+        ...options
+    });
+};
+
+/**
+ * Cấp presigned download grant theo role
+ */
+export const grantPublicationAssetDownload = <ThrowOnError extends boolean = false>(options: Options<GrantPublicationAssetDownloadData, ThrowOnError>) => {
+    return (options.client ?? client).post<GrantPublicationAssetDownloadResponses, GrantPublicationAssetDownloadErrors, ThrowOnError>({
+        url: '/publication-tasks/{publicationTaskId}/assets/{assetRole}/download-grant',
         ...options
     });
 };

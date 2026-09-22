@@ -128,7 +128,7 @@
 
 - [ ] **Hoàn tất feature Publishing.**
   - [x] Phân tích publish package/task/field/checklist/proof và chốt contract/schema.
-  - [ ] API quản lý package, metadata field, checklist, asset download và nhiều lần
+  - [x] API quản lý package, metadata field, checklist, asset download và nhiều lần
     ghi nhận publication proof.
   - [ ] Web xây calendar/list, package detail, copy field, download asset, checklist
     và form xác nhận URL/post ID.
