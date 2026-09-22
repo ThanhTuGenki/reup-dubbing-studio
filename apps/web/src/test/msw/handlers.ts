@@ -13,6 +13,8 @@ import {
   channelProfilesEnvelope,
   seriesProfile,
   seriesProfilesEnvelope,
+  channelReviewPolicy,
+  seriesReviewPolicy,
   voiceProfile,
   voiceProfilesEnvelope,
   sourceAccount,
@@ -46,6 +48,15 @@ export const handlers = [
     channelProfilesEnvelope,
     { headers: { 'X-Request-Id': channelProfilesEnvelope.meta.requestId } },
   )),
+  http.get(`${CONTROL_PLANE_BASE_URL}/channel-profiles/:channelProfileId/review-policy`, () => HttpResponse.json(
+    { data: channelReviewPolicy, meta: { requestId: READY_REQUEST_ID } },
+    { headers: { ETag: '"2"', 'X-Request-Id': READY_REQUEST_ID } },
+  )),
+  http.patch(`${CONTROL_PLANE_BASE_URL}/channel-profiles/:channelProfileId/review-policy`, async ({ request }) => {
+    const body = await request.json() as Partial<typeof channelReviewPolicy.stored>;
+    const next = { ...channelReviewPolicy, stored: { ...channelReviewPolicy.stored, ...body }, effective: { ...channelReviewPolicy.effective, ...body }, version: 3 };
+    return HttpResponse.json({ data: next, meta: { requestId: READY_REQUEST_ID } }, { headers: { ETag: '"3"' } });
+  }),
   http.get(`${CONTROL_PLANE_BASE_URL}/channel-profiles/:channelProfileId`, () => HttpResponse.json(
     { data: channelProfile, meta: { requestId: channelProfilesEnvelope.meta.requestId } },
     { headers: { ETag: '"3"', 'X-Request-Id': channelProfilesEnvelope.meta.requestId } },
@@ -54,6 +65,23 @@ export const handlers = [
     seriesProfilesEnvelope,
     { headers: { 'X-Request-Id': seriesProfilesEnvelope.meta.requestId } },
   )),
+  http.get(`${CONTROL_PLANE_BASE_URL}/series-profiles/:seriesProfileId/review-policy`, () => HttpResponse.json(
+    { data: seriesReviewPolicy, meta: { requestId: READY_REQUEST_ID } },
+    { headers: { ETag: '"3:2"', 'X-Request-Id': READY_REQUEST_ID } },
+  )),
+  http.patch(`${CONTROL_PLANE_BASE_URL}/series-profiles/:seriesProfileId/review-policy`, async ({ request }) => {
+    const body = await request.json() as Partial<typeof seriesReviewPolicy.stored>;
+    const stored = { ...seriesReviewPolicy.stored, ...body };
+    const next = { ...seriesReviewPolicy, stored, effective: {
+      castGate: stored.castGate ?? channelReviewPolicy.effective.castGate,
+      scriptGate: stored.scriptGate ?? channelReviewPolicy.effective.scriptGate,
+      ttsGate: stored.ttsGate ?? channelReviewPolicy.effective.ttsGate,
+      renderGate: stored.renderGate ?? channelReviewPolicy.effective.renderGate,
+      publishContentGate: stored.publishContentGate ?? channelReviewPolicy.effective.publishContentGate,
+      autoRequestRender: stored.autoRequestRender ?? channelReviewPolicy.effective.autoRequestRender,
+    }, version: 4 };
+    return HttpResponse.json({ data: next, meta: { requestId: READY_REQUEST_ID } }, { headers: { ETag: '"4:2"' } });
+  }),
   http.get(`${CONTROL_PLANE_BASE_URL}/series-profiles/:seriesProfileId`, () => HttpResponse.json(
     { data: seriesProfile, meta: { requestId: seriesProfilesEnvelope.meta.requestId } },
     { headers: { ETag: '"2:3"', 'X-Request-Id': seriesProfilesEnvelope.meta.requestId } },
