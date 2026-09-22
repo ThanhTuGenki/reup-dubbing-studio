@@ -4,6 +4,141 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type PublishingPlatform = 'YOUTUBE' | 'FACEBOOK';
+
+export type PublishPackageStatus = 'DRAFT' | 'GENERATED' | 'APPROVED' | 'SUPERSEDED';
+
+export type PublicationTaskStatus = 'READY_FOR_CONTENT' | 'CONTENT_GENERATED' | 'CONTENT_APPROVED' | 'READY_TO_PUBLISH' | 'POSTING_MANUAL' | 'PUBLISHED' | 'VERIFIED' | 'NEEDS_REVISION' | 'CANCELLED';
+
+export type PublicationChecklistStatus = 'PENDING' | 'COMPLETED' | 'SKIPPED';
+
+export type PublicationVerificationStatus = 'PENDING' | 'VERIFIED' | 'FAILED';
+
+export type CreatePublishPackage = {
+    tasks: Array<{
+        destinationId: UuidV7;
+        renderOutputId: UuidV7;
+    }>;
+};
+
+export type UpdatePublicationField = {
+    value: string;
+};
+
+export type PlanPublicationTask = {
+    scheduledAt?: string | null;
+    deadlineAt?: string | null;
+    notes?: string | null;
+};
+
+export type CreatePublicationProof = {
+    platformPostId?: string | null;
+    publicUrl?: string | null;
+};
+
+export type VerifyPublicationProof = {
+    status: 'VERIFIED' | 'FAILED';
+    detail?: string | null;
+};
+
+export type PublicationFieldRevision = {
+    id: UuidV7;
+    revision: number;
+    value: string;
+    origin: 'GENERATED' | 'USER_EDITED' | 'REGENERATED';
+    createdAt: string;
+};
+
+export type PublicationField = {
+    id: UuidV7;
+    key: string;
+    isLocked: boolean;
+    version: number;
+    currentRevision: PublicationFieldRevision | null;
+    revisions: Array<PublicationFieldRevision>;
+};
+
+export type PublicationChecklistItem = {
+    id: UuidV7;
+    key: string;
+    label: string;
+    isRequired: boolean;
+    status: PublicationChecklistStatus;
+    ordinal: number;
+    completedAt: string | null;
+};
+
+export type PublicationProof = {
+    id: UuidV7;
+    attemptNumber: number;
+    platformPostId: string | null;
+    publicUrl: string | null;
+    verificationStatus: PublicationVerificationStatus;
+    submittedAt: string;
+    verifiedAt: string | null;
+    verificationDetail: string | null;
+};
+
+export type PublicationTaskSummary = {
+    id: UuidV7;
+    packageId: UuidV7;
+    videoId: UuidV7;
+    destinationId: UuidV7;
+    renderOutputId: UuidV7;
+    platform: PublishingPlatform;
+    destinationName: string;
+    status: PublicationTaskStatus;
+    isRequired: boolean;
+    scheduledAt: string | null;
+    deadlineAt: string | null;
+    version: number;
+    updatedAt: string;
+};
+
+export type PublicationTask = PublicationTaskSummary & {
+    notes: string | null;
+    publishedAt: string | null;
+    contentSubjectVersion: string;
+    fields: Array<PublicationField>;
+    checklist: Array<PublicationChecklistItem>;
+    proofs: Array<PublicationProof>;
+    siblingTasks: Array<PublicationTaskSummary>;
+    assetAvailability: {
+        [key: string]: boolean;
+    };
+};
+
+export type PublishPackage = {
+    id: UuidV7;
+    videoId: UuidV7;
+    channelProfileId: UuidV7;
+    status: PublishPackageStatus;
+    rulesVersion: string;
+    revision: number;
+    version: number;
+    tasks: Array<PublicationTaskSummary>;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type PublicationTaskEnvelope = {
+    data: PublicationTask;
+    meta: SuccessMeta;
+};
+
+export type PublishPackageEnvelope = {
+    data: PublishPackage;
+    meta: SuccessMeta;
+};
+
+export type PublicationTaskListEnvelope = {
+    data: {
+        items: Array<PublicationTaskSummary>;
+        nextCursor: string | null;
+    };
+    meta: SuccessMeta;
+};
+
 export type ReviewGateMode = 'MANUAL_REQUIRED' | 'NOT_REQUIRED';
 
 export type ReviewPolicyValues = {
@@ -1321,7 +1456,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED' | 'PUBLISH_PACKAGE_NOT_FOUND' | 'PUBLICATION_TASK_NOT_FOUND' | 'PUBLICATION_VERSION_CONFLICT' | 'PUBLICATION_INVALID_TRANSITION' | 'PUBLICATION_CONTENT_INCOMPLETE' | 'PUBLICATION_CONTENT_APPROVAL_REQUIRED' | 'PUBLICATION_CHECKLIST_INCOMPLETE' | 'PUBLICATION_PROOF_REQUIRED' | 'PUBLICATION_ASSET_UNAVAILABLE' | 'PUBLICATION_DESTINATION_INACTIVE' | 'PUBLICATION_FIELD_LOCKED' | 'PUBLICATION_CONTENT_AGENT_UNAVAILABLE';
     requestId: RequestId;
 };
 
@@ -1396,6 +1531,10 @@ export type IngestIdempotencyKey = string;
 export type QueueIfMatch = string;
 
 export type WorkerIfMatch = string;
+
+export type PublicationTaskId = UuidV7;
+
+export type PublicationIfMatch = string;
 
 export type ListChannelProfilesData = {
     body?: never;
@@ -4274,3 +4413,559 @@ export type RequestStudioRenderResponses = {
 };
 
 export type RequestStudioRenderResponse = RequestStudioRenderResponses[keyof RequestStudioRenderResponses];
+
+export type ListPublicationTasksData = {
+    body?: never;
+    path?: never;
+    query?: {
+        cursor?: string;
+        limit?: number;
+        status?: PublicationTaskStatus;
+        platform?: PublishingPlatform;
+        destinationId?: UuidV7;
+        videoId?: UuidV7;
+        scheduled?: boolean;
+        overdue?: boolean;
+    };
+    url: '/publication-tasks';
+};
+
+export type ListPublicationTasksErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListPublicationTasksError = ListPublicationTasksErrors[keyof ListPublicationTasksErrors];
+
+export type ListPublicationTasksResponses = {
+    /**
+     * Trang publication task.
+     */
+    200: PublicationTaskListEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ListPublicationTasksResponse = ListPublicationTasksResponses[keyof ListPublicationTasksResponses];
+
+export type CreatePublishPackageData = {
+    body: CreatePublishPackage;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}/publish-packages';
+};
+
+export type CreatePublishPackageErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreatePublishPackageError = CreatePublishPackageErrors[keyof CreatePublishPackageErrors];
+
+export type CreatePublishPackageResponses = {
+    /**
+     * Package đã tạo.
+     */
+    201: PublishPackageEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreatePublishPackageResponse = CreatePublishPackageResponses[keyof CreatePublishPackageResponses];
+
+export type GetPublishPackageData = {
+    body?: never;
+    path: {
+        publishPackageId: UuidV7;
+    };
+    query?: never;
+    url: '/publish-packages/{publishPackageId}';
+};
+
+export type GetPublishPackageErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetPublishPackageError = GetPublishPackageErrors[keyof GetPublishPackageErrors];
+
+export type GetPublishPackageResponses = {
+    /**
+     * Package hiện tại.
+     */
+    200: PublishPackageEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetPublishPackageResponse = GetPublishPackageResponses[keyof GetPublishPackageResponses];
+
+export type GetPublicationTaskData = {
+    body?: never;
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}';
+};
+
+export type GetPublicationTaskErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetPublicationTaskError = GetPublicationTaskErrors[keyof GetPublicationTaskErrors];
+
+export type GetPublicationTaskResponses = {
+    /**
+     * Task hiện tại.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetPublicationTaskResponse = GetPublicationTaskResponses[keyof GetPublicationTaskResponses];
+
+export type GeneratePublicationContentData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/generate-content';
+};
+
+export type GeneratePublicationContentErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GeneratePublicationContentError = GeneratePublicationContentErrors[keyof GeneratePublicationContentErrors];
+
+export type GeneratePublicationContentResponses = {
+    /**
+     * Task sau khi sinh nội dung.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GeneratePublicationContentResponse = GeneratePublicationContentResponses[keyof GeneratePublicationContentResponses];
+
+export type UpdatePublicationFieldData = {
+    body: UpdatePublicationField;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+        fieldKey: string;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}';
+};
+
+export type UpdatePublicationFieldErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdatePublicationFieldError = UpdatePublicationFieldErrors[keyof UpdatePublicationFieldErrors];
+
+export type UpdatePublicationFieldResponses = {
+    /**
+     * Task sau cập nhật.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdatePublicationFieldResponse = UpdatePublicationFieldResponses[keyof UpdatePublicationFieldResponses];
+
+export type RegeneratePublicationFieldData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+        fieldKey: string;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}/regenerate';
+};
+
+export type RegeneratePublicationFieldErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RegeneratePublicationFieldError = RegeneratePublicationFieldErrors[keyof RegeneratePublicationFieldErrors];
+
+export type RegeneratePublicationFieldResponses = {
+    /**
+     * Task sau khi sinh lại.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RegeneratePublicationFieldResponse = RegeneratePublicationFieldResponses[keyof RegeneratePublicationFieldResponses];
+
+export type LockPublicationFieldData = {
+    body: {
+        isLocked: boolean;
+    };
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+        fieldKey: string;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/fields/{fieldKey}/lock';
+};
+
+export type LockPublicationFieldErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type LockPublicationFieldError = LockPublicationFieldErrors[keyof LockPublicationFieldErrors];
+
+export type LockPublicationFieldResponses = {
+    /**
+     * Task sau cập nhật.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type LockPublicationFieldResponse = LockPublicationFieldResponses[keyof LockPublicationFieldResponses];
+
+export type ApprovePublicationContentData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/approve-content';
+};
+
+export type ApprovePublicationContentErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ApprovePublicationContentError = ApprovePublicationContentErrors[keyof ApprovePublicationContentErrors];
+
+export type ApprovePublicationContentResponses = {
+    /**
+     * Task đã qua gate.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type ApprovePublicationContentResponse = ApprovePublicationContentResponses[keyof ApprovePublicationContentResponses];
+
+export type PlanPublicationTaskData = {
+    body: PlanPublicationTask;
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/plan';
+};
+
+export type PlanPublicationTaskErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PlanPublicationTaskError = PlanPublicationTaskErrors[keyof PlanPublicationTaskErrors];
+
+export type PlanPublicationTaskResponses = {
+    /**
+     * Task sau cập nhật.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type PlanPublicationTaskResponse = PlanPublicationTaskResponses[keyof PlanPublicationTaskResponses];
+
+export type UpdatePublicationChecklistData = {
+    body: {
+        status: PublicationChecklistStatus;
+    };
+    headers: {
+        'If-Match': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+        itemKey: string;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/checklist/{itemKey}';
+};
+
+export type UpdatePublicationChecklistErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdatePublicationChecklistError = UpdatePublicationChecklistErrors[keyof UpdatePublicationChecklistErrors];
+
+export type UpdatePublicationChecklistResponses = {
+    /**
+     * Task sau cập nhật.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type UpdatePublicationChecklistResponse = UpdatePublicationChecklistResponses[keyof UpdatePublicationChecklistResponses];
+
+export type StartManualPostingData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/start-manual-posting';
+};
+
+export type StartManualPostingErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type StartManualPostingError = StartManualPostingErrors[keyof StartManualPostingErrors];
+
+export type StartManualPostingResponses = {
+    /**
+     * Task đang được đăng thủ công.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type StartManualPostingResponse = StartManualPostingResponses[keyof StartManualPostingResponses];
+
+export type CreatePublicationProofData = {
+    body: CreatePublicationProof;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/proofs';
+};
+
+export type CreatePublicationProofErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreatePublicationProofError = CreatePublicationProofErrors[keyof CreatePublicationProofErrors];
+
+export type CreatePublicationProofResponses = {
+    /**
+     * Proof attempt đã ghi nhận.
+     */
+    201: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CreatePublicationProofResponse = CreatePublicationProofResponses[keyof CreatePublicationProofResponses];
+
+export type VerifyPublicationProofData = {
+    body: VerifyPublicationProof;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+        proofId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/proofs/{proofId}/verify';
+};
+
+export type VerifyPublicationProofErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type VerifyPublicationProofError = VerifyPublicationProofErrors[keyof VerifyPublicationProofErrors];
+
+export type VerifyPublicationProofResponses = {
+    /**
+     * Task sau xác minh.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type VerifyPublicationProofResponse = VerifyPublicationProofResponses[keyof VerifyPublicationProofResponses];
+
+export type RequestPublicationRevisionData = {
+    body?: never;
+    headers: {
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        publicationTaskId: UuidV7;
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/request-revision';
+};
+
+export type RequestPublicationRevisionErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestPublicationRevisionError = RequestPublicationRevisionErrors[keyof RequestPublicationRevisionErrors];
+
+export type RequestPublicationRevisionResponses = {
+    /**
+     * Task cần chỉnh sửa.
+     */
+    200: PublicationTaskEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestPublicationRevisionResponse = RequestPublicationRevisionResponses[keyof RequestPublicationRevisionResponses];
+
+export type GrantPublicationAssetDownloadData = {
+    body?: never;
+    path: {
+        publicationTaskId: UuidV7;
+        assetRole: 'VIDEO' | 'SUBTITLE' | 'THUMBNAIL';
+    };
+    query?: never;
+    url: '/publication-tasks/{publicationTaskId}/assets/{assetRole}/download-grant';
+};
+
+export type GrantPublicationAssetDownloadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantPublicationAssetDownloadError = GrantPublicationAssetDownloadErrors[keyof GrantPublicationAssetDownloadErrors];
+
+export type GrantPublicationAssetDownloadResponses = {
+    /**
+     * Download grant ngắn hạn.
+     */
+    200: DownloadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GrantPublicationAssetDownloadResponse = GrantPublicationAssetDownloadResponses[keyof GrantPublicationAssetDownloadResponses];

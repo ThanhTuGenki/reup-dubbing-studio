@@ -1174,6 +1174,152 @@ paths:
         '202': { description: Render queued, content: { application/json: { schema: { $ref: '#/components/schemas/StudioMutationEnvelope' } } } }
         default: { $ref: '#/components/responses/Problem' }
 
+  /publication-tasks:
+    get:
+      summary: Liệt kê task đăng thủ công
+      operationId: listPublicationTasks
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/PublicationTaskStatus' } }
+        - { name: platform, in: query, schema: { $ref: '#/components/schemas/PublishingPlatform' } }
+        - { name: destinationId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: videoId, in: query, schema: { $ref: '#/components/schemas/UuidV7' } }
+        - { name: scheduled, in: query, schema: { type: boolean } }
+        - { name: overdue, in: query, schema: { type: boolean } }
+      responses:
+        '200': { description: Trang publication task., content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskListEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /videos/{videoId}/publish-packages:
+    post:
+      summary: Tạo package và các destination task
+      operationId: createPublishPackage
+      parameters:
+        - { $ref: '#/components/parameters/VideoId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreatePublishPackage' } } } }
+      responses:
+        '201': { description: Package đã tạo., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublishPackageEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publish-packages/{publishPackageId}:
+    get:
+      summary: Đọc package cùng sibling task
+      operationId: getPublishPackage
+      parameters: [{ name: publishPackageId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }]
+      responses:
+        '200': { description: Package hiện tại., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublishPackageEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}:
+    get:
+      summary: Đọc publication task
+      operationId: getPublicationTask
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }]
+      responses:
+        '200': { description: Task hiện tại., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/generate-content:
+    post:
+      summary: Yêu cầu Content Agent sinh toàn bộ metadata
+      operationId: generatePublicationContent
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Task sau khi sinh nội dung., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/fields/{fieldKey}:
+    patch:
+      summary: Tạo revision thủ công cho metadata field
+      operationId: updatePublicationField
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: fieldKey, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/PublicationIfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UpdatePublicationField' } } } }
+      responses:
+        '200': { description: Task sau cập nhật., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/fields/{fieldKey}/regenerate:
+    post:
+      summary: Yêu cầu Content Agent sinh lại một field
+      operationId: regeneratePublicationField
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: fieldKey, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Task sau khi sinh lại., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/fields/{fieldKey}/lock:
+    patch:
+      summary: Khoá hoặc mở khoá metadata field
+      operationId: lockPublicationField
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: fieldKey, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/PublicationIfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [isLocked], properties: { isLocked: { type: boolean } } } } } }
+      responses:
+        '200': { description: Task sau cập nhật., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/approve-content:
+    post:
+      summary: Duyệt metadata theo policy PUBLISH_CONTENT
+      operationId: approvePublicationContent
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Task đã qua gate., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/plan:
+    patch:
+      summary: Cập nhật lịch, deadline và ghi chú
+      operationId: planPublicationTask
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PlanPublicationTask' } } } }
+      responses:
+        '200': { description: Task sau cập nhật., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/checklist/{itemKey}:
+    patch:
+      summary: Cập nhật checklist snapshot
+      operationId: updatePublicationChecklist
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: itemKey, in: path, required: true, schema: { type: string } }, { $ref: '#/components/parameters/PublicationIfMatch' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [status], properties: { status: { $ref: '#/components/schemas/PublicationChecklistStatus' } } } } } }
+      responses:
+        '200': { description: Task sau cập nhật., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/start-manual-posting:
+    post:
+      summary: Bắt đầu đăng thủ công
+      operationId: startManualPosting
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Task đang được đăng thủ công., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/proofs:
+    post:
+      summary: Ghi nhận một publication proof mới
+      operationId: createPublicationProof
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreatePublicationProof' } } } }
+      responses:
+        '201': { description: Proof attempt đã ghi nhận., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/proofs/{proofId}/verify:
+    post:
+      summary: Xác minh publication proof hiện hành
+      operationId: verifyPublicationProof
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: proofId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VerifyPublicationProof' } } } }
+      responses:
+        '200': { description: Task sau xác minh., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/request-revision:
+    post:
+      summary: Mở revision content mới
+      operationId: requestPublicationRevision
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { $ref: '#/components/parameters/PublicationIfMatch' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses:
+        '200': { description: Task cần chỉnh sửa., headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/PublicationTaskEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /publication-tasks/{publicationTaskId}/assets/{assetRole}/download-grant:
+    post:
+      summary: Cấp presigned download grant theo role
+      operationId: grantPublicationAssetDownload
+      parameters: [{ $ref: '#/components/parameters/PublicationTaskId' }, { name: assetRole, in: path, required: true, schema: { type: string, enum: [VIDEO, SUBTITLE, THUMBNAIL] } }]
+      responses:
+        '200': { description: Download grant ngắn hạn., content: { application/json: { schema: { $ref: '#/components/schemas/DownloadGrantEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+
 components:
   parameters:
     VideoId:
@@ -1328,6 +1474,16 @@ components:
       in: header
       required: true
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    PublicationTaskId:
+      name: publicationTaskId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/UuidV7' }
+    PublicationIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   headers:
     VersionEtag:
       description: Strong ETag của aggregate version.
@@ -1363,6 +1519,176 @@ components:
       description: Strong ETag của Worker.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    PublishingPlatform:
+      type: string
+      enum: [YOUTUBE, FACEBOOK]
+    PublishPackageStatus:
+      type: string
+      enum: [DRAFT, GENERATED, APPROVED, SUPERSEDED]
+    PublicationTaskStatus:
+      type: string
+      enum: [READY_FOR_CONTENT, CONTENT_GENERATED, CONTENT_APPROVED, READY_TO_PUBLISH, POSTING_MANUAL, PUBLISHED, VERIFIED, NEEDS_REVISION, CANCELLED]
+    PublicationChecklistStatus:
+      type: string
+      enum: [PENDING, COMPLETED, SKIPPED]
+    PublicationVerificationStatus:
+      type: string
+      enum: [PENDING, VERIFIED, FAILED]
+    CreatePublishPackage:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [destinationId, renderOutputId]
+            properties:
+              destinationId: { $ref: '#/components/schemas/UuidV7' }
+              renderOutputId: { $ref: '#/components/schemas/UuidV7' }
+    UpdatePublicationField:
+      type: object
+      additionalProperties: false
+      required: [value]
+      properties: { value: { type: string, maxLength: 10000 } }
+    PlanPublicationTask:
+      type: object
+      additionalProperties: false
+      properties:
+        scheduledAt: { type: [string, 'null'], format: date-time }
+        deadlineAt: { type: [string, 'null'], format: date-time }
+        notes: { type: [string, 'null'], maxLength: 2000 }
+    CreatePublicationProof:
+      type: object
+      additionalProperties: false
+      properties:
+        platformPostId: { type: [string, 'null'], maxLength: 300 }
+        publicUrl: { type: [string, 'null'], format: uri, maxLength: 2048 }
+    VerifyPublicationProof:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [VERIFIED, FAILED] }
+        detail: { type: [string, 'null'], maxLength: 1000 }
+    PublicationFieldRevision:
+      type: object
+      additionalProperties: false
+      required: [id, revision, value, origin, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        revision: { type: integer, minimum: 1 }
+        value: { type: string }
+        origin: { type: string, enum: [GENERATED, USER_EDITED, REGENERATED] }
+        createdAt: { type: string, format: date-time }
+    PublicationField:
+      type: object
+      additionalProperties: false
+      required: [id, key, isLocked, version, currentRevision, revisions]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        key: { type: string }
+        isLocked: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        currentRevision: { oneOf: [{ $ref: '#/components/schemas/PublicationFieldRevision' }, { type: 'null' }] }
+        revisions: { type: array, items: { $ref: '#/components/schemas/PublicationFieldRevision' } }
+    PublicationChecklistItem:
+      type: object
+      additionalProperties: false
+      required: [id, key, label, isRequired, status, ordinal, completedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        key: { type: string }
+        label: { type: string }
+        isRequired: { type: boolean }
+        status: { $ref: '#/components/schemas/PublicationChecklistStatus' }
+        ordinal: { type: integer, minimum: 0 }
+        completedAt: { type: [string, 'null'], format: date-time }
+    PublicationProof:
+      type: object
+      additionalProperties: false
+      required: [id, attemptNumber, platformPostId, publicUrl, verificationStatus, submittedAt, verifiedAt, verificationDetail]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        attemptNumber: { type: integer, minimum: 1 }
+        platformPostId: { type: [string, 'null'] }
+        publicUrl: { type: [string, 'null'], format: uri }
+        verificationStatus: { $ref: '#/components/schemas/PublicationVerificationStatus' }
+        submittedAt: { type: string, format: date-time }
+        verifiedAt: { type: [string, 'null'], format: date-time }
+        verificationDetail: { type: [string, 'null'] }
+    PublicationTaskSummary:
+      type: object
+      additionalProperties: false
+      required: [id, packageId, videoId, destinationId, renderOutputId, platform, destinationName, status, isRequired, scheduledAt, deadlineAt, version, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        packageId: { $ref: '#/components/schemas/UuidV7' }
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        destinationId: { $ref: '#/components/schemas/UuidV7' }
+        renderOutputId: { $ref: '#/components/schemas/UuidV7' }
+        platform: { $ref: '#/components/schemas/PublishingPlatform' }
+        destinationName: { type: string }
+        status: { $ref: '#/components/schemas/PublicationTaskStatus' }
+        isRequired: { type: boolean }
+        scheduledAt: { type: [string, 'null'], format: date-time }
+        deadlineAt: { type: [string, 'null'], format: date-time }
+        version: { type: integer, minimum: 1 }
+        updatedAt: { type: string, format: date-time }
+    PublicationTask:
+      allOf:
+        - { $ref: '#/components/schemas/PublicationTaskSummary' }
+        - type: object
+          required: [notes, publishedAt, contentSubjectVersion, fields, checklist, proofs, siblingTasks, assetAvailability]
+          properties:
+            notes: { type: [string, 'null'] }
+            publishedAt: { type: [string, 'null'], format: date-time }
+            contentSubjectVersion: { type: string }
+            fields: { type: array, items: { $ref: '#/components/schemas/PublicationField' } }
+            checklist: { type: array, items: { $ref: '#/components/schemas/PublicationChecklistItem' } }
+            proofs: { type: array, items: { $ref: '#/components/schemas/PublicationProof' } }
+            siblingTasks: { type: array, items: { $ref: '#/components/schemas/PublicationTaskSummary' } }
+            assetAvailability:
+              type: object
+              additionalProperties: { type: boolean }
+    PublishPackage:
+      type: object
+      additionalProperties: false
+      required: [id, videoId, channelProfileId, status, rulesVersion, revision, version, tasks, createdAt, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        status: { $ref: '#/components/schemas/PublishPackageStatus' }
+        rulesVersion: { type: string }
+        revision: { type: integer, minimum: 1 }
+        version: { type: integer, minimum: 1 }
+        tasks: { type: array, items: { $ref: '#/components/schemas/PublicationTaskSummary' } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PublicationTaskEnvelope:
+      type: object
+      required: [data, meta]
+      properties: { data: { $ref: '#/components/schemas/PublicationTask' }, meta: { $ref: '#/components/schemas/SuccessMeta' } }
+    PublishPackageEnvelope:
+      type: object
+      required: [data, meta]
+      properties: { data: { $ref: '#/components/schemas/PublishPackage' }, meta: { $ref: '#/components/schemas/SuccessMeta' } }
+    PublicationTaskListEnvelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items: { type: array, items: { $ref: '#/components/schemas/PublicationTaskSummary' } }
+            nextCursor: { type: [string, 'null'] }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     ReviewGateMode:
       type: string
       enum: [MANUAL_REQUIRED, NOT_REQUIRED]
@@ -2976,6 +3302,18 @@ components:
             - ENROLLMENT_TOKEN_EXPIRED
             - ENROLLMENT_TOKEN_CONSUMED
             - WORKER_CREDENTIAL_REVOKED
+            - PUBLISH_PACKAGE_NOT_FOUND
+            - PUBLICATION_TASK_NOT_FOUND
+            - PUBLICATION_VERSION_CONFLICT
+            - PUBLICATION_INVALID_TRANSITION
+            - PUBLICATION_CONTENT_INCOMPLETE
+            - PUBLICATION_CONTENT_APPROVAL_REQUIRED
+            - PUBLICATION_CHECKLIST_INCOMPLETE
+            - PUBLICATION_PROOF_REQUIRED
+            - PUBLICATION_ASSET_UNAVAILABLE
+            - PUBLICATION_DESTINATION_INACTIVE
+            - PUBLICATION_FIELD_LOCKED
+            - PUBLICATION_CONTENT_AGENT_UNAVAILABLE
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

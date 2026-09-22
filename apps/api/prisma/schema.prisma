@@ -163,6 +163,43 @@ enum ReviewDecisionKind {
   REJECTED
 }
 
+enum PublishPackageStatus {
+  DRAFT
+  GENERATED
+  APPROVED
+  SUPERSEDED
+}
+
+enum PublicationTaskStatus {
+  READY_FOR_CONTENT
+  CONTENT_GENERATED
+  CONTENT_APPROVED
+  READY_TO_PUBLISH
+  POSTING_MANUAL
+  PUBLISHED
+  VERIFIED
+  NEEDS_REVISION
+  CANCELLED
+}
+
+enum PublicationFieldOrigin {
+  GENERATED
+  USER_EDITED
+  REGENERATED
+}
+
+enum PublicationChecklistStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
+enum PublicationVerificationStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
 enum ChannelProfileAssetRole {
   INTRO
   OUTRO
@@ -500,12 +537,13 @@ model ChannelProfile {
   createdAt               DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt               DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  defaultVoice VoiceProfile?           @relation("ChannelDefaultVoice", fields: [defaultVoiceProfileId], references: [id], onDelete: Restrict)
-  destinations PublishingDestination[]
-  series       SeriesProfile[]
-  assets       ChannelProfileAsset[]
-  videos       Video[]
-  reviewPolicy ReviewPolicy?
+  defaultVoice    VoiceProfile?           @relation("ChannelDefaultVoice", fields: [defaultVoiceProfileId], references: [id], onDelete: Restrict)
+  destinations    PublishingDestination[]
+  series          SeriesProfile[]
+  assets          ChannelProfileAsset[]
+  videos          Video[]
+  reviewPolicy    ReviewPolicy?
+  publishPackages PublishPackage[]
 
   @@index([status, createdAt, id])
   @@map("channel_profiles")
@@ -525,7 +563,8 @@ model PublishingDestination {
   createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  channelProfile ChannelProfile @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  channelProfile   ChannelProfile    @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  publicationTasks PublicationTask[]
 
   @@index([channelProfileId])
   @@map("publishing_destinations")
@@ -773,6 +812,11 @@ model User {
   approvedCastSheets    CastSheet[]
   segmentRevisions      SegmentRevision[]
   reviewDecisions       ReviewDecision[]
+  publishPackages       PublishPackage[]
+  publicationTasks      PublicationTask[]
+  publicationRevisions  PublicationFieldRevision[]
+  publicationChecklist  PublicationChecklistItem[]
+  publicationProofs     PublicationProof[]
 
   @@map("users")
 }
@@ -804,6 +848,7 @@ model Video {
   transcriptRuns  TranscriptRun[]
   segments        VideoSegment[]
   reviewDecisions ReviewDecision[]
+  publishPackages PublishPackage[]
 
   @@unique([sourceContentId, channelProfileId])
   @@index([status, updatedAt, id])
@@ -845,16 +890,143 @@ model RenderOutput {
   approvedAt       DateTime?           @map("approved_at") @db.Timestamptz(6)
   createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  video          Video        @relation(fields: [videoId], references: [id], onDelete: Restrict)
-  pipelineJob    PipelineJob? @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
-  videoAsset     VideoAsset?  @relation("RenderOutputVideoLink", fields: [videoAssetId], references: [id], onDelete: Restrict)
-  subtitleAsset  VideoAsset?  @relation("RenderOutputSubtitleLink", fields: [subtitleAssetId], references: [id], onDelete: Restrict)
-  thumbnailAsset VideoAsset?  @relation("RenderOutputThumbnailLink", fields: [thumbnailAssetId], references: [id], onDelete: Restrict)
-  approvedUser   User?        @relation(fields: [approvedBy], references: [id], onDelete: Restrict)
+  video            Video             @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  pipelineJob      PipelineJob?      @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  videoAsset       VideoAsset?       @relation("RenderOutputVideoLink", fields: [videoAssetId], references: [id], onDelete: Restrict)
+  subtitleAsset    VideoAsset?       @relation("RenderOutputSubtitleLink", fields: [subtitleAssetId], references: [id], onDelete: Restrict)
+  thumbnailAsset   VideoAsset?       @relation("RenderOutputThumbnailLink", fields: [thumbnailAssetId], references: [id], onDelete: Restrict)
+  approvedUser     User?             @relation(fields: [approvedBy], references: [id], onDelete: Restrict)
+  publicationTasks PublicationTask[]
 
   @@unique([videoId, variant, revision])
   @@index([videoId, variant, status])
   @@map("render_outputs")
+}
+
+model PublishPackage {
+  id               String               @id @db.Uuid
+  videoId          String               @map("video_id") @db.Uuid
+  channelProfileId String               @map("channel_profile_id") @db.Uuid
+  status           PublishPackageStatus @default(DRAFT)
+  contextSnapshot  Json                 @map("context_snapshot")
+  rulesVersion     String               @map("rules_version")
+  revision         Int
+  createdBy        String               @map("created_by") @db.Uuid
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version          Int                  @default(1)
+
+  video          Video             @relation(fields: [videoId], references: [id], onDelete: Restrict)
+  channelProfile ChannelProfile    @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
+  creator        User              @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+  tasks          PublicationTask[]
+
+  @@unique([videoId, revision])
+  @@index([videoId, status])
+  @@map("publish_packages")
+}
+
+model PublicationTask {
+  id                  String                @id @db.Uuid
+  publishPackageId    String                @map("publish_package_id") @db.Uuid
+  destinationId       String                @map("destination_id") @db.Uuid
+  renderOutputId      String                @map("render_output_id") @db.Uuid
+  destinationSnapshot Json                  @map("destination_snapshot")
+  status              PublicationTaskStatus @default(READY_FOR_CONTENT)
+  isRequired          Boolean               @default(false) @map("is_required")
+  scheduledAt         DateTime?             @map("scheduled_at") @db.Timestamptz(6)
+  deadlineAt          DateTime?             @map("deadline_at") @db.Timestamptz(6)
+  assignedTo          String?               @map("assigned_to") @db.Uuid
+  notes               String?
+  publishedAt         DateTime?             @map("published_at") @db.Timestamptz(6)
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version             Int                   @default(1)
+
+  publishPackage PublishPackage             @relation(fields: [publishPackageId], references: [id], onDelete: Restrict)
+  destination    PublishingDestination      @relation(fields: [destinationId], references: [id], onDelete: Restrict)
+  renderOutput   RenderOutput               @relation(fields: [renderOutputId], references: [id], onDelete: Restrict)
+  assignee       User?                      @relation(fields: [assignedTo], references: [id], onDelete: Restrict)
+  fields         PublicationField[]
+  checklist      PublicationChecklistItem[]
+  proofs         PublicationProof[]
+
+  @@unique([publishPackageId, destinationId, renderOutputId])
+  @@index([status, scheduledAt, id])
+  @@index([destinationId, status])
+  @@map("publication_tasks")
+}
+
+model PublicationField {
+  id                String  @id @db.Uuid
+  publicationTaskId String  @map("publication_task_id") @db.Uuid
+  fieldKey          String  @map("field_key")
+  isLocked          Boolean @default(false) @map("is_locked")
+  currentRevisionId String? @unique @map("current_revision_id") @db.Uuid
+  version           Int     @default(1)
+
+  task            PublicationTask            @relation(fields: [publicationTaskId], references: [id], onDelete: Restrict)
+  currentRevision PublicationFieldRevision?  @relation("CurrentPublicationFieldRevision", fields: [currentRevisionId], references: [id], onDelete: Restrict)
+  revisions       PublicationFieldRevision[] @relation("PublicationFieldRevisions")
+
+  @@unique([publicationTaskId, fieldKey])
+  @@map("publication_fields")
+}
+
+model PublicationFieldRevision {
+  id                 String                 @id @db.Uuid
+  publicationFieldId String                 @map("publication_field_id") @db.Uuid
+  revision           Int
+  valueText          String                 @map("value_text")
+  origin             PublicationFieldOrigin
+  generationRunId    String?                @map("generation_run_id") @db.Uuid
+  createdBy          String                 @map("created_by") @db.Uuid
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  field      PublicationField  @relation("PublicationFieldRevisions", fields: [publicationFieldId], references: [id], onDelete: Restrict)
+  currentFor PublicationField? @relation("CurrentPublicationFieldRevision")
+  creator    User              @relation(fields: [createdBy], references: [id], onDelete: Restrict)
+
+  @@unique([publicationFieldId, revision])
+  @@map("publication_field_revisions")
+}
+
+model PublicationChecklistItem {
+  id                String                     @id @db.Uuid
+  publicationTaskId String                     @map("publication_task_id") @db.Uuid
+  itemKey           String                     @map("item_key")
+  labelSnapshot     String                     @map("label_snapshot")
+  isRequired        Boolean                    @map("is_required")
+  status            PublicationChecklistStatus @default(PENDING)
+  completedBy       String?                    @map("completed_by") @db.Uuid
+  completedAt       DateTime?                  @map("completed_at") @db.Timestamptz(6)
+  ordinal           Int
+
+  task      PublicationTask @relation(fields: [publicationTaskId], references: [id], onDelete: Restrict)
+  completer User?           @relation(fields: [completedBy], references: [id], onDelete: Restrict)
+
+  @@unique([publicationTaskId, itemKey])
+  @@map("publication_checklist_items")
+}
+
+model PublicationProof {
+  id                     String                        @id @db.Uuid
+  publicationTaskId      String                        @map("publication_task_id") @db.Uuid
+  attemptNumber          Int                           @map("attempt_number")
+  platformPostId         String?                       @map("platform_post_id")
+  publicUrl              String?                       @map("public_url")
+  contentSnapshot        Json                          @map("content_snapshot")
+  submittedBy            String                        @map("submitted_by") @db.Uuid
+  submittedAt            DateTime                      @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  verificationStatus     PublicationVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt             DateTime?                     @map("verified_at") @db.Timestamptz(6)
+  verificationDetailSafe String?                       @map("verification_detail_safe")
+
+  task      PublicationTask @relation(fields: [publicationTaskId], references: [id], onDelete: Restrict)
+  submitter User            @relation(fields: [submittedBy], references: [id], onDelete: Restrict)
+
+  @@unique([publicationTaskId, attemptNumber])
+  @@map("publication_proofs")
 }
 
 model CastSheet {
