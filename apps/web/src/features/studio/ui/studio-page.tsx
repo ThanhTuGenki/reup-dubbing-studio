@@ -9,13 +9,15 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Textarea } from '@/components/ui/textarea';
 import { ListState } from '@/shared/ui/list-state';
-import { regenerateSegment, renderStudio, requestSegmentPreview, reviewStudio, saveStudioSegment } from '../api/studio-api';
+import { useQueryInvalidationStream } from '@/shared/api/use-query-invalidation-stream';
+import { regenerateSegment, renderStudio, requestSegmentPreview, reviewStudio, saveStudioSegment, studioWorkflowEventsUrl } from '../api/studio-api';
 import { studioKeys, studioQuery } from '../api/studio-query';
 
 export function StudioPage() {
   const { videoId = '' } = useParams();
   const queryClient = useQueryClient();
   const query = useQuery(studioQuery(videoId));
+  const streamState = useQueryInvalidationStream({ url: studioWorkflowEventsUrl(), queryKeys: [studioKeys.detail(videoId)], eventName: 'queue.invalidate', enabled: typeof EventSource !== 'undefined' });
   const [selectedId, setSelectedId] = useState<string>();
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [audioUrl, setAudioUrl] = useState<string>();
@@ -29,12 +31,12 @@ export function StudioPage() {
   const preview = useMutation({ mutationFn: () => selected ? requestSegmentPreview(videoId, selected.id) : Promise.reject(new Error('Chưa chọn segment')), onSuccess: (grant) => setAudioUrl(grant.url) });
   const regenerate = useMutation({ mutationFn: () => selected && studio ? regenerateSegment(videoId, selected.id, studio.video.version, `studio-${videoId}-${selected.id}-${studio.video.version}`) : Promise.reject(new Error('Chưa chọn segment')), onSuccess: () => void queryClient.invalidateQueries({ queryKey: studioKeys.detail(videoId) }) });
   const review = useMutation({ mutationFn: () => studio ? reviewStudio(videoId, studio.video.version, { scope: 'SCRIPT', subjectVersion: String(studio.video.version), decision: reviewDecision, ...(reviewNote ? { note: reviewNote } : {}) }) : Promise.reject(new Error('Studio chưa tải')), onSuccess: () => { setReviewNote(''); void queryClient.invalidateQueries({ queryKey: studioKeys.detail(videoId) }); } });
-  const render = useMutation({ mutationFn: () => studio ? renderStudio(videoId, studio.video.version, `studio-render-${videoId}-${studio.video.version}`) : Promise.reject(new Error('Studio chưa tải')) });
+  const render = useMutation({ mutationFn: () => studio ? renderStudio(videoId, studio.video.version, `studio-render-${videoId}-${studio.video.version}`) : Promise.reject(new Error('Studio chưa tải')), onSuccess: () => void queryClient.invalidateQueries({ queryKey: studioKeys.detail(videoId) }) });
 
   if (query.isPending) return <div className="page"><ListState state="loading" title="Đang mở Studio" description="Đang tải transcript và revision mới nhất…" /></div>;
   if (query.isError || !studio) return <div className="page"><ListState state="error" title="Không thể mở Studio" description={query.error instanceof Error ? query.error.message : 'Video có thể đã bị xoá hoặc kết nối gặp lỗi.'} action={<Button asChild><Link to="/library">Quay lại thư viện</Link></Button>} /></div>;
   return <div className="page studio-page">
-    <header className="queue-heading"><div><p className="eyebrow">Studio biên tập</p><h1>{studio.video.title || 'Video chưa có tiêu đề'}</h1><p className="lede">{studio.video.status} · Version {studio.video.version} · {studio.segments.length} segment</p></div><div className="studio-header-actions"><Button asChild variant="outline"><Link to={`/library/${videoId}`}>Chi tiết video</Link></Button><Button onClick={() => render.mutate()} disabled={!studio.capabilities.canRender || render.isPending}><SendIcon />{render.isPending ? 'Đang gửi…' : 'Yêu cầu render'}</Button></div></header>
+    <header className="queue-heading"><div><p className="eyebrow">Studio biên tập</p><h1>{studio.video.title || 'Video chưa có tiêu đề'}</h1><p className="lede">{studio.video.status} · Version {studio.video.version} · {studio.segments.length} segment</p><Badge variant="outline">{liveStatus(streamState, query.isFetching)}</Badge></div><div className="studio-header-actions"><Button asChild variant="outline"><Link to={`/library/${videoId}`}>Chi tiết video</Link></Button><Button onClick={() => render.mutate()} disabled={!studio.capabilities.canRender || render.isPending}><SendIcon />{render.isPending ? 'Đang gửi…' : 'Yêu cầu render'}</Button></div></header>
     <div className="studio-grid">
       <section className="queue-list-card studio-player" aria-label="Player preview"><div className="studio-player-art"><PlayIcon aria-hidden="true" /></div><div className="studio-player-controls"><Badge variant="outline">{studio.video.sourceDurationMs ? formatDuration(studio.video.sourceDurationMs) : 'Chưa có duration'}</Badge><span>Preview audio chỉ tạo khi người dùng yêu cầu.</span></div>{audioUrl && <audio controls src={audioUrl} aria-label="Audio preview" />}</section>
       <aside className="queue-list-card studio-cast"><div className="studio-section-heading"><div><p className="eyebrow">Cast sheet</p><h2>Nhân vật và giọng</h2></div><Badge variant="outline">{studio.cast?.status ?? 'Chưa gán'}</Badge></div>{studio.cast?.entries.length ? <ul className="studio-cast-list">{studio.cast.entries.map((entry) => <li key={entry.id}><span><strong>{entry.displayName}</strong><small>{entry.characterKey} · {entry.roleKind}</small></span><Badge variant="outline">{entry.voice.name}</Badge></li>)}</ul> : <p className="muted">Chưa có cast sheet cho series này.</p>}</aside>
@@ -45,3 +47,4 @@ export function StudioPage() {
 }
 
 function formatDuration(milliseconds: number) { const seconds = Math.floor(milliseconds / 1000); return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`; }
+function liveStatus(state: string, fetching: boolean) { if (fetching) return 'Đang đồng bộ trạng thái'; if (state === 'open') return 'Cập nhật trực tiếp'; if (state === 'reconnecting' || state === 'connecting') return 'Đang kết nối cập nhật'; return 'Tự động kiểm tra khi đang xử lý'; }

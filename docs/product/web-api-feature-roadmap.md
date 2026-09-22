@@ -113,7 +113,7 @@
     decision và yêu cầu render.
   - [x] Web xây player, segment editor, cast sheet, audio preview, dirty state và
     review/render actions.
-  - [ ] Tích hợp SSE/polling cho preview và render status mà không triển khai Worker.
+  - [x] Tích hợp SSE/polling cho preview và render status mà không triển khai Worker.
   - [ ] Kiểm thử conflict khi sửa, retry, unsaved changes và accessibility editor.
 
 ## 10. Chính sách tự động hóa và điểm duyệt
