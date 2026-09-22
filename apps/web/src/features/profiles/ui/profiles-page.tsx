@@ -1,8 +1,9 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ChannelProfile, ProfileStatus, SeriesProfile } from '@reup-dubbing-studio/api-client';
-import { ArchiveIcon, PlusIcon, RotateCcwIcon, SearchIcon, Settings2Icon } from 'lucide-react';
+import { ArchiveIcon, PlusIcon, RotateCcwIcon, SearchIcon, Settings2Icon, SlidersHorizontalIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,7 @@ function ProfileTable({ kind, channels, series, onSelect }: { kind: Kind; channe
 }
 
 function ProfileSheet({ selected, snapshot, loading, onOpenChange, onEdit, onArchive, archivePending }: { selected: { kind: Kind; id: string } | null; snapshot?: ChannelSnapshot | SeriesSnapshot | undefined; loading: boolean; onOpenChange: (open: boolean) => void; onEdit: () => void; onArchive: () => void; archivePending: boolean }) {
-  return <Sheet open={Boolean(selected)} onOpenChange={onOpenChange}><SheetContent className="profile-sheet overflow-y-auto sm:max-w-xl"><SheetHeader><SheetTitle>{snapshot?.profile.name ?? 'Chi tiết hồ sơ'}</SheetTitle><SheetDescription>{selected?.kind === 'channels' ? 'Defaults của Channel Profile' : 'Cấu hình hiệu lực và nguồn kế thừa của Series'}</SheetDescription></SheetHeader>{loading ? <div className="p-4"><ListState state="loading" title="Đang tải chi tiết" description="Đang lấy phiên bản mới nhất…" /></div> : snapshot ? <ProfileDetails snapshot={snapshot} /> : <div className="p-4"><ListState state="error" title="Không thể tải chi tiết" description="Đóng bảng chi tiết và thử lại." /></div>}{snapshot && <SheetFooter><Button variant="outline" onClick={onArchive} disabled={archivePending}>{snapshot.profile.status === 'ARCHIVED' ? <RotateCcwIcon /> : <ArchiveIcon />}{snapshot.profile.status === 'ARCHIVED' ? 'Khôi phục' : 'Lưu trữ'}</Button>{snapshot.profile.status !== 'ARCHIVED' && <Button onClick={onEdit}><Settings2Icon />Chỉnh sửa</Button>}</SheetFooter>}</SheetContent></Sheet>;
+  return <Sheet open={Boolean(selected)} onOpenChange={onOpenChange}><SheetContent className="profile-sheet overflow-y-auto sm:max-w-xl"><SheetHeader><SheetTitle>{snapshot?.profile.name ?? 'Chi tiết hồ sơ'}</SheetTitle><SheetDescription>{selected?.kind === 'channels' ? 'Defaults của Channel Profile' : 'Cấu hình hiệu lực và nguồn kế thừa của Series'}</SheetDescription></SheetHeader>{loading ? <div className="p-4"><ListState state="loading" title="Đang tải chi tiết" description="Đang lấy phiên bản mới nhất…" /></div> : snapshot ? <ProfileDetails snapshot={snapshot} /> : <div className="p-4"><ListState state="error" title="Không thể tải chi tiết" description="Đóng bảng chi tiết và thử lại." /></div>}{snapshot && selected && <SheetFooter><Button variant="outline" onClick={onArchive} disabled={archivePending}>{snapshot.profile.status === 'ARCHIVED' ? <RotateCcwIcon /> : <ArchiveIcon />}{snapshot.profile.status === 'ARCHIVED' ? 'Khôi phục' : 'Lưu trữ'}</Button><Button variant="outline" asChild><Link to={`/channel-profiles/${selected.kind === 'channels' ? 'channel' : 'series'}/${selected.id}/review-policy`}><SlidersHorizontalIcon />Điểm duyệt</Link></Button>{snapshot.profile.status !== 'ARCHIVED' && <Button onClick={onEdit}><Settings2Icon />Chỉnh sửa</Button>}</SheetFooter>}</SheetContent></Sheet>;
 }
 
 function ProfileDetails({ snapshot }: { snapshot: ChannelSnapshot | SeriesSnapshot }) {

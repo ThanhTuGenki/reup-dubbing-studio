@@ -18,6 +18,7 @@ import type {
   QueueJobDetail,
   Worker,
   WorkerImage,
+  ReviewPolicy,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -81,6 +82,20 @@ export const seriesProfile = {
 
 export const channelProfilesEnvelope = { data: { items: [channelProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies ChannelProfileListEnvelope;
 export const seriesProfilesEnvelope = { data: { items: [seriesProfile], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies SeriesProfileListEnvelope;
+export const channelReviewPolicy = {
+  ownerType: 'CHANNEL', ownerProfileId: channelProfile.id,
+  stored: { castGate: 'NOT_REQUIRED', scriptGate: 'MANUAL_REQUIRED', ttsGate: 'MANUAL_REQUIRED', renderGate: 'MANUAL_REQUIRED', publishContentGate: 'MANUAL_REQUIRED', autoRequestRender: false },
+  effective: { castGate: 'NOT_REQUIRED', scriptGate: 'MANUAL_REQUIRED', ttsGate: 'MANUAL_REQUIRED', renderGate: 'MANUAL_REQUIRED', publishContentGate: 'MANUAL_REQUIRED', autoRequestRender: false },
+  inheritance: { castGate: 'CHANNEL', scriptGate: 'CHANNEL', ttsGate: 'CHANNEL', renderGate: 'CHANNEL', publishContentGate: 'CHANNEL', autoRequestRender: 'CHANNEL' },
+  version: 2, parentPolicyVersion: null, updatedAt: '2026-09-20T09:00:00.000Z',
+} satisfies ReviewPolicy;
+export const seriesReviewPolicy = {
+  ownerType: 'SERIES', ownerProfileId: seriesProfile.id,
+  stored: { castGate: null, scriptGate: 'NOT_REQUIRED', ttsGate: null, renderGate: null, publishContentGate: null, autoRequestRender: null },
+  effective: { ...channelReviewPolicy.effective, scriptGate: 'NOT_REQUIRED' },
+  inheritance: { castGate: 'CHANNEL', scriptGate: 'SERIES', ttsGate: 'CHANNEL', renderGate: 'CHANNEL', publishContentGate: 'CHANNEL', autoRequestRender: 'CHANNEL' },
+  version: 3, parentPolicyVersion: channelReviewPolicy.version, updatedAt: '2026-09-20T09:30:00.000Z',
+} satisfies ReviewPolicy;
 export const voiceProfile = {
   id: '0191f3d2-7f5b-7abc-8b2e-123456789ae0', name: 'Giọng kể ấm', primaryLanguage: 'vi',
   description: 'Giọng kể phim ngắn', tags: ['ấm', 'kể chuyện'], status: 'READY', licenseKind: 'OWNED_RECORDING',

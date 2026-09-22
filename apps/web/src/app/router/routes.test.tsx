@@ -41,6 +41,12 @@ describe('application routes', () => {
     expect(await screen.findByText('Kênh Việt hóa')).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
   });
+  it('renders Review Policy inside the shell', async () => {
+    renderApp(<AppRoutes />, { route: '/channel-profiles/channel/0191f3d2-7f5b-7abc-8b2e-123456789ac0/review-policy' });
+    expect(await screen.findByRole('heading', { name: 'Tự động hóa & điểm duyệt' })).toBeInTheDocument();
+    expect(await screen.findByText('Kênh Việt hóa')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInTheDocument();
+  });
   it('renders the Settings feature inside the shell', async () => {
     renderApp(<AppRoutes />, { route: '/settings' });
     expect(await screen.findByRole('heading', { name: 'Cài đặt hệ thống' })).toBeInTheDocument();

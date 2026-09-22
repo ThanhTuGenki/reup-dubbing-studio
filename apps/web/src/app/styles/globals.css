@@ -203,6 +203,37 @@
 .profile-details dd { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); margin: 0; overflow-wrap: anywhere; }
 .profile-details section h3 { margin-bottom: var(--space-2); }
 .profile-details section p, .profile-details section ul { margin-bottom: 0; color: var(--muted-fg); }
+.review-policy-page { display: grid; gap: var(--space-4); padding-bottom: 96px; }
+.review-policy-topline { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); }
+.review-policy-heading .lede { margin-bottom: 0; }
+.review-policy-readiness [data-slot='card-content'] { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); padding: var(--space-4); }
+.review-policy-readiness [data-slot='card-content'] > div { display: flex; align-items: flex-start; gap: var(--space-3); }
+.review-policy-readiness strong { display: block; font-weight: var(--weight-strong); }
+.review-policy-readiness p { margin: 2px 0 0; color: var(--muted-fg); font-size: var(--text-xs); }
+.review-policy-readiness code { color: var(--meta); font: 12px / 1.5 var(--font-code); white-space: nowrap; }
+.review-policy-inheritance { border-color: var(--brand-accent); background: color-mix(in oklch, var(--brand-accent-soft) 35%, var(--surface)); }
+.review-policy-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; align-items: start; gap: var(--space-4); }
+.review-policy-editor { display: grid; gap: var(--space-4); min-width: 0; }
+.review-policy-editor [data-slot='card'], .review-policy-effective [data-slot='card'] { box-shadow: var(--card-shadow); }
+.review-policy-gates { display: grid; gap: 0; }
+.review-policy-gate { display: grid; grid-template-columns: minmax(0, 1fr) 220px; align-items: center; gap: var(--space-2) var(--space-4); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-soft); }
+.review-policy-gate:first-child { padding-top: 0; }
+.review-policy-gate:last-child { padding-bottom: 0; border-bottom: 0; }
+.review-policy-gate h3 { margin: 0; font-size: 14px; }
+.review-policy-gate p { margin: 2px 0 0; color: var(--muted-fg); font-size: var(--text-xs); }
+.review-policy-gate [data-slot='select-trigger'] { width: 220px; }
+.review-policy-impact { grid-column: 1 / -1; margin: var(--space-2) 0 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--border-soft); border-radius: var(--radius-control); background: var(--panel-subtle); color: var(--muted-fg); font-size: var(--text-xs); }
+.review-policy-card-title { display: flex; align-items: flex-start; gap: var(--space-3); }
+.review-policy-card-title > svg { width: 20px; height: 20px; flex: none; margin-top: 1px; color: var(--brand-accent-strong); }
+.review-policy-effective { position: sticky; top: calc(var(--topbar-h) + var(--space-4)); }
+.review-policy-effective dl { margin: 0 0 var(--space-4); }
+.review-policy-effective dl > div { display: grid; gap: var(--space-1); padding: var(--space-3) 0; border-bottom: 1px solid var(--border-soft); }
+.review-policy-effective dt { color: var(--muted-fg); font-size: var(--text-xs); }
+.review-policy-effective dd { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin: 0; font-weight: var(--weight-ui); }
+.review-policy-actions { position: fixed; z-index: 15; right: var(--space-8); bottom: var(--space-5); left: calc(var(--sidebar-w) + var(--space-8)); max-width: calc(var(--content-max) + var(--space-8)); min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); margin: 0 auto; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-card); background: color-mix(in oklch, var(--surface) 96%, transparent); box-shadow: var(--elev-raised); backdrop-filter: blur(18px); transition: left var(--motion-base) var(--ease-standard); }
+.review-policy-actions > span { color: var(--muted-fg); font-size: var(--text-xs); }
+.review-policy-actions > div { display: flex; gap: var(--space-2); }
+[data-collapsible='icon'] ~ .app-shell-main .review-policy-actions { left: calc(var(--sidebar-w-collapsed) + var(--space-8)); }
 .voices-page { display: grid; gap: var(--space-5); }
 .queue-page { display: grid; gap: var(--space-5); padding-bottom: var(--space-12); }
 .queue-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-5); }
@@ -429,6 +460,15 @@
   .profiles-toolbar { align-items: stretch; flex-direction: column; }
   .profiles-toolbar > [data-slot='select-trigger'] { width: 100%; }
   .profiles-table { overflow-x: auto; }
+  .review-policy-topline { align-items: stretch; flex-direction: column; }
+  .review-policy-topline > [data-slot='button'] { width: 100%; }
+  .review-policy-layout { grid-template-columns: 1fr; }
+  .review-policy-effective { position: static; }
+  .review-policy-gate { grid-template-columns: 1fr; }
+  .review-policy-gate [data-slot='select-trigger'] { width: 100%; }
+  .review-policy-readiness [data-slot='card-content'], .review-policy-readiness [data-slot='card-content'] > div { flex-direction: column; }
+  .review-policy-actions { right: var(--space-3); bottom: var(--space-3); left: var(--space-3) !important; align-items: stretch; flex-direction: column; }
+  .review-policy-actions > div { display: grid; grid-template-columns: 1fr 1fr; }
   .discovery-source-head, .discovery-source-controls, .discovery-inline, .watchlist-panel-head { align-items: stretch; flex-direction: column; }
   .discovery-source-controls > [data-slot='select-trigger'], .discovery-inline > [data-slot='select-trigger'], .discovery-inline > [data-slot='button'] { width: 100%; }
   .discovery-selection-bar { align-items: stretch; flex-direction: column; width: 100%; bottom: var(--space-2); }
@@ -462,6 +502,9 @@
 @media (min-width: 768px) and (max-width: 1179px) {
   .main-content { padding: var(--space-6); }
   .settings-action-bar { right: var(--space-6); left: var(--space-6) !important; }
+  .review-policy-actions { right: var(--space-6); left: var(--space-6) !important; }
+  .review-policy-layout { grid-template-columns: 1fr; }
+  .review-policy-effective { position: static; }
   .settings-retention-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .queue-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .queue-search { grid-column: span 2; }

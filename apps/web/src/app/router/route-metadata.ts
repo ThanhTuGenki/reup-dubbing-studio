@@ -38,6 +38,7 @@ export const navigationGroups: ReadonlyArray<{
 ];
 
 const detailRoutes: ReadonlyArray<RouteMetadata> = [
+  { path: paths.reviewPolicy, label: 'Tự động hóa & điểm duyệt', end: true },
   { path: paths.studio, label: 'Studio biên tập', end: true },
   { path: paths.libraryVideo, label: 'Chi tiết video', end: true },
 ];
