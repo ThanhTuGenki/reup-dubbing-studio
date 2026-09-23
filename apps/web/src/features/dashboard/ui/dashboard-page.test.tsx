@@ -36,7 +36,7 @@ describe('DashboardPage', () => {
       ...dashboardEnvelope,
       data: {
         ...dashboardEnvelope.data,
-        cost: { openBillingSessions: 1, estimatedCostCp: '250.500000', estimatedCostVnd: '120000.00', vndCoverage: 'PARTIAL' },
+        cost: { openBillingSessions: 1, estimatedCostCp: '250.500000', estimatedCostVnd: null, vndCoverage: 'PARTIAL' },
         attention: { items: [], total: 0 },
         recentActivity: { items: [] },
       },
@@ -45,7 +45,7 @@ describe('DashboardPage', () => {
     renderApp(<DashboardPage />);
     expect(await screen.findByText('Không có việc khẩn cấp')).toBeInTheDocument();
     expect(screen.getByText('Chưa có hoạt động')).toBeInTheDocument();
-    expect(screen.getByText(/dữ liệu quy đổi một phần/)).toBeInTheDocument();
+    expect(screen.getByText('Dữ liệu quy đổi VND chỉ có một phần')).toBeInTheDocument();
   });
 
   it('offers retry when the Dashboard API is unavailable', async () => {

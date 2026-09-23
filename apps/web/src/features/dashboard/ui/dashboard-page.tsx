@@ -23,10 +23,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { ListState } from '@/shared/ui/list-state';
+import { DISPLAY_TIMEZONE } from '@/shared/lib/display-time';
 
 import { dashboardQuery } from '../api/dashboard-query';
-
-const DISPLAY_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
 const videoStatuses: Array<{ key: keyof Dashboard['videos']['countsByStatus']; label: string }> = [
   { key: 'PROCESSING', label: 'Đang xử lý' },
@@ -121,9 +120,10 @@ function Metric({ label, value }: { label: string; value: string }) {
 function formatInteger(value: number) { return new Intl.NumberFormat('vi-VN').format(value); }
 function formatCp(value: string) { return `${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(Number(value))} CP`; }
 function formatVnd(value: string | null, coverage: Dashboard['cost']['vndCoverage']) {
+  if (coverage === 'PARTIAL') return 'Dữ liệu quy đổi VND chỉ có một phần';
   if (value === null || coverage === 'NONE') return 'Chưa đủ tỷ giá để quy đổi VND';
   const formatted = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value));
-  return coverage === 'PARTIAL' ? `${formatted} · dữ liệu quy đổi một phần` : formatted;
+  return formatted;
 }
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat('vi-VN', { timeZone: DISPLAY_TIMEZONE, dateStyle: 'short', timeStyle: 'short' }).format(new Date(value));
