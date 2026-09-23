@@ -4,6 +4,11 @@ import { renderApp } from '../../test/test-utils';
 import { AppRoutes } from './routes';
 
 describe('application routes', () => {
+  it('renders Dashboard inside the shell', async () => {
+    renderApp(<AppRoutes />);
+    expect(await screen.findByRole('heading', { name: 'Tổng quan vận hành' })).toBeInTheDocument();
+    expect(screen.getByText('Job đang chờ GPU')).toBeInTheDocument();
+  });
   it('renders Publishing inside the shell', async () => {
     renderApp(<AppRoutes />, { route: '/publishing' });
     expect(await screen.findByRole('heading', { name: 'Bàn đăng bài' })).toBeInTheDocument();

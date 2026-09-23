@@ -21,6 +21,7 @@ import type {
   ReviewPolicy,
   PublicationTask,
   PublicationTaskListEnvelope,
+  DashboardEnvelope,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -149,6 +150,35 @@ export const publicationTask = {
 } satisfies PublicationTask;
 export const publicationListEnvelope = { data: { items: [{ id: publicationTask.id, packageId: publicationTask.packageId, videoId: publicationTask.videoId, destinationId: publicationTask.destinationId, renderOutputId: publicationTask.renderOutputId, platform: publicationTask.platform, destinationName: publicationTask.destinationName, status: publicationTask.status, isRequired: publicationTask.isRequired, scheduledAt: publicationTask.scheduledAt, deadlineAt: publicationTask.deadlineAt, version: publicationTask.version, updatedAt: publicationTask.updatedAt }], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } } satisfies PublicationTaskListEnvelope;
 export const publicationDetailEnvelope = { data: publicationTask, meta: { requestId: READY_REQUEST_ID } };
+
+export const dashboardEnvelope = {
+  data: {
+    generatedAt: '2026-09-23T03:30:00.000Z',
+    timezone: 'Asia/Ho_Chi_Minh',
+    videos: {
+      countsByStatus: { INGEST_QUEUED: 2, INGESTING: 1, INGESTED: 4, PROCESSING: 3, AWAITING_REVIEW: 5, READY_TO_PUBLISH: 6, PUBLISHED: 18, FAILED: 1, ARCHIVED: 2 },
+      processing: 3, awaitingReview: 5, readyToPublish: 6, published: 18, failed: 1, totalActive: 22,
+    },
+    queue: { active: 7, running: 4, waitingForGpu: 2, failed: 1 },
+    publishing: { upcoming: 3, overdue: 1, awaitingProof: 2, awaitingVerification: 1, needsRevision: 1 },
+    workers: { online: 2, busy: 1, safeToTerminate: 1, unhealthy: 0, activeLeases: 2 },
+    cost: { openBillingSessions: 2, estimatedCostCp: '13000.000000', estimatedCostVnd: '13000.00', vndCoverage: 'COMPLETE' },
+    attention: {
+      total: 2,
+      items: [
+        { id: 'attention:queue:1', code: 'QUEUE_WAITING_FOR_GPU', severity: 'WARNING', title: 'Job đang chờ GPU', detail: 'Job đã chờ capacity hơn 15 phút.', entityType: 'PIPELINE_JOB', entityId: ingestJobId, occurredAt: '2026-09-23T03:00:00.000Z', dueAt: null, href: '/queue' },
+        { id: 'attention:publishing:1', code: 'PUBLICATION_OVERDUE', severity: 'CRITICAL', title: 'Lịch đăng đã quá hạn', detail: 'Một publication task cần được xử lý ngay.', entityType: 'PUBLICATION_TASK', entityId: publicationTask.id, occurredAt: '2026-09-23T02:00:00.000Z', dueAt: '2026-09-23T03:00:00.000Z', href: '/publishing' },
+      ],
+    },
+    recentActivity: {
+      items: [
+        { id: 'activity:queue:1', kind: 'QUEUE_EVENT', title: 'Job bắt đầu xử lý', detail: 'Video Queue mẫu', entityType: 'PIPELINE_JOB', entityId: ingestJobId, occurredAt: '2026-09-23T03:20:00.000Z', href: '/queue' },
+        { id: 'activity:proof:1', kind: 'PUBLICATION_PROOF_SUBMITTED', title: 'Đã gửi bằng chứng đăng bài', detail: 'YouTube Việt hóa', entityType: 'PUBLICATION_TASK', entityId: publicationTask.id, occurredAt: '2026-09-23T03:10:00.000Z', href: '/publishing' },
+      ],
+    },
+  },
+  meta: { requestId: READY_REQUEST_ID },
+} satisfies DashboardEnvelope;
 
 export const workerImage = {
   id: '0191f3d2-7f5b-7abc-8b2e-123456789b01', role: 'BATCH_MEDIA', semanticVersion: '1.8.2',

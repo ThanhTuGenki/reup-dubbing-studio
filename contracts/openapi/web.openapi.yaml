@@ -1647,10 +1647,12 @@ components:
           properties:
             items: { type: array, maxItems: 12, items: { $ref: '#/components/schemas/DashboardActivityItem' } }
     DashboardEnvelope:
-      allOf:
-        - $ref: '#/components/schemas/SuccessEnvelope'
-        - type: object
-          properties: { data: { $ref: '#/components/schemas/Dashboard' } }
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/Dashboard' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
     PublishingPlatform:
       type: string
       enum: [YOUTUBE, FACEBOOK]
