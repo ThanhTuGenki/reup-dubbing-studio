@@ -19,3 +19,27 @@ trong thư mục này.
 luồng xử lý nền, còn thư mục này chỉ sở hữu các worker có phụ thuộc GPU. `apps/`
 sở hữu điểm vào sản phẩm; `packages/` sở hữu thành phần dùng lại; `infra/` sở hữu
 cấu hình vận hành và hạ tầng để chạy worker.
+
+## Worker Agent foundation
+
+Runtime dùng Python 3.11 và `uv`. Tất cả model/request/response HTTP trong
+`src/reup_worker_contract/` được sinh trực tiếp từ
+`contracts/openapi/worker.openapi.yaml`; không sửa các file sinh bằng tay.
+
+```bash
+cd workers/gpu
+uv sync
+make contract
+make check
+cp .env.example .env
+uv run reup-gpu-worker
+```
+
+Agent giữ tối đa một task GPU đang chạy, heartbeat độc lập với lease renewal,
+ngừng claim khi Control Plane yêu cầu drain và dùng fencing token từ claim cho
+mọi mutation. Credential sau enroll được ghi atomically với permission `0600`;
+`.state/`, `.work/`, `.env` và virtual environment đều không được commit.
+
+`TaskExecutor` là boundary cho adapter. Foundation hiện cố ý không chứa model
+ASR/OCR/Demucs/FFmpeg/OmniVoice; adapter thật và fake executor được thêm ở các
+milestone kế tiếp mà không thay wire model hoặc vòng đời Agent.

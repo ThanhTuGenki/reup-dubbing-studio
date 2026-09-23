@@ -69,18 +69,18 @@
 
 ## 3. Python Worker Agent foundation
 
-- [ ] **Hoàn tất Worker Agent chạy được trên local.**
-  - [ ] Scaffold `workers/gpu` bằng Python 3.11, `uv`, lint, typecheck, test và
+- [x] **Hoàn tất Worker Agent chạy được trên local.**
+  - [x] Scaffold `workers/gpu` bằng Python 3.11, `uv`, lint, typecheck, test và
     cấu hình theo environment.
-  - [ ] Dùng client/model sinh hoặc dẫn xuất trực tiếp từ OpenAPI; không duy trì
+  - [x] Dùng client/model sinh hoặc dẫn xuất trực tiếp từ OpenAPI; không duy trì
     một bộ wire model viết tay thứ hai.
-  - [ ] Implement enrollment, credential persistence an toàn, session và
+  - [x] Implement enrollment, credential persistence an toàn, session và
     heartbeat có sequence.
-  - [ ] Implement claim loop, lease renewal, progress, completion/failure và
+  - [x] Implement claim loop, lease renewal, progress, completion/failure và
     graceful shutdown/drain.
-  - [ ] Implement subprocess isolation, timeout, cancellation, log redaction và
+  - [x] Implement subprocess isolation, timeout, cancellation, log redaction và
     workspace tạm theo từng attempt.
-  - [ ] Giới hạn concurrency theo role/capability; baseline GPU concurrency là 1.
+  - [x] Giới hạn concurrency theo role/capability; baseline GPU concurrency là 1.
 
 ## 4. Fake executor end-to-end
 
