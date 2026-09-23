@@ -40,16 +40,16 @@
 
 ## 1. Contract thực thi task cho Worker
 
-- [ ] **Hoàn tất Worker task contract.**
-  - [ ] Bổ sung contract claim, start, renew lease, progress, complete, fail và
+- [x] **Hoàn tất Worker task contract.**
+  - [x] Bổ sung contract claim, start, renew lease, progress, complete, fail và
     quan sát cancel/drain vào `worker.openapi.yaml`.
-  - [ ] Bổ sung task payload có version, attempt ID, lease ID, fencing token,
+  - [x] Bổ sung task payload có version, attempt ID, lease ID, fencing token,
     deadline, capability requirement và input/output manifest.
-  - [ ] Bổ sung contract cấp quyền download/upload asset ngắn hạn; không truyền
+  - [x] Bổ sung contract cấp quyền download/upload asset ngắn hạn; không truyền
     R2 credential dài hạn cho Worker.
-  - [ ] Chuẩn hóa error code cho stale attempt, lease hết hạn, task bị cancel,
+  - [x] Chuẩn hóa error code cho stale attempt, lease hết hạn, task bị cancel,
     capability mismatch, asset/checksum và output commit.
-  - [ ] Generate lại contract artifact và thêm contract validation/test.
+  - [x] Generate lại contract artifact và thêm contract validation/test.
 
 ## 2. Control Plane task execution API
 

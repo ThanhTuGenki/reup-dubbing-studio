@@ -14,7 +14,7 @@
     "depcruise": "depcruise --config .dependency-cruiser.cjs apps/api/src apps/web/src",
     "contract:lint": "redocly lint --config contracts/openapi/.redocly.yaml contracts/openapi/web.openapi.yaml contracts/openapi/worker.openapi.yaml",
     "contract:generate": "pnpm --filter @reup-dubbing-studio/api-contract generate",
-    "contract:check": "pnpm contract:lint && pnpm contract:generate && git diff --exit-code -- packages/api-contract/src/generated",
+    "contract:check": "pnpm contract:lint && pnpm contract:generate && git diff --exit-code -- packages/api-contract/src/generated packages/api-contract/src/generated-worker",
     "test:contract": "pnpm --filter @reup-dubbing-studio/api-contract test && pnpm --filter @reup-dubbing-studio/api-client test",
     "contract:verify": "pnpm contract:check && pnpm test:contract",
     "web:dev": "pnpm --filter @reup-dubbing-studio/web dev",
