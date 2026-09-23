@@ -1,8 +1,9 @@
 import { ChevronRight } from 'lucide-react';
 import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
-import { resolveRouteMetadata } from '../router/route-metadata';
+import { resolveRouteBreadcrumbs, resolveRouteMetadata } from '../router/route-metadata';
+import { AppCommandPalette } from './app-command-palette';
 
 function NavigationTrigger() {
   const { isMobile, openMobile, state } = useSidebar();
@@ -25,6 +26,7 @@ function NavigationTrigger() {
 export function Topbar() {
   const location = useLocation();
   const metadata = resolveRouteMetadata(location.pathname);
+  const breadcrumbs = resolveRouteBreadcrumbs(location.pathname);
 
   useEffect(() => {
     document.title = `Reup Dubbing Studio — ${metadata.label}`;
@@ -35,9 +37,9 @@ export function Topbar() {
       <NavigationTrigger />
       <div aria-label="Breadcrumb" className="breadcrumb">
         <span>Reup Dubbing Studio</span>
-        <ChevronRight aria-hidden="true" />
-        <strong>{metadata.label}</strong>
+        {breadcrumbs.map((item, index) => <span className="breadcrumb-item" key={`${item.label}:${index}`}><ChevronRight aria-hidden="true" />{item.path ? <Link to={item.path}>{item.label}</Link> : <strong>{item.label}</strong>}</span>)}
       </div>
+      <AppCommandPalette />
     </header>
   );
 }

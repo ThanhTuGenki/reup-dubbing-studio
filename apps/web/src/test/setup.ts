@@ -12,6 +12,15 @@ Object.defineProperties(HTMLElement.prototype, {
   setPointerCapture: { configurable: true, value: () => undefined },
 });
 
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  configurable: true,
+  value: class ResizeObserver {
+    observe() { /* jsdom layout is static in component tests. */ }
+    unobserve() { /* jsdom layout is static in component tests. */ }
+    disconnect() { /* jsdom layout is static in component tests. */ }
+  },
+});
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   cleanup();

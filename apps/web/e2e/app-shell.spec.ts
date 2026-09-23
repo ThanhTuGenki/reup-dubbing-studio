@@ -43,6 +43,16 @@ test('desktop shell exposes grouped navigation and can collapse', async ({ page 
   await expect(page.locator('[data-slot="sidebar"][data-state="collapsed"]')).toBeVisible();
 });
 
+test('command palette navigates by technical keyword', async ({ page }) => {
+  await ready(page);
+  await page.goto('/');
+  await page.keyboard.press('Control+K');
+  await page.getByPlaceholder('Nhập tên màn hình…').fill('storage');
+  await page.getByRole('option', { name: /Cài đặt/ }).click();
+  await expect(page).toHaveURL('/settings');
+  await expect(page.getByRole('heading', { name: 'Cài đặt hệ thống' })).toBeVisible();
+});
+
 test('dashboard shell has no serious accessibility violations', async ({ page }) => {
   await ready(page);
   await page.goto('/');

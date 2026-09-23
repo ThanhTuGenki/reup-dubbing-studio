@@ -8,6 +8,9 @@ test('active Library routes keep the shell', async ({ page }) => {
   await mockLibrary(page); await page.goto('/library'); await expect(page.getByRole('heading', { name: 'Thư viện video' })).toBeVisible();
   await page.goto(`/library/${libraryVideo.id}`); await expect(page.getByRole('heading', { name: 'Video Library mẫu' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeVisible();
+  const breadcrumb = page.getByLabel('Breadcrumb');
+  await expect(breadcrumb.getByRole('link', { name: 'Thư viện video' })).toHaveAttribute('href', '/library');
+  await expect(breadcrumb).toContainText('Chi tiết video');
 });
 
 test('unknown route is accessible and links home', async ({ page }) => {

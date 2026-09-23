@@ -122,9 +122,15 @@
 .topbar { position: sticky; z-index: 20; top: 0; min-height: var(--topbar-h); display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-6); border-bottom: 1px solid var(--border); background: color-mix(in oklch, var(--surface) 94%, transparent); backdrop-filter: blur(18px); }
 .navigation-trigger { flex: none; color: var(--muted-fg); }
 .breadcrumb { min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
-.breadcrumb > span { overflow: hidden; color: var(--meta); white-space: nowrap; text-overflow: ellipsis; }
+.breadcrumb > span:first-child { overflow: hidden; color: var(--meta); white-space: nowrap; text-overflow: ellipsis; }
 .breadcrumb svg { width: 14px; height: 14px; flex: none; color: var(--meta); }
 .breadcrumb strong { overflow: hidden; font-weight: var(--weight-ui); white-space: nowrap; text-overflow: ellipsis; }
+.breadcrumb-item { min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+.breadcrumb-item a { color: var(--muted-fg); text-decoration: none; white-space: nowrap; }
+.breadcrumb-item a:hover { color: var(--brand-accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+.app-command-trigger { min-width: 220px; margin-left: auto; justify-content: flex-start; color: var(--muted-fg); }
+.app-command-trigger > span { overflow: hidden; text-overflow: ellipsis; }
+.app-command-trigger kbd { margin-left: auto; padding: 2px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--panel-subtle); color: var(--meta); font: 10px var(--font-code); }
 .main-content { min-width: 0; width: 100%; padding: var(--space-8); }
 .page { width: min(var(--content-max), 100%); margin: 0 auto; }
 .eyebrow { margin: 0 0 var(--space-2); color: var(--muted-fg); font: var(--weight-ui) 12px / 1.4 var(--font-code); letter-spacing: .04em; text-transform: uppercase; }
@@ -593,7 +599,9 @@
 
 @media (max-width: 767px) {
   .topbar { padding: 0 var(--space-4); }
-  .breadcrumb > span, .breadcrumb svg { display: none; }
+  .breadcrumb > span:first-child, .breadcrumb-item:not(:last-child), .breadcrumb-item:last-child > svg { display: none; }
+  .app-command-trigger { min-width: 44px; width: 44px; margin-left: auto; padding-inline: 0; }
+  .app-command-trigger > span, .app-command-trigger kbd { display: none; }
   .main-content { padding: var(--space-6) var(--space-4); }
   .settings-grid, .settings-two-columns, .settings-retention-grid { grid-template-columns: 1fr; }
   .settings-retention-card { grid-column: auto; }
