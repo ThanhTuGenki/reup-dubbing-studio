@@ -2,6 +2,7 @@ export {
   createClient,
   getLiveness,
   getReadiness,
+  getDashboard,
   getSettings,
   updateSettings,
   testContentAgentConnection,
@@ -268,4 +269,8 @@ export {
   type PublicationTaskEnvelope,
   type PublishPackageEnvelope,
   type PublicationTaskListEnvelope,
+  type Dashboard,
+  type DashboardEnvelope,
+  type DashboardAttentionItem,
+  type DashboardActivityItem,
 } from '@reup-dubbing-studio/api-contract';

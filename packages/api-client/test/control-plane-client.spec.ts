@@ -4,6 +4,7 @@ import {
   createClient,
   getLiveness,
   getReadiness,
+  getDashboard,
   getSettings,
   updateSettings,
   testContentAgentConnection,
@@ -42,6 +43,7 @@ describe('Control Plane client public API', () => {
     expect(createClient).toBeTypeOf('function');
     expect(getLiveness).toBeTypeOf('function');
     expect(getReadiness).toBeTypeOf('function');
+    expect(getDashboard).toBeTypeOf('function');
     expect(getSettings).toBeTypeOf('function');
     expect(updateSettings).toBeTypeOf('function');
     expect(testContentAgentConnection).toBeTypeOf('function');

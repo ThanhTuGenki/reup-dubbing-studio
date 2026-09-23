@@ -4,6 +4,97 @@ export type ClientOptions = {
     baseUrl: 'http://localhost:3000/v1' | (string & {});
 };
 
+export type DashboardSeverity = 'CRITICAL' | 'WARNING';
+
+export type DashboardAttentionCode = 'WORKER_BILLING_SAFE_TO_TERMINATE' | 'WORKER_BILLING_OFFLINE' | 'PUBLICATION_OVERDUE' | 'SOURCE_CREDENTIAL_EXPIRED' | 'QUEUE_JOB_FAILED' | 'PUBLICATION_NEEDS_REVISION' | 'SOURCE_CREDENTIAL_EXPIRING' | 'QUEUE_WAITING_FOR_GPU' | 'SOURCE_ACCOUNT_COOLDOWN';
+
+export type DashboardAttentionItem = {
+    id: string;
+    code: DashboardAttentionCode;
+    severity: DashboardSeverity;
+    title: string;
+    detail: string;
+    entityType: 'PIPELINE_JOB' | 'PUBLICATION_TASK' | 'WORKER' | 'SOURCE_ACCOUNT';
+    entityId: UuidV7;
+    occurredAt: string;
+    dueAt: string | null;
+    href: string;
+};
+
+export type DashboardActivityItem = {
+    id: string;
+    kind: 'QUEUE_EVENT' | 'AUDIT_EVENT' | 'PUBLICATION_PROOF_SUBMITTED' | 'PUBLICATION_PROOF_VERIFIED';
+    title: string;
+    detail: string | null;
+    entityType: string;
+    entityId: string | null;
+    occurredAt: string;
+    href: string;
+};
+
+export type DashboardVideoCounts = {
+    INGEST_QUEUED: number;
+    INGESTING: number;
+    INGESTED: number;
+    PROCESSING: number;
+    AWAITING_REVIEW: number;
+    READY_TO_PUBLISH: number;
+    PUBLISHED: number;
+    FAILED: number;
+    ARCHIVED: number;
+};
+
+export type Dashboard = {
+    generatedAt: string;
+    timezone: 'Asia/Ho_Chi_Minh';
+    videos: {
+        countsByStatus: DashboardVideoCounts;
+        processing: number;
+        awaitingReview: number;
+        readyToPublish: number;
+        published: number;
+        failed: number;
+        totalActive: number;
+    };
+    queue: {
+        active: number;
+        running: number;
+        waitingForGpu: number;
+        failed: number;
+    };
+    publishing: {
+        upcoming: number;
+        overdue: number;
+        awaitingProof: number;
+        awaitingVerification: number;
+        needsRevision: number;
+    };
+    workers: {
+        online: number;
+        busy: number;
+        safeToTerminate: number;
+        unhealthy: number;
+        activeLeases: number;
+    };
+    cost: {
+        openBillingSessions: number;
+        estimatedCostCp: string;
+        estimatedCostVnd: string | null;
+        vndCoverage: 'COMPLETE' | 'PARTIAL' | 'NONE';
+    };
+    attention: {
+        items: Array<DashboardAttentionItem>;
+        total: number;
+    };
+    recentActivity: {
+        items: Array<DashboardActivityItem>;
+    };
+};
+
+export type DashboardEnvelope = SuccessEnvelope & {
+    data?: Dashboard;
+};
+
 export type PublishingPlatform = 'YOUTUBE' | 'FACEBOOK';
 
 export type PublishPackageStatus = 'DRAFT' | 'GENERATED' | 'APPROVED' | 'SUPERSEDED';
@@ -1535,6 +1626,35 @@ export type WorkerIfMatch = string;
 export type PublicationTaskId = UuidV7;
 
 export type PublicationIfMatch = string;
+
+export type GetDashboardData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/dashboard';
+};
+
+export type GetDashboardErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetDashboardError = GetDashboardErrors[keyof GetDashboardErrors];
+
+export type GetDashboardResponses = {
+    /**
+     * Snapshot Dashboard hiện tại.
+     */
+    200: DashboardEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type GetDashboardResponse = GetDashboardResponses[keyof GetDashboardResponses];
 
 export type ListChannelProfilesData = {
     body?: never;
