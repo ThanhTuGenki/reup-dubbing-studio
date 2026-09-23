@@ -628,11 +628,16 @@ REGENERATE_SEGMENT
 SEPARATE_AUDIO
 RENDER
 EXPORT_SRT
-UPLOAD_OUTPUTS
+UPLOAD_OUTPUTS (legacy enum; job mới commit output trong task tạo asset)
 GENERATE_PUBLISH_PACKAGE
 ```
 
-Task là đơn vị được worker lease. Không giao nguyên video job độc quyền cho một GPU Worker trong toàn bộ vòng đời, vì các stage cần loại tài nguyên khác nhau và có bước chờ người dùng.
+Task là đơn vị được executor xử lý. GPU task được Worker lease qua HTTPS; task
+`IO`, `CPU`, `CONTROL_PLANE` do runner/use case phía VPS xử lý và
+`HUMAN_REVIEW` do người dùng hoàn tất. Không giao nguyên video job độc quyền cho
+một GPU Worker trong toàn bộ vòng đời, vì các stage cần loại tài nguyên khác nhau
+và có bước chờ người dùng. Mapping hiện hành nằm tại
+[`worker-task-execution.md`](worker-task-execution.md).
 
 ### 8.3 Resource class
 
@@ -647,7 +652,8 @@ CONTROL_PLANE
 HUMAN_REVIEW
 ```
 
-Task chỉ được cấp cho worker có capability và slot tương ứng.
+GPU task chỉ được cấp cho Worker có role, capability và slot tương ứng. Các
+resource class còn lại không được GPU Worker claim.
 
 ### 8.4 Lease nguyên tắc
 

@@ -6,6 +6,7 @@
 - **Cập nhật:** 2026-08-31 — EzyCloudX dùng manual registered worker cho tới khi có API công khai chính thức
 - **Cập nhật:** 2026-08-31 — GPU Worker phát hành bằng Docker image có version; thêm máy thuê bằng cấu hình và bootstrap token, không sửa code
 - **Cập nhật:** 2026-09-01 — chốt OmniVoice là TTS engine duy nhất; tách Batch Media Worker và Interactive TTS Worker trên Docker GPU EzyCloudX
+- **Cập nhật:** 2026-09-23 — xóa hard-sub là tùy chọn theo effective Profile và mặc định tắt trong MVP
 - **Trạng thái:** `ACCEPTED` cho phần nghiệp vụ. Phần **tech stack (§12) đã bị thay thế** — xem dưới.
 - **Nguồn chuẩn cho:** vấn đề, người dùng, phạm vi, luồng nghiệp vụ, khái niệm Profile.
 - **KHÔNG phải nguồn chuẩn cho:** stack kỹ thuật, cấu trúc source code, contract.
@@ -23,8 +24,9 @@
 3. Media job được đưa vào queue. Nếu chưa có GPU, EzyCloudX hiện yêu cầu người
    dùng thuê Docker GPU/VM thủ công và chạy bootstrap command của app.
 4. Khi worker báo `READY`, app tự giao job theo vai trò: Batch Media Worker xử lý
-   VSR/OCR/ASR/Demucs/render; Interactive TTS Worker chạy OmniVoice và được giữ
-   nóng trong phiên Studio để nghe lại câu vừa sửa với độ trễ thấp.
+   OCR/ASR/Demucs/render và VSR khi được bật; Interactive TTS Worker chạy
+   OmniVoice và được giữ nóng trong phiên Studio để nghe lại câu vừa sửa với độ
+   trễ thấp.
 5. Worker trả về video đã lồng tiếng Việt và file SRT rời, không burn-in sub Việt.
 6. Content Agent dùng meta + toàn bộ SRT + thumbnail + Channel Profile để tạo gói
    YouTube/Facebook có cấu trúc, sửa/copy riêng từng trường.
@@ -40,11 +42,11 @@
 
 ## 1. Mục tiêu
 
-Xây một ứng dụng **tự chủ** để reup video: tải video nguồn
-(chủ yếu Douyin/Bilibili — tiếng Trung), **xóa hard-sub gốc**, **dịch + lồng
-tiếng Việt**, xuất **phụ đề Việt `.srt` rời** (không chèn phụ đề Việt vào hình),
-thêm intro/outro, xuất bản 16:9 và 9:16, rồi **đăng và quản lý** trên nhiều
-kênh Facebook + YouTube.
+Xây một ứng dụng **tự chủ** để reup video: tải video nguồn (chủ yếu
+Douyin/Bilibili — tiếng Trung), **tùy chọn xóa hard-sub gốc**, **dịch + lồng tiếng
+Việt**, xuất **phụ đề Việt `.srt` rời** (không chèn phụ đề Việt vào hình), thêm
+intro/outro, xuất bản 16:9 và 9:16, rồi **đăng và quản lý** trên nhiều kênh
+Facebook + YouTube.
 
 Nguyên tắc xuyên suốt: **giữ nguyên nội dung video gốc** (đây là reup, không
 dựng lại từ đầu); **tự động là mặc định, con người chỉ can thiệp ở điểm đáng
@@ -66,7 +68,8 @@ kênh gốc). Thiết kế không nhằm né tránh phát hiện bản quyền.
 
 **Trong phạm vi:**
 - Tải video từ Douyin/Bilibili (và nguồn khác yt-dlp hỗ trợ) bằng cookie đăng nhập.
-- Xóa hard-sub trong vùng chỉ định (mask), bằng inpainting AI.
+- Tùy chọn xóa hard-sub trong vùng chỉ định (mask), bằng inpainting AI; mặc định
+  tắt trong MVP.
 - Bóc lời (ASR) → dịch sang tiếng Việt theo câu.
 - Lồng tiếng Việt: 1 giọng / 2 giọng (người dẫn + nhân vật) / đa giọng tự động
   gán theo nhân vật — chọn theo hồ sơ.
@@ -106,8 +109,8 @@ Dùng chung cho cả kênh:
 
 ### 3.2 Series Profile (Hồ sơ bộ) — kế thừa Channel Profile
 Riêng cho từng bộ truyện/phim:
-- **Mask vùng xóa sub:** tọa độ dải chứa hard-sub (thường cố định ở đáy). Model
-  chỉ inpaint trong vùng này → nhanh và sạch hơn nhiều so với quét cả khung.
+- **Mask vùng xóa sub:** cấu hình tùy chọn, chỉ bắt buộc khi bật xóa hard-sub;
+  model chỉ inpaint trong vùng này → nhanh và sạch hơn nhiều so với quét cả khung.
 - **Chế độ giọng:** `single` / `dual` / `multi-auto`.
 - **Cast sheet:** bản đồ `nhân vật → giọng`, lớn dần khi thêm tập; tập sau tự
   nhận lại nhân vật cũ.
@@ -395,7 +398,7 @@ TERMINATING → TERMINATED`.
    Job Queue  <----------------------------+
         |                                   |
         v                                   |
-   Batch Media Worker: desub -> OCR/ASR -> Demucs
+   Batch Media Worker: OCR/ASR + optional desub -> Demucs
         |
         v
    VPS: dịch -> gán nhân vật
@@ -426,8 +429,8 @@ gán nhân vật theo câu → TTS theo câu → khớp lại timestamp gốc.
 | # | Bước | Công cụ | Nơi chạy |
 |---|------|---------|----------|
 | 1 | Tải video gốc (kèm cookie auth) | yt-dlp | VPS |
-| 2 | Xóa hard-sub trong vùng mask | video-subtitle-remover (STTN/LAMA/ProPainter) | GPU |
-| 3 | Bóc lời: **OCR hard-sub** (chính) + ASR (đối chiếu) → transcript + timestamp câu | PaddleOCR / faster-whisper | GPU |
+| 2 | Xóa hard-sub trong vùng mask khi effective Profile bật; mặc định skip | video-subtitle-remover (STTN/LAMA/ProPainter) | GPU |
+| 3 | Bóc lời từ `RAW`: **OCR hard-sub** (chính) + ASR (đối chiếu) → transcript + timestamp câu | PaddleOCR / faster-whisper | GPU |
 | 4 | Dịch transcript → kịch bản Việt theo câu | LLM (API) | VPS |
 | 5 | Gán nhân vật (nếu chế độ `multi-auto`) + **LLM chọn đoạn highlight** cho bản 9:16 | LLM | VPS |
 | 6 | OmniVoice tạo initial dub từng segment và preview có tiếng | OmniVoice | Interactive TTS Worker |
@@ -438,6 +441,8 @@ gán nhân vật theo câu → TTS theo câu → khớp lại timestamp gốc.
 | 9 | Bàn đăng bài: duyệt/sửa/copy từng trường; tải MP4/SRT/thumbnail; người dùng upload thủ công rồi nhập URL/post ID | Web UI + người dùng | VPS/trình duyệt |
 
 ### 5.1 Xóa hard-sub (bước 2 — rủi ro nhất)
+- Stage này là tùy chọn và mặc định tắt trong MVP. Khi tắt, pipeline không tạo
+  task DESUB, không yêu cầu mask và render dùng video `RAW`.
 - Dùng [video-subtitle-remover](https://github.com/YaoFANGUK/video-subtitle-remover)
   (hỗ trợ CUDA + Apple Silicon).
 - Đây là công cụ wrapper đã chọn cho pipeline; bên trong sẽ dùng model inpainting
@@ -504,6 +509,8 @@ Hard-sub tiếng Trung = lời thoại đã có dạng chữ trên hình kèm ti
 audio. Chiến lược: OCR làm nguồn chính, faster-whisper làm đối chiếu/dự phòng
 (video không có sub hoặc OCR kém). **MVP chạy cả hai trên cùng video để so sánh
 rồi chốt.** Bonus: vùng chữ OCR phát hiện được có thể dùng làm gợi ý mask xóa sub.
+OCR luôn đọc video `RAW`, kể cả khi DESUB được bật; file `DESUBBED` chỉ thay thế
+visual input của bước render, nếu không OCR sẽ mất chính vùng chữ cần nhận dạng.
 
 ### 5.5 Audio: tách nhạc nền bằng Demucs (đã chốt)
 Không ducking toàn bộ audio gốc (sẽ mất nhạc nền + hiệu ứng, video "chết").
@@ -698,12 +705,13 @@ Mỗi giai đoạn có spec → plan → triển khai riêng.
 
 ### Giai đoạn 1 — MVP (làm trước, kiểm chứng rủi ro)
 Chạy trọn **1 video** từ đầu đến cuối bằng **script CLI**, chưa có web UI/Content Agent:
-tải → xóa hard-sub (mask cố định) → bóc lời (**so sánh OCR vs ASR**) → dịch →
-lồng **1 giọng** → **Demucs giữ nhạc nền** → render video lồng tiếng 16:9 không
-burn-in phụ đề + xuất file SRT rời cùng tên.
-**Mục tiêu:** đo (a) chất lượng xóa hard-sub, (b) độ tự nhiên giọng lồng,
-(c) OCR hay ASR chính xác hơn, (d) chi phí GPU thật/video. Nếu đạt, phần còn
-lại chỉ là mở rộng; nếu không, biết sớm mà không tốn công xây cả hệ thống.
+tải → tùy chọn xóa hard-sub (mặc định skip) + bóc lời từ raw (**so sánh OCR vs
+ASR**) → dịch → lồng **1 giọng** → **Demucs giữ nhạc nền** → render video lồng
+tiếng 16:9 không burn-in phụ đề + xuất file SRT rời cùng tên.
+**Mục tiêu:** đo (a) độ tự nhiên giọng lồng, (b) OCR hay ASR chính xác hơn,
+(c) chi phí GPU thật/video; chất lượng xóa hard-sub chỉ đo khi bật feature. Nếu
+đạt, phần còn lại chỉ là mở rộng; nếu không, biết sớm mà không tốn công xây cả
+hệ thống.
 
 ### Giai đoạn 2 — Studio & tự động hóa
 Web dashboard + hàng đợi job + `MANUAL_REGISTERED_WORKER` cho EzyCloudX;
@@ -798,7 +806,8 @@ TypeScript/React chỉ xuất hiện ở GĐ2 khi dựng giao diện.
   tới khi provider có official billing API.
 - Khối lượng: 5–10 video/ngày, 3–5 kênh.
 - Thể loại: recap phim/truyện, tin tức/trend, game/highlight, kiến thức tổng hợp.
-- Sub gốc: hard-sub cháy vào hình; nguồn nước ngoài → dịch sang Việt.
+- Sub gốc: hard-sub cháy vào hình; nguồn nước ngoài → dịch sang Việt. Xóa
+  hard-sub là tùy chọn theo Profile và mặc định tắt trong MVP.
 - Gán giọng: tùy biến theo hồ sơ (single/dual/multi-auto).
 - Đặt tên cấu hình: Channel Profile + Series Profile (thay "template").
 - Lưu trữ: có asset store; sau khi đăng xác nhận đạt → xóa `raw` + `desubbed` +

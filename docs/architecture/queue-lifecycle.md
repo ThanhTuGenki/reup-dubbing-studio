@@ -250,3 +250,5 @@ notification inbox hay cam kết replay dài hạn.
 - Không notification center persistent; chỉ toast/SSE transient.
 - Không implement scheduler, task runner, lease reaper hoặc Worker/GPU trong slice
   Web + API này.
+- Baseline cho executor ownership, Worker eligibility và lease protocol tiếp theo
+  nằm tại [`worker-task-execution.md`](worker-task-execution.md).

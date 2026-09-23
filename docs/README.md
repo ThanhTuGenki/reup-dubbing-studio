@@ -16,6 +16,7 @@ thư mục mới.
 | Mô hình dữ liệu và inventory bảng toàn hệ thống         | [`architecture/database-design.md`](architecture/database-design.md)  | `DRAFT`, review trước từng migration                 |
 | Discovery và ingest metadata từ Douyin                 | [`architecture/douyin-discovery.md`](architecture/douyin-discovery.md) | `ACCEPTED`, contract/schema MVP; mode nâng cao giữ validation gate |
 | GPU Worker registry, enrollment, heartbeat và drain    | [`architecture/gpu-worker-control-plane.md`](architecture/gpu-worker-control-plane.md) | `ACCEPTED`, contract/schema Control Plane |
+| GPU Worker task ownership, capability, lease và asset boundary | [`architecture/worker-task-execution.md`](architecture/worker-task-execution.md) | `ACCEPTED`, baseline trước contract task |
 | Video Library aggregate, output, asset và filter       | [`architecture/video-library.md`](architecture/video-library.md) | `ACCEPTED`, read model/API boundary |
 | Studio editor, transcript, segment, cast và review     | [`architecture/studio-domain-analysis.md`](architecture/studio-domain-analysis.md) | `ACCEPTED`, API/schema boundary trước implementation |
 | Review policy, inheritance và approval gates           | [`architecture/review-policy.md`](architecture/review-policy.md) | `ACCEPTED`, policy/snapshot boundary MVP |
@@ -29,6 +30,7 @@ thư mục mới.
 | Nợ kỹ thuật đã biết                                     | [`operations/known-followups.md`](operations/known-followups.md)       | ⚠️ tracker tạm                                       |
 | Bố cục màn hình và route đã duyệt                       | [`reference/ui-prototype/`](reference/ui-prototype/)                   | `ARCHIVED`                                           |
 | Roadmap và tiến độ cấp feature Web + API                | [`product/web-api-feature-roadmap.md`](product/web-api-feature-roadmap.md) | `ACTIVE`                                          |
+| Roadmap và tiến độ triển khai GPU Worker                | [`product/gpu-worker-implementation-roadmap.md`](product/gpu-worker-implementation-roadmap.md) | `ACTIVE`                              |
 | **Trạng thái issue/task chi tiết**                      | [GitHub Project #1](https://github.com/users/ThanhTuGenki/projects/1)  | **không nhân đôi vào file**                          |
 
 ## Bốn quy tắc
