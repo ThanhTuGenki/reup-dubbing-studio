@@ -149,7 +149,7 @@
 - [x] Hoàn thiện toast/SSE transient; không tạo notification center persistent.
 - [x] Chạy accessibility và responsive QA cho các viewport đã chốt.
 - [x] Chạy contract test, integration test và Playwright cho các flow chính.
-- [ ] Rà soát security: secret redaction, presigned URL, input validation và audit.
+- [x] Rà soát security: secret redaction, presigned URL, input validation và audit.
 - [ ] Rà soát performance: query/index, bundle splitting và list virtualization khi
   có dữ liệu thực tế.
 - [ ] Cập nhật tài liệu vận hành và đánh dấu toàn bộ feature hoàn tất.
