@@ -413,6 +413,11 @@ Task claim/lease/renew/complete/fail không thuộc checkbox phân tích này v�
 được thêm Just-in-Time trong Task execution slice. Không tạo endpoint giả trả
 task chưa thể thực thi.
 
+Ranh giới executor, capability, lifecycle lease và asset manifest cho slice đó
+đã được chốt tại
+[`worker-task-execution.md`](worker-task-execution.md). Tài liệu hiện tại vẫn là
+nguồn chuẩn cho registry/session/heartbeat/drain, không override task baseline.
+
 Mọi response dùng envelope/Problem Details chung, request ID, UUID v7, UTC và
 camelCase. Contract Web đi vào `web.openapi.yaml`; worker boundary đi vào
 `worker.openapi.yaml` trong task API kế tiếp rồi mới generate/verify consumer.
