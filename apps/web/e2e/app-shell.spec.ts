@@ -4,14 +4,17 @@ import { expect, test, type Page } from '@playwright/test';
 const requestId = '0191f3d2-7f5b-7abc-8b2e-123456789abd';
 async function ready(page: Page) {
   await page.route('**/v1/health/ready', (route) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'X-Request-Id': requestId }, body: JSON.stringify({ data: { status: 'ok' }, meta: { requestId } }) }));
+  await page.route('**/v1/dashboard', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dashboardEnvelope) }));
 }
+
+const dashboardEnvelope = { data: { generatedAt: '2026-09-23T03:30:00.000Z', timezone: 'Asia/Ho_Chi_Minh', videos: { countsByStatus: { INGEST_QUEUED: 0, INGESTING: 0, INGESTED: 0, PROCESSING: 1, AWAITING_REVIEW: 2, READY_TO_PUBLISH: 3, PUBLISHED: 4, FAILED: 0, ARCHIVED: 0 }, processing: 1, awaitingReview: 2, readyToPublish: 3, published: 4, failed: 0, totalActive: 6 }, queue: { active: 2, running: 1, waitingForGpu: 0, failed: 0 }, publishing: { upcoming: 1, overdue: 0, awaitingProof: 0, awaitingVerification: 0, needsRevision: 0 }, workers: { online: 1, busy: 1, safeToTerminate: 0, unhealthy: 0, activeLeases: 1 }, cost: { openBillingSessions: 1, estimatedCostCp: '100.000000', estimatedCostVnd: null, vndCoverage: 'NONE' }, attention: { items: [], total: 0 }, recentActivity: { items: [] } }, meta: { requestId } };
 
 for (const width of [375, 768, 1440]) {
   test(`shell is usable without horizontal overflow at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await ready(page);
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Nền tảng vận hành đã sẵn sàng.' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tổng quan vận hành' })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 }
@@ -40,10 +43,10 @@ test('desktop shell exposes grouped navigation and can collapse', async ({ page 
   await expect(page.locator('[data-slot="sidebar"][data-state="collapsed"]')).toBeVisible();
 });
 
-test('foundation shell has no serious accessibility violations', async ({ page }) => {
+test('dashboard shell has no serious accessibility violations', async ({ page }) => {
   await ready(page);
   await page.goto('/');
-  await expect(page.getByText('Sẵn sàng', { exact: true })).toBeVisible();
+  await expect(page.getByText('Không có việc khẩn cấp')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter(({ impact }) => impact === 'serious' || impact === 'critical')).toEqual([]);
 });

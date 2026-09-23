@@ -91,8 +91,9 @@ export type Dashboard = {
     };
 };
 
-export type DashboardEnvelope = SuccessEnvelope & {
-    data?: Dashboard;
+export type DashboardEnvelope = {
+    data: Dashboard;
+    meta: SuccessMeta;
 };
 
 export type PublishingPlatform = 'YOUTUBE' | 'FACEBOOK';

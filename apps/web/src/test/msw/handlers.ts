@@ -31,9 +31,11 @@ import {
   workerListEnvelope,
   publicationListEnvelope,
   publicationDetailEnvelope,
+  dashboardEnvelope,
 } from '../fixtures/control-plane';
 
 export const handlers = [
+  http.get(`${CONTROL_PLANE_BASE_URL}/dashboard`, () => HttpResponse.json(dashboardEnvelope)),
   http.get(`${CONTROL_PLANE_BASE_URL}${LIVENESS_PATH}`, () => HttpResponse.json(
     liveEnvelope,
     { headers: { 'X-Request-Id': liveEnvelope.meta.requestId } },
