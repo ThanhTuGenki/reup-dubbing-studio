@@ -10,6 +10,13 @@ import { QueuePage } from './queue-page';
 
 describe('QueuePage', () => {
   afterEach(() => vi.unstubAllGlobals());
+  it('opens API-owned Dashboard deep links directly', async () => {
+    renderApp(<QueuePage />, { route: `/queue?jobId=${queueDetailEnvelope.data.id}` });
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('Tiến độ pipeline')).toBeInTheDocument();
+    expect(within(dialog).getByText('Version 1')).toBeInTheDocument();
+  });
+
   it('lists safe job progress and opens task details', async () => {
     const user = userEvent.setup();
     renderApp(<QueuePage />, { route: '/queue' });

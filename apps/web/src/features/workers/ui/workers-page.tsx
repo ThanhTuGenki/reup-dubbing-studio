@@ -16,6 +16,8 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useQueryInvalidationStream } from '@/shared/api/use-query-invalidation-stream';
 import { ListState } from '@/shared/ui/list-state';
+import { DISPLAY_TIMEZONE, toVietnamDateTimeInput, vietnamDateTimeInputToIso } from '@/shared/lib/display-time';
+import { useQuerySelection } from '@/shared/lib/use-query-selection';
 import { addWorker, confirmTermination, requestDrain, workerEventsUrl, WorkersApiError, type CreateWorkerResult } from '../api/workers-api';
 import { workerImagesQuery, workerKeys, workerQuery, workersQuery } from '../api/workers-query';
 
@@ -27,7 +29,7 @@ export function WorkersPage() {
   const images = useQuery(workerImagesQuery());
   const [adding, setAdding] = useState(false);
   const [created, setCreated] = useState<CreateWorkerResult | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useQuerySelection('workerId');
   const [pendingAction, setPendingAction] = useState<{ kind: 'drain' | 'terminate'; worker: Worker } | null>(null);
   const actionKeys = useRef(new Map<string, string>());
   useQueryInvalidationStream({ url: workerEventsUrl(), queryKeys: [workerKeys.all], eventName: 'worker.invalidate', enabled: typeof EventSource !== 'undefined' });
@@ -94,7 +96,7 @@ function AddWorkerDialog({ open, images, imagesLoading, created, onOpenChange, o
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const vramGb = optionalNumber(data.get('expectedVramGb'));
-    const input: CreateWorker = { displayName: required(data, 'displayName'), role, provider: required(data, 'provider'), approvedImageId: required(data, 'approvedImageId'), hourlyRateCp: required(data, 'hourlyRateCp'), billingStartedAt: new Date(required(data, 'billingStartedAt')).toISOString(), ...(optional(data, 'providerInstanceId') ? { providerInstanceId: optional(data, 'providerInstanceId') } : {}), ...(optional(data, 'expectedGpuModel') ? { expectedGpuModel: optional(data, 'expectedGpuModel') } : {}), ...(vramGb !== null ? { expectedVramMb: Math.round(vramGb * 1024) } : {}), ...(optional(data, 'paidVndPerCp') ? { paidVndPerCp: optional(data, 'paidVndPerCp') } : {}) };
+    const input: CreateWorker = { displayName: required(data, 'displayName'), role, provider: required(data, 'provider'), approvedImageId: required(data, 'approvedImageId'), hourlyRateCp: required(data, 'hourlyRateCp'), billingStartedAt: vietnamDateTimeInputToIso(required(data, 'billingStartedAt')), ...(optional(data, 'providerInstanceId') ? { providerInstanceId: optional(data, 'providerInstanceId') } : {}), ...(optional(data, 'expectedGpuModel') ? { expectedGpuModel: optional(data, 'expectedGpuModel') } : {}), ...(vramGb !== null ? { expectedVramMb: Math.round(vramGb * 1024) } : {}), ...(optional(data, 'paidVndPerCp') ? { paidVndPerCp: optional(data, 'paidVndPerCp') } : {}) };
     setSubmitting(true);
     const fingerprint = JSON.stringify(input);
     if (request.current?.fingerprint !== fingerprint) request.current = { fingerprint, key: crypto.randomUUID() };
@@ -136,10 +138,10 @@ function firstGpu(worker: Worker) { const inventory = worker.currentSession?.gpu
 function billingCost(data: Record<string, unknown>) { const cp = Number(data.estimatedCostCp); const vnd = Number(data.paidVndPerCp); if (!Number.isFinite(cp)) return '—'; return vnd > 0 ? `${Math.round(cp * vnd).toLocaleString('vi-VN')} ₫ (ước tính)` : `${cp.toLocaleString('vi-VN', { maximumFractionDigits: 2 })} CP`; }
 function providerLabel(worker: Worker) { return [worker.provider, safeText(worker.providerInstanceId)].filter(Boolean).join(' · '); }
 function relativeTime(value: string) { const seconds = Math.max(0, Math.round((Date.now() - new Date(value).valueOf()) / 1000)); if (seconds < 60) return `${seconds} giây trước`; const minutes = Math.round(seconds / 60); if (minutes < 60) return `${minutes} phút trước`; return `${Math.round(minutes / 60)} giờ trước`; }
-function formatDate(value: string) { return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
+function formatDate(value: string) { return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: DISPLAY_TIMEZONE }).format(new Date(value)); }
 function shortId(value: string) { return value.slice(0, 8).toUpperCase(); }
 function compactJson(value: unknown) { const data = record(value); return Object.keys(data).length ? JSON.stringify(data) : '—'; }
 function optional(data: FormData, key: string) { return String(data.get(key) ?? '').trim(); }
 function required(data: FormData, key: string) { return optional(data, key); }
 function optionalNumber(value: FormDataEntryValue | null) { const text = String(value ?? '').trim(); if (!text) return null; const result = Number(text); return Number.isFinite(result) ? result : null; }
-function localDateTime() { const date = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000); return date.toISOString().slice(0, 16); }
+function localDateTime() { return toVietnamDateTimeInput(new Date()); }

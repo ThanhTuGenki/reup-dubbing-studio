@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -9,6 +9,13 @@ import { renderApp } from '@/test/test-utils';
 import { PublishingPage } from './publishing-page';
 
 describe('PublishingPage', () => {
+  it('opens an API-owned Dashboard task deep link directly', async () => {
+    renderApp(<PublishingPage />, { route: `/publishing?taskId=${publicationTask.id}` });
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('YouTube Việt hóa')).toBeInTheDocument();
+    expect(within(dialog).getByText('Version 3')).toBeInTheDocument();
+  });
+
   it('switches between list/calendar and opens the full task workspace', async () => {
     const user = userEvent.setup();
     renderApp(<PublishingPage />, { route: '/publishing' });
@@ -34,6 +41,18 @@ describe('PublishingPage', () => {
     await waitFor(() => expect(ifMatch).toBe('"3"'));
     expect(body).toEqual({ value: 'Tiêu đề đã sửa' });
     expect(await screen.findByText('Version 4')).toBeInTheDocument();
+  });
+
+  it('reads and saves publishing wall-clock values in Asia/Ho_Chi_Minh', async () => {
+    const user = userEvent.setup(); let body: unknown;
+    server.use(http.patch(`${CONTROL_PLANE_BASE_URL}/publication-tasks/:taskId/plan`, async ({ request }) => { body = await request.json(); return HttpResponse.json({ data: { ...publicationTask, version: 4, ...(body as object) }, meta: { requestId: READY_REQUEST_ID } }); }));
+    renderApp(<PublishingPage />, { route: '/publishing' });
+    await user.click((await screen.findAllByRole('button', { name: 'Mở task' }))[0]!);
+    const scheduledAt = await screen.findByLabelText('Thời gian dự kiến');
+    expect(scheduledAt).toHaveValue('2026-09-23T09:00');
+    fireEvent.change(scheduledAt, { target: { value: '2026-09-24T00:30' } });
+    await user.click(screen.getByRole('button', { name: 'Lưu kế hoạch' }));
+    await waitFor(() => expect(body).toMatchObject({ scheduledAt: '2026-09-23T17:30:00.000Z' }));
   });
 
   it('submits append-only proof with an idempotency key and protects dirty drafts', async () => {

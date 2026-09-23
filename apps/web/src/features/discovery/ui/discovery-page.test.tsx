@@ -8,6 +8,13 @@ import { server } from '@/test/msw/server';
 import { DiscoveryPage } from './discovery-page';
 
 describe('DiscoveryPage', () => {
+  it('selects the source account from an API-owned Dashboard deep link', async () => {
+    const linkedAccount = { ...sourceAccount, id: '0191f3d2-7f5b-7abc-8b2e-123456789aef', displayName: 'Nguồn cần kiểm tra' };
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/source-accounts`, () => HttpResponse.json({ data: { items: [sourceAccount, linkedAccount] }, meta: { requestId: READY_REQUEST_ID } })));
+    renderApp(<DiscoveryPage />, { route: `/discovery?sourceAccountId=${linkedAccount.id}` });
+    expect(await screen.findByText('Nguồn cần kiểm tra')).toBeInTheDocument();
+  });
+
   it('lists sanitized source content and supports local selection', async () => {
     const user = userEvent.setup(); renderApp(<DiscoveryPage />);
     expect(await screen.findByText('Mẹo học tiếng Trung')).toBeInTheDocument();

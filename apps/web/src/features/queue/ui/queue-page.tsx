@@ -14,6 +14,8 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQueryInvalidationStream } from '@/shared/api/use-query-invalidation-stream';
 import { ListState } from '@/shared/ui/list-state';
+import { DISPLAY_TIMEZONE } from '@/shared/lib/display-time';
+import { useQuerySelection } from '@/shared/lib/use-query-selection';
 import { cancelJob, QueueApiError, queueEventsUrl, retryJob } from '../api/queue-api';
 import { queueAttemptsQuery, queueJobQuery, queueJobsQuery, queueKeys } from '../api/queue-query';
 
@@ -27,7 +29,7 @@ export function QueuePage() {
   const [resource, setResource] = useState('ALL');
   const [range, setRange] = useState<TimeRange>('7d');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useQuerySelection('jobId');
   const [confirmCancel, setConfirmCancel] = useState(false);
   const query = useDeferredValue(search.trim());
   const filters = useMemo(() => ({ ...(status !== 'ALL' ? { status } : {}), ...(kind !== 'ALL' ? { kind } : {}), ...(resource !== 'ALL' ? { resourceClass: resource } : {}), ...(query ? { query } : {}), ...(range !== 'all' ? { createdFrom: new Date(Date.now() - rangeMs(range)).toISOString() } : {}), limit: 20 }), [kind, query, range, resource, status]);
@@ -79,7 +81,7 @@ const STATUSES: QueueJobStatus[] = ['QUEUED', 'RUNNING', 'WAITING_FOR_GPU', 'WAI
 function summary(jobs: QueueJob[]) { return STATUSES.map((status) => ({ status, count: jobs.filter((job) => job.status === status).length })).filter((item) => item.count > 0); }
 function rangeMs(value: Exclude<TimeRange, 'all'>) { return { '24h': 86_400_000, '7d': 604_800_000, '30d': 2_592_000_000 }[value]; }
 function shortId(value: string) { return value.slice(0, 8).toUpperCase(); }
-function formatDate(value: string) { return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)); }
+function formatDate(value: string) { return new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short', timeZone: DISPLAY_TIMEZONE }).format(new Date(value)); }
 function statusLabel(value: QueueJobStatus) { return ({ QUEUED: 'Đã xếp hàng', RUNNING: 'Đang chạy', WAITING_FOR_GPU: 'Chờ GPU', WAITING_FOR_REVIEW: 'Chờ duyệt', SUCCEEDED: 'Hoàn thành', FAILED: 'Thất bại', CANCELLED: 'Đã hủy' } as const)[value]; }
 function tone(value: QueueJobStatus) { return ({ QUEUED: 'waiting', RUNNING: 'running', WAITING_FOR_GPU: 'gpu', WAITING_FOR_REVIEW: 'review', SUCCEEDED: 'done', FAILED: 'failed', CANCELLED: 'cancelled' } as const)[value]; }
 function JobStatus({ status }: { status: QueueJobStatus }) { return <Badge variant="outline" className={`queue-status status-${tone(status)}`}>{statusLabel(status)}</Badge>; }

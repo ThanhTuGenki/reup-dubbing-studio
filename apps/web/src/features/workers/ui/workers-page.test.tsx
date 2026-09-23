@@ -8,6 +8,13 @@ import { renderApp } from '@/test/test-utils';
 import { WorkersPage } from './workers-page';
 
 describe('WorkersPage', () => {
+  it('opens an API-owned Dashboard worker deep link directly', async () => {
+    renderApp(<WorkersPage />, { route: `/workers?workerId=${gpuWorker.id}` });
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByText('batch-a100-01')).toBeInTheDocument();
+    expect(within(dialog).getByText('Shutdown an toàn')).toBeInTheDocument();
+  });
+
   it('groups workers and exposes safe runtime details', async () => {
     const user = userEvent.setup();
     renderApp(<WorkersPage />, { route: '/workers' });
