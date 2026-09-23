@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './app-sidebar';
@@ -16,7 +17,7 @@ export function AppShell() {
       <AppSidebar />
       <SidebarInset className="app-shell-main" id="main-content" tabIndex={-1}>
         <Topbar />
-        <div className="main-content"><Outlet /></div>
+        <div className="main-content"><Suspense fallback={<div className="page" role="status" aria-live="polite">Đang tải màn hình…</div>}><Outlet /></Suspense></div>
       </SidebarInset>
     </SidebarProvider>
   );
