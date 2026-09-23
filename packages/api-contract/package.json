@@ -9,6 +9,12 @@
     "./worker": "./src/worker.ts",
     "./generated/*": "./src/generated/*"
   },
+  "typesVersions": {
+    "*": {
+      "worker": ["src/worker.ts"],
+      "generated/*": ["src/generated/*"]
+    }
+  },
   "scripts": {
     "generate": "openapi-ts --file openapi-ts.config.ts",
     "lint": "eslint src test openapi-ts.config.ts",

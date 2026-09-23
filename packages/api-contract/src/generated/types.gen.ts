@@ -533,6 +533,7 @@ export type WorkerImage = {
     imageDigest: string;
     registryRef: string;
     contractVersion: number;
+    capabilities: Array<string>;
     status: WorkerImageStatus;
     approvedAt: string;
     revokedAt: string | null;
@@ -545,6 +546,7 @@ export type WorkerSession = {
     imageDigest: string;
     agentVersion: string;
     contractVersion: number;
+    capabilities: Array<string>;
     capacity: {
         [key: string]: unknown;
     };
@@ -552,7 +554,7 @@ export type WorkerSession = {
     lastHeartbeatSequence: string;
     startedAt: string;
     lastHeartbeatAt: string;
-    [key: string]: unknown | UuidV7 | string | number | {
+    [key: string]: unknown | UuidV7 | string | number | Array<string> | {
         [key: string]: unknown;
     } | number | string;
 };
@@ -591,6 +593,7 @@ export type CreateWorkerImage = {
     imageDigest: string;
     registryRef: string;
     contractVersion: number;
+    capabilities: Array<string>;
 };
 
 export type CreateWorker = {

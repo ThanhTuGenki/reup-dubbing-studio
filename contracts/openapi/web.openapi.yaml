@@ -2103,7 +2103,7 @@ components:
     WorkerImageStatus: { type: string, enum: [ACTIVE, REVOKED] }
     WorkerImage:
       type: object
-      required: [id, role, semanticVersion, imageDigest, registryRef, contractVersion, status, approvedAt, revokedAt, version]
+      required: [id, role, semanticVersion, imageDigest, registryRef, contractVersion, capabilities, status, approvedAt, revokedAt, version]
       properties:
         id: { $ref: '#/components/schemas/UuidV7' }
         role: { $ref: '#/components/schemas/WorkerRole' }
@@ -2111,6 +2111,7 @@ components:
         imageDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
         registryRef: { type: string }
         contractVersion: { type: integer, minimum: 1 }
+        capabilities: { type: array, minItems: 1, maxItems: 32, uniqueItems: true, items: { type: string } }
         status: { $ref: '#/components/schemas/WorkerImageStatus' }
         approvedAt: { type: string, format: date-time }
         revokedAt: { type: [string, 'null'], format: date-time }
@@ -2118,13 +2119,14 @@ components:
     WorkerSession:
       type: object
       additionalProperties: true
-      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
+      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capabilities, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
       properties:
         id: { $ref: '#/components/schemas/UuidV7' }
         sessionNonce: { $ref: '#/components/schemas/UuidV7' }
         imageDigest: { type: string }
         agentVersion: { type: string }
         contractVersion: { type: integer }
+        capabilities: { type: array, items: { type: string } }
         capacity: { type: object, additionalProperties: true }
         currentTaskCount: { type: integer, minimum: 0 }
         lastHeartbeatSequence: { type: string, pattern: '^[0-9]+$' }
@@ -2153,13 +2155,14 @@ components:
         updatedAt: { type: string, format: date-time }
     CreateWorkerImage:
       type: object
-      required: [role, semanticVersion, imageDigest, registryRef, contractVersion]
+      required: [role, semanticVersion, imageDigest, registryRef, contractVersion, capabilities]
       properties:
         role: { $ref: '#/components/schemas/WorkerRole' }
         semanticVersion: { type: string }
         imageDigest: { type: string }
         registryRef: { type: string }
         contractVersion: { type: integer, minimum: 1 }
+        capabilities: { type: array, minItems: 1, maxItems: 32, uniqueItems: true, items: { type: string } }
     CreateWorker:
       type: object
       required: [displayName, role, provider, approvedImageId, hourlyRateCp, billingStartedAt]
