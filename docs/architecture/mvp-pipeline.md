@@ -5,6 +5,11 @@
 > trong tài liệu này **không còn trên `main`**. Kiểm bằng `git ls-files`, đừng kiểm
 > bằng `git log`. Thiết kế các stage vẫn dùng được khi dựng lại.
 
+> **Current Web/API MVP decision, 2026-09-23:** tài liệu CLI lịch sử bên dưới xem
+> `DESUB` là stage bắt buộc, nhưng hành vi hiện hành đã đổi. Profile có
+> `removeHardSubEnabled`, mặc định `false`; chỉ profile có giá trị hiệu lực `true`
+> mới yêu cầu mask/reference và mới được Worker tương lai lập lịch `DESUB`.
+
 
 > **Design change, 2026-08-31 (documentation only; code not updated yet):**
 > output must be a Vietnamese-dubbed video with no Vietnamese subtitles burned

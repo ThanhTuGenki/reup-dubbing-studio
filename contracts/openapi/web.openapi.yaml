@@ -2438,7 +2438,7 @@ components:
     PipelineConfig:
       type: object
       additionalProperties: false
-      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, removeHardSubEnabled, output16x9Enabled, output9x16Enabled]
       properties:
         targetLanguage: { type: string, maxLength: 35 }
         defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
@@ -2448,6 +2448,7 @@ components:
         subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
         ttsSpeed: { type: number, minimum: 0.5, maximum: 2 }
         timingPolicy: { $ref: '#/components/schemas/TimingPolicy' }
+        removeHardSubEnabled: { type: boolean, default: false }
         output16x9Enabled: { type: boolean }
         output9x16Enabled: { type: boolean }
     PipelinePatch:
@@ -2463,6 +2464,7 @@ components:
         subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
         ttsSpeed: { type: number, minimum: 0.5, maximum: 2 }
         timingPolicy: { $ref: '#/components/schemas/TimingPolicy' }
+        removeHardSubEnabled: { type: boolean }
         output16x9Enabled: { type: boolean }
         output9x16Enabled: { type: boolean }
     ContentConfig:
@@ -2573,7 +2575,7 @@ components:
     SeriesOverrides:
       type: object
       additionalProperties: false
-      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, removeHardSubEnabled, output16x9Enabled, output9x16Enabled]
       properties:
         targetLanguage: { type: [string, 'null'], maxLength: 35 }
         defaultVoiceProfileId: { oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }] }
@@ -2583,6 +2585,7 @@ components:
         subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
         ttsSpeed: { type: [number, 'null'], minimum: 0.5, maximum: 2 }
         timingPolicy: { oneOf: [{ $ref: '#/components/schemas/TimingPolicy' }, { type: 'null' }] }
+        removeHardSubEnabled: { type: [boolean, 'null'] }
         output16x9Enabled: { type: [boolean, 'null'] }
         output9x16Enabled: { type: [boolean, 'null'] }
     SeriesOverridesPatch:
@@ -2598,6 +2601,7 @@ components:
         subtitleMaxLineLength: { type: [integer, 'null'], minimum: 1, maximum: 500 }
         ttsSpeed: { type: [number, 'null'], minimum: 0.5, maximum: 2 }
         timingPolicy: { oneOf: [{ $ref: '#/components/schemas/TimingPolicy' }, { type: 'null' }] }
+        removeHardSubEnabled: { type: [boolean, 'null'] }
         output16x9Enabled: { type: [boolean, 'null'] }
         output9x16Enabled: { type: [boolean, 'null'] }
     SubtitleMask:
@@ -2612,7 +2616,7 @@ components:
     InheritanceMap:
       type: object
       additionalProperties: false
-      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, output16x9Enabled, output9x16Enabled]
+      required: [targetLanguage, defaultVoiceProfileId, voiceMode, subtitleLanguage, subtitleFilenameRule, subtitleMaxLineLength, ttsSpeed, timingPolicy, removeHardSubEnabled, output16x9Enabled, output9x16Enabled]
       properties:
         targetLanguage: { type: string, enum: [CHANNEL, SERIES] }
         defaultVoiceProfileId: { type: string, enum: [CHANNEL, SERIES] }
@@ -2622,6 +2626,7 @@ components:
         subtitleMaxLineLength: { type: string, enum: [CHANNEL, SERIES] }
         ttsSpeed: { type: string, enum: [CHANNEL, SERIES] }
         timingPolicy: { type: string, enum: [CHANNEL, SERIES] }
+        removeHardSubEnabled: { type: string, enum: [CHANNEL, SERIES] }
         output16x9Enabled: { type: string, enum: [CHANNEL, SERIES] }
         output9x16Enabled: { type: string, enum: [CHANNEL, SERIES] }
     SeriesProfile:

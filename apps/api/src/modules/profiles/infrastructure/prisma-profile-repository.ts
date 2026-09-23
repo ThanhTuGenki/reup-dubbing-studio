@@ -299,6 +299,7 @@ function channelPipelineData(input: PipelineConfig) {
     defaultVoiceMode: input.voiceMode, subtitleLanguage: input.subtitleLanguage,
     subtitleFilenameRule: input.subtitleFilenameRule, subtitleMaxLineLength: input.subtitleMaxLineLength,
     ttsSpeed: input.ttsSpeed, timingPolicy: input.timingPolicy,
+    removeHardSubEnabled: input.removeHardSubEnabled,
     output16x9Enabled: input.output16x9Enabled, output9x16Enabled: input.output9x16Enabled,
   };
 }
@@ -314,6 +315,7 @@ function channelPipelinePatch(input: Partial<PipelineConfig> | undefined): Prism
     ...(input.subtitleMaxLineLength !== undefined ? { subtitleMaxLineLength: input.subtitleMaxLineLength } : {}),
     ...(input.ttsSpeed !== undefined ? { ttsSpeed: input.ttsSpeed } : {}),
     ...(input.timingPolicy !== undefined ? { timingPolicy: input.timingPolicy } : {}),
+    ...(input.removeHardSubEnabled !== undefined ? { removeHardSubEnabled: input.removeHardSubEnabled } : {}),
     ...(input.output16x9Enabled !== undefined ? { output16x9Enabled: input.output16x9Enabled } : {}),
     ...(input.output9x16Enabled !== undefined ? { output9x16Enabled: input.output9x16Enabled } : {}),
   };
@@ -358,6 +360,7 @@ function seriesOverrideData(input: Partial<SeriesOverrides> | undefined) {
     ...(input.subtitleMaxLineLength !== undefined ? { subtitleMaxLineLengthOverride: input.subtitleMaxLineLength } : {}),
     ...(input.ttsSpeed !== undefined ? { ttsSpeedOverride: input.ttsSpeed } : {}),
     ...(input.timingPolicy !== undefined ? { timingPolicyOverride: input.timingPolicy } : {}),
+    ...(input.removeHardSubEnabled !== undefined ? { removeHardSubOverride: input.removeHardSubEnabled } : {}),
     ...(input.output16x9Enabled !== undefined ? { output16x9Override: input.output16x9Enabled } : {}),
     ...(input.output9x16Enabled !== undefined ? { output9x16Override: input.output9x16Enabled } : {}),
   };
@@ -372,6 +375,7 @@ function maskData(mask: CreateSeriesProfile['mask'] | undefined) {
 
 function toChannelView(row: ChannelRow): ChannelProfileView {
   const issues: string[] = [];
+  if (row.removeHardSubEnabled) issues.push('MASK_REQUIRED');
   if (!row.output16x9Enabled && !row.output9x16Enabled) issues.push('OUTPUT_REQUIRED');
   if (!row.defaultVoiceProfileId) issues.push('DEFAULT_VOICE_REQUIRED');
   else if (row.defaultVoice?.status !== 'READY') issues.push('DEFAULT_VOICE_NOT_READY');
@@ -403,6 +407,7 @@ function toSeriesView(row: SeriesRow): SeriesProfileView {
     subtitleFilenameRule: row.subtitleFilenameRuleOverride,
     subtitleMaxLineLength: row.subtitleMaxLineLengthOverride,
     ttsSpeed: decimal(row.ttsSpeedOverride), timingPolicy: row.timingPolicyOverride,
+    removeHardSubEnabled: row.removeHardSubOverride,
     output16x9Enabled: row.output16x9Override, output9x16Enabled: row.output9x16Override,
   };
   const effectiveConfig = mergePipeline(parent.pipeline, overrides);
@@ -412,13 +417,17 @@ function toSeriesView(row: SeriesRow): SeriesProfileView {
     remove(issues, 'DEFAULT_VOICE_NOT_READY');
     if (row.defaultVoiceOverride?.status !== 'READY') issues.push('DEFAULT_VOICE_NOT_READY');
   }
+  remove(issues, 'MASK_REQUIRED');
   remove(issues, 'OUTPUT_REQUIRED');
   if (!effectiveConfig.output16x9Enabled && !effectiveConfig.output9x16Enabled) issues.push('OUTPUT_REQUIRED');
   const mask = row.maskX === null ? null : {
     x: decimal(row.maskX)!, y: decimal(row.maskY)!, width: decimal(row.maskWidth)!, height: decimal(row.maskHeight)!,
   };
   const assets = row.assets.map(assetView);
-  if (mask && !assets.some((item) => item.role === 'MASK_REFERENCE_FRAME')) issues.push('MASK_REFERENCE_ASSET_REQUIRED');
+  if (effectiveConfig.removeHardSubEnabled) {
+    if (!mask) issues.push('MASK_REQUIRED');
+    else if (!assets.some((item) => item.role === 'MASK_REFERENCE_FRAME')) issues.push('MASK_REFERENCE_ASSET_REQUIRED');
+  }
   if (effectiveConfig.voiceMode !== 'SINGLE') issues.push('CAST_REQUIRED');
   if (row.channelProfile.status !== 'ACTIVE') issues.push('PARENT_CHANNEL_NOT_ACTIVE');
   const uniqueIssues = [...new Set(issues)];
@@ -437,6 +446,7 @@ function channelPipeline(row: ChannelRow): PipelineConfig {
     voiceMode: row.defaultVoiceMode, subtitleLanguage: row.subtitleLanguage,
     subtitleFilenameRule: row.subtitleFilenameRule, subtitleMaxLineLength: row.subtitleMaxLineLength,
     ttsSpeed: decimal(row.ttsSpeed)!, timingPolicy: row.timingPolicy,
+    removeHardSubEnabled: row.removeHardSubEnabled,
     output16x9Enabled: row.output16x9Enabled, output9x16Enabled: row.output9x16Enabled,
   };
 }

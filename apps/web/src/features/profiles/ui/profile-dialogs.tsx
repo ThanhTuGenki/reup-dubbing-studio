@@ -65,6 +65,7 @@ export function ChannelProfileDialog({ open, snapshot, onOpenChange }: {
         <SelectField label="Voice mode" value={draft.voiceMode} onChange={(value) => update('voiceMode', value as ChannelDraft['voiceMode'])}><SelectItem value="SINGLE">Một giọng</SelectItem><SelectItem value="DUAL">Hai giọng</SelectItem><SelectItem value="MULTI_AUTO">Tự động nhiều giọng</SelectItem></SelectField>
         <TextField id="channel-tts-speed" label="Tốc độ TTS" inputMode="decimal" value={draft.ttsSpeed} error={errors.ttsSpeed} onChange={(value) => update('ttsSpeed', value)} />
         <SelectField label="Timing policy" value={draft.timingPolicy} onChange={(value) => update('timingPolicy', value as ChannelDraft['timingPolicy'])}><SelectItem value="PRESERVE_SEGMENT">Giữ segment</SelectItem><SelectItem value="FIT_SEGMENT">Fit segment</SelectItem><SelectItem value="ALLOW_DRIFT">Cho phép lệch</SelectItem></SelectField>
+        <Field className="profile-form-full"><div className="profile-inline-heading"><div><FieldLabel htmlFor="channel-remove-hard-sub">Xóa hard-sub</FieldLabel><FieldDescription>Mặc định tắt cho MVP. Chỉ bật khi video cần xóa subtitle dính trên hình.</FieldDescription></div><Switch id="channel-remove-hard-sub" checked={draft.removeHardSubEnabled} onCheckedChange={(checked) => update('removeHardSubEnabled', checked)} /></div></Field>
         <div className="profile-output-options"><Check label="Output 16:9" checked={draft.output16x9Enabled} onChange={(value) => update('output16x9Enabled', value)} /><Check label="Output 9:16" checked={draft.output9x16Enabled} onChange={(value) => update('output9x16Enabled', value)} />{errors.outputs && <FieldError>{errors.outputs}</FieldError>}</div>
       </AccordionContent></AccordionItem>
       <AccordionItem value="content"><AccordionTrigger>Content Agent và destination</AccordionTrigger><AccordionContent className="profile-form-grid">
@@ -94,6 +95,10 @@ export function SeriesProfileDialog({ open, snapshot, channels, initialChannelId
     const link = snapshot?.profile.assets.find((item) => item.role === 'MASK_REFERENCE_FRAME');
     if (snapshot && link) void fetchMaskPreview(snapshot.profile.id, link.linkId).then((grant) => setPreviewUrl(grant.url)).catch(() => undefined);
   }, [initialChannelId, open, snapshot]);
+  const channelRemoveHardSubEnabled = channels.find((item) => item.id === draft.channelProfileId)?.pipeline.removeHardSubEnabled ?? false;
+  const effectiveRemoveHardSubEnabled = draft.overridden.has('removeHardSubEnabled')
+    ? draft.removeHardSubEnabled
+    : channelRemoveHardSubEnabled;
   const mutation = useMutation({
     mutationFn: async () => {
       const saved = snapshot
@@ -114,10 +119,13 @@ export function SeriesProfileDialog({ open, snapshot, channels, initialChannelId
       toast.error(message(error, 'Không thể lưu Series Profile.'));
     },
   });
-  const submit = (event: FormEvent) => { event.preventDefault(); const next = validateSeriesDraft(draft); setErrors(next); if (!Object.keys(next).length) mutation.mutate(); };
+  const submit = (event: FormEvent) => { event.preventDefault(); const next = validateSeriesDraft({ ...draft, removeHardSubEnabled: effectiveRemoveHardSubEnabled }); setErrors(next); if (!Object.keys(next).length) mutation.mutate(); };
   const update = (patch: Partial<SeriesDraft>) => setDraft((current) => ({ ...current, ...patch }));
   const toggleOverride = (field: SeriesField, checked: boolean) => setDraft((current) => {
-    const overridden = new Set(current.overridden); if (checked) overridden.add(field); else overridden.delete(field); return { ...current, overridden };
+    const overridden = new Set(current.overridden); if (checked) overridden.add(field); else overridden.delete(field);
+    return field === 'removeHardSubEnabled' && checked
+      ? { ...current, overridden, removeHardSubEnabled: channelRemoveHardSubEnabled }
+      : { ...current, overridden };
   });
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="profile-dialog sm:max-w-4xl"><form onSubmit={submit} noValidate><DialogHeader><DialogTitle>{snapshot ? 'Sửa Series Profile' : 'Tạo Series Profile'}</DialogTitle><DialogDescription>Chỉ bật ghi đè cho giá trị thật sự khác Channel cha; phần còn lại luôn theo cấu hình mới nhất của Channel.</DialogDescription></DialogHeader><div className="profile-dialog-body"><FieldGroup>
     <div className="profile-form-grid"><TextField id="series-name" label="Tên series" value={draft.name} error={errors.name} onChange={(name) => update({ name })} /><SelectField label="Channel cha" value={draft.channelProfileId} onChange={(channelProfileId) => update({ channelProfileId })} disabled={Boolean(snapshot)} error={errors.channelProfileId}>{channels.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectField><SelectField label="Trạng thái" value={draft.status} onChange={(status) => update({ status: status as SeriesDraft['status'] })} disabled={!snapshot}><SelectItem value="DRAFT">Bản nháp</SelectItem><SelectItem value="ACTIVE">Hoạt động</SelectItem></SelectField></div>
@@ -131,11 +139,12 @@ export function SeriesProfileDialog({ open, snapshot, channels, initialChannelId
         <OverrideField label="Ký tự tối đa mỗi dòng" field="subtitleMaxLineLength" draft={draft} onToggle={toggleOverride} error={errors.subtitleMaxLineLength}><Input inputMode="numeric" value={draft.subtitleMaxLineLength} disabled={!draft.overridden.has('subtitleMaxLineLength')} onChange={(event) => update({ subtitleMaxLineLength: event.target.value })} /></OverrideField>
         <OverrideField label="Tốc độ TTS" field="ttsSpeed" draft={draft} onToggle={toggleOverride} error={errors.ttsSpeed}><Input value={draft.ttsSpeed} disabled={!draft.overridden.has('ttsSpeed')} onChange={(event) => update({ ttsSpeed: event.target.value })} /></OverrideField>
         <OverrideField label="Timing policy" field="timingPolicy" draft={draft} onToggle={toggleOverride}><Select value={draft.timingPolicy} disabled={!draft.overridden.has('timingPolicy')} onValueChange={(timingPolicy) => update({ timingPolicy: timingPolicy as SeriesDraft['timingPolicy'] })}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PRESERVE_SEGMENT">Giữ segment</SelectItem><SelectItem value="FIT_SEGMENT">Fit segment</SelectItem><SelectItem value="ALLOW_DRIFT">Cho phép lệch</SelectItem></SelectContent></Select></OverrideField>
+        <OverrideField label="Xóa hard-sub" field="removeHardSubEnabled" draft={draft} onToggle={toggleOverride}><Switch aria-label="Xóa hard-sub cho Series" checked={effectiveRemoveHardSubEnabled} disabled={!draft.overridden.has('removeHardSubEnabled')} onCheckedChange={(checked) => update({ removeHardSubEnabled: checked })} /></OverrideField>
         <OverrideField label="Output 16:9" field="output16x9Enabled" draft={draft} onToggle={toggleOverride}><Checkbox checked={draft.output16x9Enabled} disabled={!draft.overridden.has('output16x9Enabled')} onCheckedChange={(value) => update({ output16x9Enabled: value === true })} /></OverrideField>
         <OverrideField label="Output 9:16" field="output9x16Enabled" draft={draft} onToggle={toggleOverride}><Checkbox checked={draft.output9x16Enabled} disabled={!draft.overridden.has('output9x16Enabled')} onCheckedChange={(value) => update({ output9x16Enabled: value === true })} /></OverrideField>
         {errors.outputs && <FieldError className="profile-form-full">{errors.outputs}</FieldError>}
       </AccordionContent></AccordionItem>
-      <AccordionItem value="mask"><AccordionTrigger>Reference frame và mask editor</AccordionTrigger><AccordionContent><MaskEditor draft={draft} error={errors.mask} previewUrl={previewUrl} onChange={update} onFile={(nextFile, url) => { setFile(nextFile); if (url) setPreviewUrl(url); }} /></AccordionContent></AccordionItem>
+      <AccordionItem value="mask"><AccordionTrigger>Reference frame và mask editor</AccordionTrigger><AccordionContent><MaskEditor draft={draft} removeHardSubEnabled={effectiveRemoveHardSubEnabled} error={errors.mask} previewUrl={previewUrl} onChange={update} onFile={(nextFile, url) => { setFile(nextFile); if (url) setPreviewUrl(url); }} /></AccordionContent></AccordionItem>
     </Accordion>
   </FieldGroup></div><DialogFooter><Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Hủy</Button><Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? <Spinner /> : <SaveIcon />}{mutation.isPending ? 'Đang lưu và upload…' : 'Lưu series'}</Button></DialogFooter></form></DialogContent></Dialog>;
 }

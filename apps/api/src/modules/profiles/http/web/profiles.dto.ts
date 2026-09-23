@@ -29,6 +29,7 @@ export class PipelineConfigDto {
   @IsOptional() @IsInt() @Min(1) @Max(500) subtitleMaxLineLength!: number | null;
   @IsNumber() @Min(0.5) @Max(2) ttsSpeed!: number;
   @IsIn(TIMING_POLICIES) timingPolicy!: typeof TIMING_POLICIES[number];
+  @IsBoolean() removeHardSubEnabled!: boolean;
   @IsBoolean() output16x9Enabled!: boolean;
   @IsBoolean() output9x16Enabled!: boolean;
 }
@@ -42,6 +43,7 @@ export class PipelinePatchDto {
   @IsOptional() @IsInt() @Min(1) @Max(500) subtitleMaxLineLength?: number | null;
   @IsOptional() @IsNumber() @Min(0.5) @Max(2) ttsSpeed?: number;
   @IsOptional() @IsIn(TIMING_POLICIES) timingPolicy?: typeof TIMING_POLICIES[number];
+  @IsOptional() @IsBoolean() removeHardSubEnabled?: boolean;
   @IsOptional() @IsBoolean() output16x9Enabled?: boolean;
   @IsOptional() @IsBoolean() output9x16Enabled?: boolean;
 }

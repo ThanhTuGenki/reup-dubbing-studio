@@ -110,7 +110,7 @@ function validatePipeline(input: CreateChannelProfile['pipeline']): void {
 function validatePipelinePatch(input: Partial<CreateChannelProfile['pipeline']>): void {
   rejectNulls(input, [
     'targetLanguage', 'voiceMode', 'subtitleLanguage', 'subtitleFilenameRule',
-    'ttsSpeed', 'timingPolicy', 'output16x9Enabled', 'output9x16Enabled',
+    'ttsSpeed', 'timingPolicy', 'removeHardSubEnabled', 'output16x9Enabled', 'output9x16Enabled',
   ]);
   for (const language of [input.targetLanguage, input.subtitleLanguage]) {
     if (language !== undefined && !/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(language)) fail('Invalid BCP 47 language tag');

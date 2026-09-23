@@ -6,9 +6,9 @@ import { Switch } from '@/components/ui/switch';
 import type { SeriesDraft } from '../model/profile-form';
 
 export function MaskEditor({
-  draft, error, previewUrl, onChange, onFile,
+  draft, removeHardSubEnabled, error, previewUrl, onChange, onFile,
 }: {
-  draft: SeriesDraft; error?: string | undefined; previewUrl?: string | undefined;
+  draft: SeriesDraft; removeHardSubEnabled: boolean; error?: string | undefined; previewUrl?: string | undefined;
   onChange: (patch: Partial<SeriesDraft>) => void;
   onFile: (file: File | null, previewUrl?: string) => void;
 }) {
@@ -26,8 +26,8 @@ export function MaskEditor({
   };
   return (
     <section className="profile-mask-section" aria-labelledby="mask-heading">
-      <div className="profile-inline-heading"><div><h3 id="mask-heading">Mask xóa subtitle</h3><p>Rectangle normalized nên không phụ thuộc độ phân giải video.</p></div><Switch checked={draft.maskEnabled} onCheckedChange={(checked) => onChange({ maskEnabled: checked })} aria-label="Bật mask subtitle" /></div>
-      {draft.maskEnabled && <>
+      <div className="profile-inline-heading"><div><h3 id="mask-heading">Mask xóa subtitle</h3><p>{removeHardSubEnabled ? 'Rectangle normalized nên không phụ thuộc độ phân giải video.' : 'Bật “Xóa hard-sub” trong cấu hình kế thừa trước khi thiết lập mask.'}</p></div><Switch checked={draft.maskEnabled} disabled={!removeHardSubEnabled} onCheckedChange={(checked) => onChange({ maskEnabled: checked })} aria-label="Cấu hình mask subtitle" /></div>
+      {removeHardSubEnabled && draft.maskEnabled && <>
         <Field><FieldLabel htmlFor="mask-reference">Reference frame</FieldLabel><Input id="mask-reference" type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => choose(event.target.files?.[0])} /><FieldDescription>PNG, JPEG hoặc WebP; tối đa 20 MiB. File được upload trực tiếp lên R2 sau khi lưu.</FieldDescription></Field>
         <div className="mask-stage" aria-label="Xem trước vùng mask">
           {image ? <img src={image} alt="Reference frame cho mask subtitle" /> : <div className="mask-stage-empty">Chọn reference frame để xem mask trên khung hình</div>}

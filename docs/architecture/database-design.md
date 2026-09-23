@@ -345,6 +345,7 @@ subtitle_filename_rule     text
 subtitle_max_line_length   integer nullable
 tts_speed                  numeric(5,3)
 timing_policy              text
+remove_hard_sub_enabled    boolean default false
 output_16x9_enabled        boolean
 output_9x16_enabled        boolean
 content_voice_rules        jsonb
@@ -412,8 +413,10 @@ version               integer
 ```
 
 Mask của MVP là một rectangle cố định theo series. Giá trị dùng tọa độ normalized
-`0..1`; không lưu coordinate space, pixel, polygon hoặc keyframe. Series lưu các
-field override nullable như tài liệu Profile, không copy cấu hình của Channel.
+`0..1`; không lưu coordinate space, pixel, polygon hoặc keyframe. Series lưu
+`remove_hard_sub_override boolean nullable` cùng các field override nullable khác,
+không copy cấu hình của Channel. `null` nghĩa là kế thừa; giá trị hiệu lực mặc
+định là `false`. Mask/reference chỉ bắt buộc khi giá trị hiệu lực là `true`.
 
 ### 7.4 `voice_profiles` (`CORE`)
 

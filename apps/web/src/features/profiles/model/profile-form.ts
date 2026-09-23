@@ -11,19 +11,19 @@ export type ChannelDraft = {
   name: string; status: 'DRAFT' | 'ACTIVE'; targetLanguage: string; defaultVoiceProfileId: string;
   voiceMode: 'SINGLE' | 'DUAL' | 'MULTI_AUTO'; subtitleLanguage: string; subtitleFilenameRule: string;
   subtitleMaxLineLength: string; ttsSpeed: string; timingPolicy: 'PRESERVE_SEGMENT' | 'FIT_SEGMENT' | 'ALLOW_DRIFT';
-  output16x9Enabled: boolean; output9x16Enabled: boolean; ctaTemplate: string; baseKeywords: string;
+  removeHardSubEnabled: boolean; output16x9Enabled: boolean; output9x16Enabled: boolean; ctaTemplate: string; baseKeywords: string;
   youtubeName: string; youtubeExternalId: string; facebookName: string; facebookExternalId: string;
 };
 
 export type SeriesField = 'targetLanguage' | 'defaultVoiceProfileId' | 'voiceMode' | 'subtitleLanguage'
   | 'subtitleFilenameRule' | 'subtitleMaxLineLength' | 'ttsSpeed' | 'timingPolicy'
-  | 'output16x9Enabled' | 'output9x16Enabled';
+  | 'removeHardSubEnabled' | 'output16x9Enabled' | 'output9x16Enabled';
 
 export type SeriesDraft = {
   name: string; channelProfileId: string; status: 'DRAFT' | 'ACTIVE'; overridden: Set<SeriesField>;
   targetLanguage: string; defaultVoiceProfileId: string; voiceMode: 'SINGLE' | 'DUAL' | 'MULTI_AUTO';
   subtitleLanguage: string; subtitleFilenameRule: string; subtitleMaxLineLength: string; ttsSpeed: string;
-  timingPolicy: 'PRESERVE_SEGMENT' | 'FIT_SEGMENT' | 'ALLOW_DRIFT'; output16x9Enabled: boolean; output9x16Enabled: boolean;
+  timingPolicy: 'PRESERVE_SEGMENT' | 'FIT_SEGMENT' | 'ALLOW_DRIFT'; removeHardSubEnabled: boolean; output16x9Enabled: boolean; output9x16Enabled: boolean;
   maskEnabled: boolean; maskX: string; maskY: string; maskWidth: string; maskHeight: string;
 };
 
@@ -33,7 +33,7 @@ export function emptyChannelDraft(): ChannelDraft {
   return {
     name: '', status: 'DRAFT', targetLanguage: 'vi', defaultVoiceProfileId: '', voiceMode: 'SINGLE',
     subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.vi.srt', subtitleMaxLineLength: '42',
-    ttsSpeed: '1', timingPolicy: 'FIT_SEGMENT', output16x9Enabled: true, output9x16Enabled: false,
+    ttsSpeed: '1', timingPolicy: 'FIT_SEGMENT', removeHardSubEnabled: false, output16x9Enabled: true, output9x16Enabled: false,
     ctaTemplate: '', baseKeywords: '', youtubeName: '', youtubeExternalId: '', facebookName: '', facebookExternalId: '',
   };
 }
@@ -48,6 +48,7 @@ export function channelDraft(profile: ChannelProfile): ChannelDraft {
     subtitleFilenameRule: profile.pipeline.subtitleFilenameRule,
     subtitleMaxLineLength: profile.pipeline.subtitleMaxLineLength?.toString() ?? '',
     ttsSpeed: profile.pipeline.ttsSpeed.toString(), timingPolicy: profile.pipeline.timingPolicy,
+    removeHardSubEnabled: profile.pipeline.removeHardSubEnabled,
     output16x9Enabled: profile.pipeline.output16x9Enabled, output9x16Enabled: profile.pipeline.output9x16Enabled,
     ctaTemplate: profile.content.ctaTemplate ?? '', baseKeywords: profile.content.baseKeywords.join(', '),
     youtubeName: youtube?.displayName ?? '', youtubeExternalId: youtube?.externalId ?? '',
@@ -93,7 +94,7 @@ export function emptySeriesDraft(channelProfileId = ''): SeriesDraft {
     name: '', channelProfileId, status: 'DRAFT', overridden: new Set(),
     targetLanguage: 'vi', defaultVoiceProfileId: '', voiceMode: 'SINGLE', subtitleLanguage: 'vi',
     subtitleFilenameRule: '{slug}.vi.srt', subtitleMaxLineLength: '42', ttsSpeed: '1', timingPolicy: 'FIT_SEGMENT',
-    output16x9Enabled: true, output9x16Enabled: false,
+    removeHardSubEnabled: false, output16x9Enabled: true, output9x16Enabled: false,
     maskEnabled: false, maskX: '0.1', maskY: '0.8', maskWidth: '0.8', maskHeight: '0.1',
   };
 }
@@ -109,7 +110,7 @@ export function seriesDraft(profile: SeriesProfile): SeriesDraft {
     voiceMode: effective.voiceMode, subtitleLanguage: effective.subtitleLanguage,
     subtitleFilenameRule: effective.subtitleFilenameRule,
     subtitleMaxLineLength: effective.subtitleMaxLineLength?.toString() ?? '', ttsSpeed: effective.ttsSpeed.toString(),
-    timingPolicy: effective.timingPolicy, output16x9Enabled: effective.output16x9Enabled,
+    timingPolicy: effective.timingPolicy, removeHardSubEnabled: effective.removeHardSubEnabled, output16x9Enabled: effective.output16x9Enabled,
     output9x16Enabled: effective.output9x16Enabled, maskEnabled: Boolean(profile.mask),
     maskX: profile.mask?.x.toString() ?? '0.1', maskY: profile.mask?.y.toString() ?? '0.8',
     maskWidth: profile.mask?.width.toString() ?? '0.8', maskHeight: profile.mask?.height.toString() ?? '0.1',
@@ -132,7 +133,8 @@ export function validateSeriesDraft(draft: SeriesDraft): ProfileFormErrors {
     const speed = Number(draft.ttsSpeed); if (!Number.isFinite(speed) || speed < 0.5 || speed > 2) errors.ttsSpeed = 'Tốc độ từ 0.5 đến 2.';
   }
   if (draft.overridden.has('output16x9Enabled') && draft.overridden.has('output9x16Enabled') && !draft.output16x9Enabled && !draft.output9x16Enabled) errors.outputs = 'Bật ít nhất một output.';
-  if (draft.maskEnabled && !validMask(draft)) errors.mask = 'Mask phải nằm hoàn toàn trong khung normalized 0–1.';
+  if (draft.removeHardSubEnabled && !draft.maskEnabled) errors.mask = 'Cấu hình mask khi bật xóa hard-sub.';
+  else if (draft.removeHardSubEnabled && !validMask(draft)) errors.mask = 'Mask phải nằm hoàn toàn trong khung normalized 0–1.';
   return errors;
 }
 
@@ -150,6 +152,7 @@ function pipelineFromChannel(draft: ChannelDraft): CreateChannelProfile['pipelin
     subtitleFilenameRule: draft.subtitleFilenameRule.trim(),
     subtitleMaxLineLength: draft.subtitleMaxLineLength ? Number(draft.subtitleMaxLineLength) : null,
     ttsSpeed: Number(draft.ttsSpeed), timingPolicy: draft.timingPolicy,
+    removeHardSubEnabled: draft.removeHardSubEnabled,
     output16x9Enabled: draft.output16x9Enabled, output9x16Enabled: draft.output9x16Enabled,
   };
 }
@@ -169,6 +172,7 @@ function seriesOverrides(draft: SeriesDraft): NonNullable<CreateSeriesProfile['o
     subtitleMaxLineLength: draft.overridden.has('subtitleMaxLineLength') && draft.subtitleMaxLineLength ? Number(draft.subtitleMaxLineLength) : null,
     ttsSpeed: draft.overridden.has('ttsSpeed') ? Number(draft.ttsSpeed) : null,
     timingPolicy: draft.overridden.has('timingPolicy') ? draft.timingPolicy : null,
+    removeHardSubEnabled: draft.overridden.has('removeHardSubEnabled') ? draft.removeHardSubEnabled : null,
     output16x9Enabled: draft.overridden.has('output16x9Enabled') ? draft.output16x9Enabled : null,
     output9x16Enabled: draft.overridden.has('output9x16Enabled') ? draft.output9x16Enabled : null,
   };
