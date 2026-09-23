@@ -1,6 +1,6 @@
 # Roadmap Web + API theo feature
 
-- **Trạng thái:** `ACTIVE`
+- **Trạng thái:** `COMPLETE`
 - **Nguồn chuẩn cho:** thứ tự triển khai và tiến độ cấp feature của Web Dashboard
   và Control Plane API.
 - **Không phải nguồn chuẩn cho:** endpoint/schema chi tiết, acceptance criteria,
@@ -152,4 +152,4 @@
 - [x] Rà soát security: secret redaction, presigned URL, input validation và audit.
 - [x] Rà soát performance: query/index, bundle splitting và list virtualization khi
   có dữ liệu thực tế.
-- [ ] Cập nhật tài liệu vận hành và đánh dấu toàn bộ feature hoàn tất.
+- [x] Cập nhật tài liệu vận hành và đánh dấu toàn bộ feature hoàn tất.
