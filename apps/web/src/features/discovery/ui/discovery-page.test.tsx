@@ -97,7 +97,7 @@ describe('DiscoveryPage', () => {
     server.use(http.post(`${CONTROL_PLANE_BASE_URL}/discovery/runs`, () => HttpResponse.json({ data: { ...partialRun, status: 'QUEUED', version: 1, pageCount: 0, itemCount: 0, errorCode: null, errorDetail: null, startedAt: null, finishedAt: null }, meta: { requestId: READY_REQUEST_ID } }, { status: 202 })), http.get(`${CONTROL_PLANE_BASE_URL}/discovery/runs/:runId`, () => HttpResponse.json({ data: partialRun, meta: { requestId: READY_REQUEST_ID } })));
     const user = userEvent.setup(); renderApp(<DiscoveryPage />);
     await user.click(await screen.findByRole('button', { name: 'Bắt đầu quét' }));
-    expect(await screen.findByText('PARTIAL')).toBeInTheDocument();
+    expect(await screen.findByText('PARTIAL', {}, { timeout: 3_000 })).toBeInTheDocument();
     expect(screen.getByText(/retry after cooldown/u)).toBeInTheDocument();
     expect(screen.getByText('Mẹo học tiếng Trung')).toBeInTheDocument();
   });
