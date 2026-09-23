@@ -138,7 +138,7 @@
 
 - [ ] **Hoàn tất feature Dashboard home.**
   - [x] Chốt KPI/cảnh báo sau khi các nguồn dữ liệu bên dưới đã ổn định.
-  - [ ] API cung cấp projection tổng hợp cho video, queue, publishing, worker và
+  - [x] API cung cấp projection tổng hợp cho video, queue, publishing, worker và
     chi phí; không tạo counter table sớm.
   - [ ] Web xây KPI, danh sách việc cần chú ý, hoạt động gần đây và quick actions.
   - [ ] Kiểm thử dữ liệu rỗng/partial, timezone và tính nhất quán với màn chi tiết.

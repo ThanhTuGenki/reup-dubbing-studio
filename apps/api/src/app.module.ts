@@ -12,6 +12,7 @@ import { LibraryModule } from './modules/library';
 import { StudioModule } from './modules/studio';
 import { ReviewPolicyModule } from './modules/review-policy';
 import { PublishingModule } from './modules/publishing';
+import { DashboardModule } from './modules/dashboard';
 import type { AppConfig } from './platform/config/config';
 import { HealthModule } from './platform/health/health.module';
 
@@ -20,7 +21,7 @@ export class AppModule {
   static register(config: AppConfig): DynamicModule {
     return {
       module: AppModule,
-      imports: [HealthModule, SettingsModule.register(config), ProfilesModule.register(config), VoicesModule.register(config), DiscoveryModule.register(config), IngestModule.register(config), QueueModule.register(config), WorkersModule.register(config), LibraryModule.register(config), StudioModule.register(config), ReviewPolicyModule.register(config), PublishingModule.register(config)],
+      imports: [HealthModule, SettingsModule.register(config), ProfilesModule.register(config), VoicesModule.register(config), DiscoveryModule.register(config), IngestModule.register(config), QueueModule.register(config), WorkersModule.register(config), LibraryModule.register(config), StudioModule.register(config), ReviewPolicyModule.register(config), PublishingModule.register(config), DashboardModule.register(config)],
     };
   }
 }

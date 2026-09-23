@@ -10,6 +10,17 @@ servers:
   - url: http://localhost:3000/v1
     description: Môi trường phát triển cục bộ
 paths:
+  /dashboard:
+    get:
+      summary: Đọc projection vận hành cho Dashboard home
+      operationId: getDashboard
+      responses:
+        '200':
+          description: Snapshot Dashboard hiện tại.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardEnvelope' }
+        default: { $ref: '#/components/responses/Problem' }
   /channel-profiles:
     get:
       summary: Liệt kê Channel Profile
@@ -1519,6 +1530,127 @@ components:
       description: Strong ETag của Worker.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
   schemas:
+    DashboardSeverity: { type: string, enum: [CRITICAL, WARNING] }
+    DashboardAttentionCode:
+      type: string
+      enum: [WORKER_BILLING_SAFE_TO_TERMINATE, WORKER_BILLING_OFFLINE, PUBLICATION_OVERDUE, SOURCE_CREDENTIAL_EXPIRED, QUEUE_JOB_FAILED, PUBLICATION_NEEDS_REVISION, SOURCE_CREDENTIAL_EXPIRING, QUEUE_WAITING_FOR_GPU, SOURCE_ACCOUNT_COOLDOWN]
+    DashboardAttentionItem:
+      type: object
+      additionalProperties: false
+      required: [id, code, severity, title, detail, entityType, entityId, occurredAt, dueAt, href]
+      properties:
+        id: { type: string }
+        code: { $ref: '#/components/schemas/DashboardAttentionCode' }
+        severity: { $ref: '#/components/schemas/DashboardSeverity' }
+        title: { type: string }
+        detail: { type: string }
+        entityType: { type: string, enum: [PIPELINE_JOB, PUBLICATION_TASK, WORKER, SOURCE_ACCOUNT] }
+        entityId: { $ref: '#/components/schemas/UuidV7' }
+        occurredAt: { type: string, format: date-time }
+        dueAt: { type: [string, 'null'], format: date-time }
+        href: { type: string }
+    DashboardActivityItem:
+      type: object
+      additionalProperties: false
+      required: [id, kind, title, detail, entityType, entityId, occurredAt, href]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [QUEUE_EVENT, AUDIT_EVENT, PUBLICATION_PROOF_SUBMITTED, PUBLICATION_PROOF_VERIFIED] }
+        title: { type: string }
+        detail: { type: [string, 'null'] }
+        entityType: { type: string }
+        entityId: { type: [string, 'null'], format: uuid }
+        occurredAt: { type: string, format: date-time }
+        href: { type: string }
+    DashboardVideoCounts:
+      type: object
+      additionalProperties: false
+      required: [INGEST_QUEUED, INGESTING, INGESTED, PROCESSING, AWAITING_REVIEW, READY_TO_PUBLISH, PUBLISHED, FAILED, ARCHIVED]
+      properties:
+        INGEST_QUEUED: { type: integer, minimum: 0 }
+        INGESTING: { type: integer, minimum: 0 }
+        INGESTED: { type: integer, minimum: 0 }
+        PROCESSING: { type: integer, minimum: 0 }
+        AWAITING_REVIEW: { type: integer, minimum: 0 }
+        READY_TO_PUBLISH: { type: integer, minimum: 0 }
+        PUBLISHED: { type: integer, minimum: 0 }
+        FAILED: { type: integer, minimum: 0 }
+        ARCHIVED: { type: integer, minimum: 0 }
+    Dashboard:
+      type: object
+      additionalProperties: false
+      required: [generatedAt, timezone, videos, queue, publishing, workers, cost, attention, recentActivity]
+      properties:
+        generatedAt: { type: string, format: date-time }
+        timezone: { type: string, const: Asia/Ho_Chi_Minh }
+        videos:
+          type: object
+          additionalProperties: false
+          required: [countsByStatus, processing, awaitingReview, readyToPublish, published, failed, totalActive]
+          properties:
+            countsByStatus: { $ref: '#/components/schemas/DashboardVideoCounts' }
+            processing: { type: integer, minimum: 0 }
+            awaitingReview: { type: integer, minimum: 0 }
+            readyToPublish: { type: integer, minimum: 0 }
+            published: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+            totalActive: { type: integer, minimum: 0 }
+        queue:
+          type: object
+          additionalProperties: false
+          required: [active, running, waitingForGpu, failed]
+          properties:
+            active: { type: integer, minimum: 0 }
+            running: { type: integer, minimum: 0 }
+            waitingForGpu: { type: integer, minimum: 0 }
+            failed: { type: integer, minimum: 0 }
+        publishing:
+          type: object
+          additionalProperties: false
+          required: [upcoming, overdue, awaitingProof, awaitingVerification, needsRevision]
+          properties:
+            upcoming: { type: integer, minimum: 0 }
+            overdue: { type: integer, minimum: 0 }
+            awaitingProof: { type: integer, minimum: 0 }
+            awaitingVerification: { type: integer, minimum: 0 }
+            needsRevision: { type: integer, minimum: 0 }
+        workers:
+          type: object
+          additionalProperties: false
+          required: [online, busy, safeToTerminate, unhealthy, activeLeases]
+          properties:
+            online: { type: integer, minimum: 0 }
+            busy: { type: integer, minimum: 0 }
+            safeToTerminate: { type: integer, minimum: 0 }
+            unhealthy: { type: integer, minimum: 0 }
+            activeLeases: { type: integer, minimum: 0 }
+        cost:
+          type: object
+          additionalProperties: false
+          required: [openBillingSessions, estimatedCostCp, estimatedCostVnd, vndCoverage]
+          properties:
+            openBillingSessions: { type: integer, minimum: 0 }
+            estimatedCostCp: { type: string, pattern: '^[0-9]+(?:\.[0-9]{6})$' }
+            estimatedCostVnd: { type: [string, 'null'], pattern: '^[0-9]+(?:\.[0-9]{2})$' }
+            vndCoverage: { type: string, enum: [COMPLETE, PARTIAL, NONE] }
+        attention:
+          type: object
+          additionalProperties: false
+          required: [items, total]
+          properties:
+            items: { type: array, maxItems: 20, items: { $ref: '#/components/schemas/DashboardAttentionItem' } }
+            total: { type: integer, minimum: 0 }
+        recentActivity:
+          type: object
+          additionalProperties: false
+          required: [items]
+          properties:
+            items: { type: array, maxItems: 12, items: { $ref: '#/components/schemas/DashboardActivityItem' } }
+    DashboardEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/SuccessEnvelope'
+        - type: object
+          properties: { data: { $ref: '#/components/schemas/Dashboard' } }
     PublishingPlatform:
       type: string
       enum: [YOUTUBE, FACEBOOK]
