@@ -686,3 +686,23 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Transient feedback: SSE remains invalidation-only and no notification inbox is persisted. */
+.cn-toast {
+  width: min(380px, calc(100vw - var(--space-6))) !important;
+  padding: var(--space-3) var(--space-4) !important;
+  border-color: var(--border) !important;
+  border-radius: var(--radius-card) !important;
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  box-shadow: var(--elev-raised) !important;
+  font-family: var(--font-body) !important;
+}
+.cn-toast-title { font-weight: var(--weight-strong) !important; }
+.cn-toast-description { color: var(--muted-fg) !important; }
+.cn-toast-success { border-color: var(--success-border) !important; background: var(--success-bg) !important; }
+.cn-toast-warning { border-color: var(--warn-border) !important; background: var(--warn-bg) !important; }
+.cn-toast-error { border-color: var(--danger-border) !important; background: var(--danger-bg) !important; }
+.cn-toast-success [data-icon] { color: var(--success); }
+.cn-toast-warning [data-icon] { color: var(--warning); }
+.cn-toast-error [data-icon] { color: var(--danger); }

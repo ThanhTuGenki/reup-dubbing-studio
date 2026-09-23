@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useQueryInvalidationStream } from '@/shared/api/use-query-invalidation-stream';
 import { ListState } from '@/shared/ui/list-state';
+import { useTransientStreamToast } from '@/shared/ui/use-transient-stream-toast';
 import { DISPLAY_TIMEZONE, toVietnamDateTimeInput, vietnamDateTimeInputToIso } from '@/shared/lib/display-time';
 import { useQuerySelection } from '@/shared/lib/use-query-selection';
 import { addWorker, confirmTermination, requestDrain, workerEventsUrl, WorkersApiError, type CreateWorkerResult } from '../api/workers-api';
@@ -32,7 +33,8 @@ export function WorkersPage() {
   const [selected, setSelected] = useQuerySelection('workerId');
   const [pendingAction, setPendingAction] = useState<{ kind: 'drain' | 'terminate'; worker: Worker } | null>(null);
   const actionKeys = useRef(new Map<string, string>());
-  useQueryInvalidationStream({ url: workerEventsUrl(), queryKeys: [workerKeys.all], eventName: 'worker.invalidate', enabled: typeof EventSource !== 'undefined' });
+  const streamState = useQueryInvalidationStream({ url: workerEventsUrl(), queryKeys: [workerKeys.all], eventName: 'worker.invalidate', enabled: typeof EventSource !== 'undefined' });
+  useTransientStreamToast({ id: 'worker-event-stream', label: 'GPU Worker', state: streamState });
   const workers = list.data?.items ?? [];
 
   const action = useMutation({
