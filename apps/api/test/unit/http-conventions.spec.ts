@@ -10,6 +10,8 @@ import { of, lastValueFrom } from 'rxjs';
 import { ProblemDetailsFilter } from '../../src/platform/http/problem-details.filter';
 import { ProblemDetailsException } from '../../src/platform/http/problem-details.exception';
 import { SuccessEnvelopeInterceptor } from '../../src/platform/http/success-envelope.interceptor';
+import { createValidationPipe } from '../../src/platform/http/validation.pipe';
+import { UpdateSettingsDto } from '../../src/modules/settings/http/web/settings.dto';
 
 type ResponseRecorder = {
   statusCode?: number;
@@ -73,6 +75,28 @@ function argumentsHost(
 }
 
 describe('HTTP conventions', () => {
+  describe('ValidationPipe', () => {
+    it('rejects nested fields outside the contract without reflecting their value', async () => {
+      const pipe = createValidationPipe();
+      const secret = 'unknown-field-secret-sentinel';
+
+      try {
+        await pipe.transform({
+          contentAgent: {
+            provider: 'OPENAI',
+            model: 'gpt-5.2',
+            credential: { action: 'CLEAR', unexpectedSecret: secret },
+          },
+        }, { type: 'body', metatype: UpdateSettingsDto });
+        throw new Error('Expected validation to reject an unknown field');
+      } catch (error) {
+        expect(error).toBeInstanceOf(BadRequestException);
+        expect(JSON.stringify((error as BadRequestException).getResponse())).toContain('property unexpectedSecret should not exist');
+        expect(JSON.stringify((error as BadRequestException).getResponse())).not.toContain(secret);
+      }
+    });
+  });
+
   describe('SuccessEnvelopeInterceptor', () => {
     it('wraps a JSON success payload with data and request metadata', async () => {
       const interceptor = new SuccessEnvelopeInterceptor();
