@@ -269,17 +269,25 @@ ghi log.
 - [x] OCR luôn đọc RAW; render chỉ dùng DESUBBED khi feature được bật.
 - [x] GPU model thuê chưa bị khóa trước giai đoạn acceptance.
 
-## 9. Việc chốt Just-in-Time ở task contract kế tiếp
+## 9. Contract task đã chốt và policy còn JIT
 
-Các chi tiết sau cố ý chưa được quyết định trong baseline này:
+Wire contract được chốt tại
+[`contracts/openapi/worker.openapi.yaml`](../../contracts/openapi/worker.openapi.yaml):
 
-- path, request/response schema và idempotency header cụ thể;
-- lease duration, start deadline, renew interval và retry backoff bằng số;
-- cách issue/refresh download grant trong claim hay bằng operation riêng;
-- MIME/size limit theo từng output purpose;
-- schema JSON artifact cho OCR/ASR và result metadata của từng task;
+- claim/start/renew/progress/complete/fail và asset grant/refresh/commit là các
+  operation riêng, mọi mutation sau enroll yêu cầu `Idempotency-Key`;
+- claim long-poll tối đa 25 giây và trả explicit `task: null` khi chưa có việc;
+- claim payload có payload version, requirements, typed task configuration,
+  input download grant và output specifications;
+- download/upload grant được refresh bằng operation riêng cho đúng attempt/asset;
+- heartbeat và task action response đều mang drain/cancel signal;
+- worker output luôn có SHA-256; input checksum là nullable có chủ đích vì browser
+  asset cũ có thể chưa có checksum, Worker vẫn phải kiểm tra size/type.
+
+Các giá trị vận hành sau thuộc server policy/configuration của implementation,
+không hard-code vào wire contract:
+
+- lease duration, start deadline, renew interval và retry backoff;
+- MIME/size limit cụ thể theo output purpose;
 - ngưỡng batch initial TTS, minimum VRAM và scratch disk;
-- cancel signal nằm trong heartbeat response hay operation polling riêng.
-
-Những giá trị này phải được chốt cùng test trong Worker task contract slice,
-không hard-code trước ở Worker hoặc Control Plane.
+- model profile và runtime timeout đã benchmark cho từng adapter.

@@ -1,106 +1,1228 @@
 openapi: 3.1.0
 info:
   title: Reup Dubbing Studio Worker Control API
-  version: 0.1.0
-servers: [{ url: 'http://localhost:3000/worker/v1' }]
-security: [{ workerBearer: [] }]
+  version: 0.2.0
+servers:
+  - url: http://localhost:3000/worker/v1
+security:
+  - workerBearer: []
 paths:
   /enroll:
     post:
-      summary: Exchange enrollment token for a scoped credential and first session
+      summary: Exchange an enrollment token for a scoped credential and first session
       operationId: enrollWorker
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SessionIdentity' } } } }
+      security:
+        - enrollmentBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionIdentity'
       responses:
-        '201': { description: One-time credential and session., content: { application/json: { schema: { $ref: '#/components/schemas/EnrollmentEnvelope' } } } }
-        default: { $ref: '#/components/responses/Problem' }
+        '201':
+          description: One-time credential and runtime session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrollmentEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
   /sessions:
     post:
-      summary: Start a runtime session with an existing worker credential
+      summary: Start a runtime session with an existing Worker credential
       operationId: startWorkerSession
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SessionIdentity' } } } }
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SessionIdentity'
       responses:
-        '201': { description: Runtime session., content: { application/json: { schema: { $ref: '#/components/schemas/SessionEnvelope' } } } }
-        default: { $ref: '#/components/responses/Problem' }
+        '201':
+          description: Runtime session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
   /sessions/{sessionId}/heartbeat:
     post:
-      summary: Update the latest capacity and safe telemetry snapshot
+      summary: Update capacity and receive drain or cancellation signals
       operationId: heartbeatWorkerSession
       parameters:
-        - { name: sessionId, in: path, required: true, schema: { $ref: '#/components/schemas/UuidV7' } }
-        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 128 } }
-      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Heartbeat' } } } }
+        - $ref: '#/components/parameters/SessionId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Heartbeat'
       responses:
-        '201': { description: Accepted sequence., content: { application/json: { schema: { $ref: '#/components/schemas/HeartbeatEnvelope' } } } }
-        default: { $ref: '#/components/responses/Problem' }
+        '200':
+          description: Accepted heartbeat sequence and current control signals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/claim:
+    post:
+      summary: Atomically claim the next eligible GPU task
+      operationId: claimWorkerTask
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimTaskRequest'
+      responses:
+        '200':
+          description: Claimed task or an explicit empty result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimTaskEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/start:
+    post:
+      summary: Mark a claimed task attempt as running
+      operationId: startWorkerTaskAttempt
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseActionRequest'
+      responses:
+        '200':
+          description: Current task attempt state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskActionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/renew:
+    post:
+      summary: Renew the current task lease using server time
+      operationId: renewWorkerTaskLease
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseActionRequest'
+      responses:
+        '200':
+          description: Renewed lease and current control signals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskActionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/progress:
+    post:
+      summary: Report monotonic progress for the current task attempt
+      operationId: reportWorkerTaskProgress
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskProgressRequest'
+      responses:
+        '200':
+          description: Accepted progress and current control signals.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskActionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/inputs/{assetId}/refresh:
+    post:
+      summary: Refresh a download grant for an authorized task input
+      operationId: refreshWorkerTaskInputGrant
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseActionRequest'
+      responses:
+        '200':
+          description: Fresh input download grant bounded by the active lease.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadGrantEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/outputs:
+    post:
+      summary: Create a pending output asset and upload grant for a declared slot
+      operationId: requestWorkerTaskOutputGrant
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutputGrantRequest'
+      responses:
+        '201':
+          description: Pending asset and lease-bounded upload grant.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadGrantEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/outputs/{assetId}/refresh:
+    post:
+      summary: Refresh an upload grant for an existing pending output asset
+      operationId: refreshWorkerTaskOutputGrant
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaseActionRequest'
+      responses:
+        '200':
+          description: Fresh upload grant for the same pending asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadGrantEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/outputs/{assetId}/commit:
+    post:
+      summary: Verify an uploaded task output and mark the asset available
+      operationId: commitWorkerTaskOutput
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/AssetId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitOutputRequest'
+      responses:
+        '200':
+          description: Verified available asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommittedOutputEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/complete:
+    post:
+      summary: Complete the current attempt after all required outputs are available
+      operationId: completeWorkerTaskAttempt
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '200':
+          description: Terminal successful attempt state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskActionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
+  /tasks/{taskId}/attempts/{attemptId}/fail:
+    post:
+      summary: Fail the current attempt with a safe allowlisted error
+      operationId: failWorkerTaskAttempt
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/AttemptId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FailTaskRequest'
+      responses:
+        '200':
+          description: Terminal failed attempt state and retry projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskActionEnvelope'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
-    workerBearer: { type: http, scheme: bearer, bearerFormat: opaque }
+    enrollmentBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-enrollment-token
+    workerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque-worker-credential
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV7'
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV7'
+    AttemptId:
+      name: attemptId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV7'
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UuidV7'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 128
   schemas:
-    UuidV7: { type: string, format: uuid, pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$' }
-    WorkerRole: { type: string, enum: [BATCH_MEDIA, INTERACTIVE_TTS] }
+    UuidV7:
+      type: string
+      format: uuid
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+    FencingToken:
+      type: string
+      pattern: '^[1-9][0-9]*$'
+    WorkerRole:
+      type: string
+      enum: [BATCH_MEDIA, INTERACTIVE_TTS]
+    WorkerDesiredStatus:
+      type: string
+      enum: [ACTIVE, DRAINING, REVOKED]
+    WorkerTaskType:
+      type: string
+      enum: [DESUB, TRANSCRIBE_OCR, TRANSCRIBE_ASR, GENERATE_INITIAL_TTS, REGENERATE_SEGMENT, SEPARATE_AUDIO, RENDER]
+    WorkerResourceClass:
+      type: string
+      enum: [GPU_BATCH, GPU_TTS_INTERACTIVE]
+    WorkerTaskStatus:
+      type: string
+      enum: [LEASED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
+    AssetKind:
+      type: string
+      enum: [RAW, DESUBBED, OCR_JSON, ASR_JSON, BACKGROUND_AUDIO, DUB_AUDIO, VOICE_SAMPLE, VOICE_PROMPT, INTRO, OUTRO, LOGO, WATERMARK, OUTPUT_VIDEO]
+    RenderOutputVariant:
+      type: string
+      enum: [FULL_16X9, HIGHLIGHT_9X16]
     SessionIdentity:
       type: object
-      required: [sessionNonce, role, imageDigest, agentVersion, contractVersion, gpuInventory, cpuInventory, capacity]
+      additionalProperties: false
+      required: [sessionNonce, role, imageDigest, agentVersion, contractVersion, capabilities, gpuInventory, cpuInventory, capacity]
       properties:
-        sessionNonce: { $ref: '#/components/schemas/UuidV7' }
-        role: { $ref: '#/components/schemas/WorkerRole' }
-        imageDigest: { type: string, pattern: '^sha256:[a-f0-9]{64}$' }
-        agentVersion: { type: string }
-        contractVersion: { type: integer, minimum: 1 }
-        gpuInventory: { type: array, maxItems: 16, items: { type: object, additionalProperties: true } }
-        cpuInventory: { type: object, additionalProperties: true }
-        capacity: { type: object, additionalProperties: true }
+        sessionNonce:
+          $ref: '#/components/schemas/UuidV7'
+        role:
+          $ref: '#/components/schemas/WorkerRole'
+        imageDigest:
+          type: string
+          pattern: '^sha256:[a-f0-9]{64}$'
+        agentVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+        contractVersion:
+          type: integer
+          minimum: 1
+        capabilities:
+          type: array
+          minItems: 1
+          maxItems: 32
+          uniqueItems: true
+          items:
+            type: string
+            pattern: '^[a-z][a-z0-9]*(\.[a-z0-9]+)+\.v[1-9][0-9]*$'
+        gpuInventory:
+          type: array
+          maxItems: 16
+          items:
+            type: object
+            additionalProperties: true
+        cpuInventory:
+          type: object
+          additionalProperties: true
+        capacity:
+          $ref: '#/components/schemas/WorkerCapacity'
+    WorkerCapacity:
+      type: object
+      additionalProperties: false
+      required: [maxConcurrentTasks, availableTaskSlots, scratchFreeBytes]
+      properties:
+        maxConcurrentTasks:
+          type: integer
+          minimum: 1
+          maximum: 64
+        availableTaskSlots:
+          type: integer
+          minimum: 0
+          maximum: 64
+        scratchFreeBytes:
+          type: string
+          pattern: '^[0-9]+$'
+        vramFreeMb:
+          type: integer
+          minimum: 0
+    WorkerTelemetry:
+      type: object
+      additionalProperties: false
+      properties:
+        gpuUtilizationPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        vramUsedMb:
+          type: integer
+          minimum: 0
+        cpuUtilizationPercent:
+          type: number
+          minimum: 0
+          maximum: 100
+        memoryUsedMb:
+          type: integer
+          minimum: 0
     Heartbeat:
       type: object
+      additionalProperties: false
       required: [sequence, sentAt, capacity, currentTaskCount, activeLeaseIds, telemetry, agentVersion, contractVersion]
       properties:
-        sequence: { type: string, pattern: '^[0-9]+$' }
-        sentAt: { type: string, format: date-time }
-        capacity: { type: object, additionalProperties: true }
-        currentTaskCount: { type: integer, minimum: 0 }
-        activeLeaseIds: { type: array, maxItems: 100, items: { $ref: '#/components/schemas/UuidV7' } }
-        telemetry: { type: object, additionalProperties: true }
-        agentVersion: { type: string }
-        contractVersion: { type: integer, minimum: 1 }
+        sequence:
+          type: string
+          pattern: '^[0-9]+$'
+        sentAt:
+          type: string
+          format: date-time
+        capacity:
+          $ref: '#/components/schemas/WorkerCapacity'
+        currentTaskCount:
+          type: integer
+          minimum: 0
+          maximum: 64
+        activeLeaseIds:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/UuidV7'
+        telemetry:
+          $ref: '#/components/schemas/WorkerTelemetry'
+        agentVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+        contractVersion:
+          type: integer
+          minimum: 1
     WorkerSession:
       type: object
-      additionalProperties: true
-      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
+      additionalProperties: false
+      required: [id, sessionNonce, imageDigest, agentVersion, contractVersion, capabilities, capacity, currentTaskCount, lastHeartbeatSequence, startedAt, lastHeartbeatAt]
       properties:
-        id: { $ref: '#/components/schemas/UuidV7' }
-        sessionNonce: { $ref: '#/components/schemas/UuidV7' }
-        imageDigest: { type: string }
-        agentVersion: { type: string }
-        contractVersion: { type: integer }
-        capacity: { type: object, additionalProperties: true }
-        currentTaskCount: { type: integer }
-        lastHeartbeatSequence: { type: string }
-        startedAt: { type: string, format: date-time }
-        lastHeartbeatAt: { type: string, format: date-time }
-    Meta: { type: object, required: [requestId], properties: { requestId: { $ref: '#/components/schemas/UuidV7' } } }
+        id:
+          $ref: '#/components/schemas/UuidV7'
+        sessionNonce:
+          $ref: '#/components/schemas/UuidV7'
+        imageDigest:
+          type: string
+        agentVersion:
+          type: string
+        contractVersion:
+          type: integer
+        capabilities:
+          type: array
+          items:
+            type: string
+        capacity:
+          $ref: '#/components/schemas/WorkerCapacity'
+        currentTaskCount:
+          type: integer
+          minimum: 0
+        lastHeartbeatSequence:
+          type: string
+          pattern: '^[0-9]+$'
+        startedAt:
+          type: string
+          format: date-time
+        lastHeartbeatAt:
+          type: string
+          format: date-time
+    ClaimTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [sessionId, waitSeconds]
+      properties:
+        sessionId:
+          $ref: '#/components/schemas/UuidV7'
+        waitSeconds:
+          type: integer
+          minimum: 0
+          maximum: 25
+    ExecutionRequirements:
+      type: object
+      additionalProperties: false
+      required: [resourceClass, requiredCapabilities]
+      properties:
+        resourceClass:
+          $ref: '#/components/schemas/WorkerResourceClass'
+        requiredCapabilities:
+          type: array
+          minItems: 1
+          maxItems: 8
+          uniqueItems: true
+          items:
+            type: string
+        minimumVramMb:
+          type: [integer, 'null']
+          minimum: 0
+        minimumScratchBytes:
+          type: [string, 'null']
+          pattern: '^[0-9]+$'
+        expectedRuntimeSeconds:
+          type: [integer, 'null']
+          minimum: 1
+    DownloadGrant:
+      type: object
+      additionalProperties: false
+      required: [assetId, method, url, headers, expiresAt, fileName, contentType, byteSize, checksumSha256]
+      properties:
+        assetId:
+          $ref: '#/components/schemas/UuidV7'
+        method:
+          type: string
+          const: GET
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 255
+        byteSize:
+          type: string
+          pattern: '^[0-9]+$'
+        checksumSha256:
+          type: [string, 'null']
+          pattern: '^[a-f0-9]{64}$'
+    TaskInputAsset:
+      type: object
+      additionalProperties: false
+      required: [slot, kind, assetId, metadata, download]
+      properties:
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 128
+        kind:
+          $ref: '#/components/schemas/AssetKind'
+        assetId:
+          $ref: '#/components/schemas/UuidV7'
+        metadata:
+          type: object
+          additionalProperties: true
+        download:
+          $ref: '#/components/schemas/DownloadGrant'
+    TaskOutputSpecification:
+      type: object
+      additionalProperties: false
+      required: [slot, kind, minItems, maxItems, allowedContentTypes, maxByteSize]
+      properties:
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 128
+        kind:
+          $ref: '#/components/schemas/AssetKind'
+        minItems:
+          type: integer
+          minimum: 0
+          maximum: 1000
+        maxItems:
+          type: integer
+          minimum: 1
+          maximum: 1000
+        allowedContentTypes:
+          type: array
+          minItems: 1
+          maxItems: 16
+          uniqueItems: true
+          items:
+            type: string
+        maxByteSize:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+    NormalizedMask:
+      type: object
+      additionalProperties: false
+      required: [x, y, width, height]
+      properties:
+        x:
+          type: number
+          minimum: 0
+          maximum: 1
+        y:
+          type: number
+          minimum: 0
+          maximum: 1
+        width:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+        height:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 1
+    DesubTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, mask, modelProfile]
+      properties:
+        kind:
+          type: string
+          const: DESUB
+        mask:
+          $ref: '#/components/schemas/NormalizedMask'
+        modelProfile:
+          type: string
+          minLength: 1
+          maxLength: 64
+    OcrTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, language, frameIntervalMs]
+      properties:
+        kind:
+          type: string
+          const: TRANSCRIBE_OCR
+        language:
+          type: string
+          minLength: 2
+          maxLength: 35
+        frameIntervalMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+    AsrTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, language, modelSize]
+      properties:
+        kind:
+          type: string
+          const: TRANSCRIBE_ASR
+        language:
+          type: string
+          minLength: 2
+          maxLength: 35
+        modelSize:
+          type: string
+          enum: [small, medium, large-v3]
+    TtsSegment:
+      type: object
+      additionalProperties: false
+      required: [segmentRevisionId, text, languageId, voiceProfileId, targetDurationMs, outputSlot]
+      properties:
+        segmentRevisionId:
+          $ref: '#/components/schemas/UuidV7'
+        text:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        languageId:
+          type: string
+          minLength: 2
+          maxLength: 35
+        voiceProfileId:
+          $ref: '#/components/schemas/UuidV7'
+        targetDurationMs:
+          type: integer
+          minimum: 1
+        outputSlot:
+          type: string
+          minLength: 1
+          maxLength: 128
+    InitialTtsTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, speed, timingPolicy, segments]
+      properties:
+        kind:
+          type: string
+          const: GENERATE_INITIAL_TTS
+        speed:
+          type: number
+          minimum: 0.5
+          maximum: 2
+        timingPolicy:
+          type: string
+          enum: [PRESERVE_SEGMENT, FIT_SEGMENT, ALLOW_DRIFT]
+        segments:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: '#/components/schemas/TtsSegment'
+    RegenerateTtsTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, speed, timingPolicy, segment]
+      properties:
+        kind:
+          type: string
+          const: REGENERATE_SEGMENT
+        speed:
+          type: number
+          minimum: 0.5
+          maximum: 2
+        timingPolicy:
+          type: string
+          enum: [PRESERVE_SEGMENT, FIT_SEGMENT, ALLOW_DRIFT]
+        segment:
+          $ref: '#/components/schemas/TtsSegment'
+    SeparateAudioTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, modelName]
+      properties:
+        kind:
+          type: string
+          const: SEPARATE_AUDIO
+        modelName:
+          type: string
+          enum: [htdemucs]
+    RenderVariant:
+      type: object
+      additionalProperties: false
+      required: [variant, outputSlot]
+      properties:
+        variant:
+          $ref: '#/components/schemas/RenderOutputVariant'
+        outputSlot:
+          type: string
+          minLength: 1
+          maxLength: 128
+        sourceStartMs:
+          type: [integer, 'null']
+          minimum: 0
+        sourceEndMs:
+          type: [integer, 'null']
+          minimum: 1
+    RenderTaskConfiguration:
+      type: object
+      additionalProperties: false
+      required: [kind, subtitleMode, variants]
+      properties:
+        kind:
+          type: string
+          const: RENDER
+        subtitleMode:
+          type: string
+          const: EXTERNAL_ONLY
+        variants:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items:
+            $ref: '#/components/schemas/RenderVariant'
+    TaskConfiguration:
+      oneOf:
+        - $ref: '#/components/schemas/DesubTaskConfiguration'
+        - $ref: '#/components/schemas/OcrTaskConfiguration'
+        - $ref: '#/components/schemas/AsrTaskConfiguration'
+        - $ref: '#/components/schemas/InitialTtsTaskConfiguration'
+        - $ref: '#/components/schemas/RegenerateTtsTaskConfiguration'
+        - $ref: '#/components/schemas/SeparateAudioTaskConfiguration'
+        - $ref: '#/components/schemas/RenderTaskConfiguration'
+    ClaimedTask:
+      type: object
+      additionalProperties: false
+      required: [taskId, attemptId, leaseId, fencingToken, taskType, payloadVersion, leaseExpiresAt, renewAfterSeconds, requirements, configuration, inputs, outputs]
+      properties:
+        taskId:
+          $ref: '#/components/schemas/UuidV7'
+        attemptId:
+          $ref: '#/components/schemas/UuidV7'
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        taskType:
+          $ref: '#/components/schemas/WorkerTaskType'
+        payloadVersion:
+          type: integer
+          const: 1
+        leaseExpiresAt:
+          type: string
+          format: date-time
+        renewAfterSeconds:
+          type: integer
+          minimum: 1
+        requirements:
+          $ref: '#/components/schemas/ExecutionRequirements'
+        configuration:
+          $ref: '#/components/schemas/TaskConfiguration'
+        inputs:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/TaskInputAsset'
+        outputs:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/TaskOutputSpecification'
+    LeaseActionRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+    TaskProgressRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken, progressBps]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        progressBps:
+          type: integer
+          minimum: 0
+          maximum: 10000
+        detailSafe:
+          type: [string, 'null']
+          maxLength: 500
+    OutputGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken, slot, fileName, contentType, byteSize, checksumSha256, metadata]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 128
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 255
+        contentType:
+          type: string
+          minLength: 1
+          maxLength: 255
+        byteSize:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+        metadata:
+          type: object
+          additionalProperties: true
+    UploadGrant:
+      type: object
+      additionalProperties: false
+      required: [assetId, slot, method, url, headers, expiresAt, maxByteSize]
+      properties:
+        assetId:
+          $ref: '#/components/schemas/UuidV7'
+        slot:
+          type: string
+        method:
+          type: string
+          const: PUT
+        url:
+          type: string
+          format: uri
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+        maxByteSize:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+    CommitOutputRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken, byteSize, checksumSha256]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        byteSize:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+    CommittedOutput:
+      type: object
+      additionalProperties: false
+      required: [assetId, slot, status, contentType, byteSize, checksumSha256]
+      properties:
+        assetId:
+          $ref: '#/components/schemas/UuidV7'
+        slot:
+          type: string
+        status:
+          type: string
+          const: AVAILABLE
+        contentType:
+          type: string
+        byteSize:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        checksumSha256:
+          type: string
+          pattern: '^[a-f0-9]{64}$'
+    TaskOutputReference:
+      type: object
+      additionalProperties: false
+      required: [slot, assetId]
+      properties:
+        slot:
+          type: string
+          minLength: 1
+          maxLength: 128
+        assetId:
+          $ref: '#/components/schemas/UuidV7'
+    TaskMetrics:
+      type: object
+      additionalProperties: false
+      properties:
+        downloadMs:
+          type: integer
+          minimum: 0
+        modelLoadMs:
+          type: integer
+          minimum: 0
+        executionMs:
+          type: integer
+          minimum: 0
+        uploadMs:
+          type: integer
+          minimum: 0
+        gpuActiveMs:
+          type: integer
+          minimum: 0
+        peakVramMb:
+          type: integer
+          minimum: 0
+        inputBytes:
+          type: string
+          pattern: '^[0-9]+$'
+        outputBytes:
+          type: string
+          pattern: '^[0-9]+$'
+        exitCode:
+          type: [integer, 'null']
+    CompleteTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken, outputs, result, metrics]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        outputs:
+          type: array
+          minItems: 1
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/TaskOutputReference'
+        result:
+          type: object
+          additionalProperties: true
+        metrics:
+          $ref: '#/components/schemas/TaskMetrics'
+    WorkerFailureCode:
+      type: string
+      enum: [MODEL_LOAD_FAILED, INFERENCE_FAILED, PROCESS_EXITED, PROCESS_TIMEOUT, DOWNLOAD_FAILED, UPLOAD_FAILED, CHECKSUM_FAILED, INVALID_INPUT, OUT_OF_MEMORY, SCRATCH_EXHAUSTED, TRANSIENT_STORAGE_ERROR, TRANSIENT_NETWORK_ERROR]
+    FailTaskRequest:
+      type: object
+      additionalProperties: false
+      required: [leaseId, fencingToken, code, detailSafe, metrics]
+      properties:
+        leaseId:
+          $ref: '#/components/schemas/UuidV7'
+        fencingToken:
+          $ref: '#/components/schemas/FencingToken'
+        code:
+          $ref: '#/components/schemas/WorkerFailureCode'
+        detailSafe:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        metrics:
+          $ref: '#/components/schemas/TaskMetrics'
+    Meta:
+      type: object
+      additionalProperties: false
+      required: [requestId]
+      properties:
+        requestId:
+          $ref: '#/components/schemas/UuidV7'
     EnrollmentEnvelope:
       type: object
+      additionalProperties: false
       required: [data, meta]
       properties:
-        data: { type: object, required: [credential, session, heartbeatIntervalSeconds, offlineTimeoutSeconds], properties: { credential: { type: string }, session: { $ref: '#/components/schemas/WorkerSession' }, heartbeatIntervalSeconds: { type: integer }, offlineTimeoutSeconds: { type: integer } } }
-        meta: { $ref: '#/components/schemas/Meta' }
+        data:
+          type: object
+          additionalProperties: false
+          required: [credential, session, heartbeatIntervalSeconds, offlineTimeoutSeconds]
+          properties:
+            credential:
+              type: string
+            session:
+              $ref: '#/components/schemas/WorkerSession'
+            heartbeatIntervalSeconds:
+              type: integer
+              minimum: 1
+            offlineTimeoutSeconds:
+              type: integer
+              minimum: 1
+        meta:
+          $ref: '#/components/schemas/Meta'
     SessionEnvelope:
       type: object
+      additionalProperties: false
       required: [data, meta]
       properties:
-        data: { type: object, required: [session, heartbeatIntervalSeconds, offlineTimeoutSeconds], properties: { session: { $ref: '#/components/schemas/WorkerSession' }, heartbeatIntervalSeconds: { type: integer }, offlineTimeoutSeconds: { type: integer } } }
-        meta: { $ref: '#/components/schemas/Meta' }
+        data:
+          type: object
+          additionalProperties: false
+          required: [session, desiredStatus, heartbeatIntervalSeconds, offlineTimeoutSeconds]
+          properties:
+            session:
+              $ref: '#/components/schemas/WorkerSession'
+            desiredStatus:
+              $ref: '#/components/schemas/WorkerDesiredStatus'
+            heartbeatIntervalSeconds:
+              type: integer
+              minimum: 1
+            offlineTimeoutSeconds:
+              type: integer
+              minimum: 1
+        meta:
+          $ref: '#/components/schemas/Meta'
     HeartbeatEnvelope:
       type: object
+      additionalProperties: false
       required: [data, meta]
       properties:
-        data: { type: object, required: [acceptedSequence, workerId, sessionId], properties: { acceptedSequence: { type: string }, workerId: { $ref: '#/components/schemas/UuidV7' }, sessionId: { $ref: '#/components/schemas/UuidV7' } } }
-        meta: { $ref: '#/components/schemas/Meta' }
+        data:
+          type: object
+          additionalProperties: false
+          required: [acceptedSequence, workerId, sessionId, desiredStatus, cancelLeaseIds]
+          properties:
+            acceptedSequence:
+              type: string
+              pattern: '^[0-9]+$'
+            workerId:
+              $ref: '#/components/schemas/UuidV7'
+            sessionId:
+              $ref: '#/components/schemas/UuidV7'
+            desiredStatus:
+              $ref: '#/components/schemas/WorkerDesiredStatus'
+            cancelLeaseIds:
+              type: array
+              maxItems: 100
+              uniqueItems: true
+              items:
+                $ref: '#/components/schemas/UuidV7'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    ClaimTaskEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [task, retryAfterSeconds, desiredStatus]
+          properties:
+            task:
+              anyOf:
+                - $ref: '#/components/schemas/ClaimedTask'
+                - type: 'null'
+            retryAfterSeconds:
+              type: integer
+              minimum: 0
+            desiredStatus:
+              $ref: '#/components/schemas/WorkerDesiredStatus'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    TaskActionEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          additionalProperties: false
+          required: [taskId, attemptId, leaseId, taskStatus, leaseExpiresAt, cancelRequested, desiredStatus]
+          properties:
+            taskId:
+              $ref: '#/components/schemas/UuidV7'
+            attemptId:
+              $ref: '#/components/schemas/UuidV7'
+            leaseId:
+              $ref: '#/components/schemas/UuidV7'
+            taskStatus:
+              $ref: '#/components/schemas/WorkerTaskStatus'
+            leaseExpiresAt:
+              type: [string, 'null']
+              format: date-time
+            cancelRequested:
+              type: boolean
+            desiredStatus:
+              $ref: '#/components/schemas/WorkerDesiredStatus'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    DownloadGrantEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/DownloadGrant'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    UploadGrantEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/UploadGrant'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    CommittedOutputEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data:
+          $ref: '#/components/schemas/CommittedOutput'
+        meta:
+          $ref: '#/components/schemas/Meta'
+    WorkerProblemCode:
+      type: string
+      enum: [VALIDATION_ERROR, RATE_LIMITED, INTERNAL_ERROR, IDEMPOTENCY_KEY_REUSED, WORKER_NOT_FOUND, WORKER_NOT_ACTIVE, WORKER_DRAINING, WORKER_SESSION_CONFLICT, WORKER_SESSION_NOT_CURRENT, WORKER_VERSION_MISMATCH, WORKER_IMAGE_NOT_APPROVED, WORKER_HARDWARE_MISMATCH, WORKER_CAPABILITY_MISMATCH, ENROLLMENT_TOKEN_INVALID, ENROLLMENT_TOKEN_EXPIRED, ENROLLMENT_TOKEN_CONSUMED, WORKER_CREDENTIAL_REVOKED, TASK_NOT_FOUND, TASK_NOT_CLAIMABLE, TASK_CAPABILITY_MISMATCH, TASK_LEASE_EXPIRED, STALE_TASK_ATTEMPT, TASK_CANCELLED, TASK_PROGRESS_REGRESSION, TASK_OUTPUT_INVALID, ASSET_NOT_FOUND, ASSET_GRANT_EXPIRED, ASSET_CHECKSUM_MISMATCH, ASSET_NOT_AVAILABLE, ASSET_NOT_OWNED_BY_ATTEMPT]
     ProblemDetails:
       type: object
+      additionalProperties: false
       required: [type, title, status, code, requestId]
-      properties: { type: { type: string }, title: { type: string }, status: { type: integer }, detail: { type: string }, code: { type: string }, requestId: { $ref: '#/components/schemas/UuidV7' } }
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          $ref: '#/components/schemas/WorkerProblemCode'
+        requestId:
+          $ref: '#/components/schemas/UuidV7'
   responses:
     Problem:
       description: RFC 9457 error without secret detail.
-      content: { application/problem+json: { schema: { $ref: '#/components/schemas/ProblemDetails' } } }
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
