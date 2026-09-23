@@ -1,0 +1,127 @@
+import { createHash } from 'node:crypto';
+import { Prisma, type Asset, type PrismaClient, type ResourceClass } from '@prisma/client';
+import type { ClaimedTask, CommitOutputRequest, CompleteTaskRequest, FailTaskRequest, OutputGrantRequest, TaskConfiguration, TaskMetrics, TaskProgressRequest, WorkerTaskType } from '@reup-dubbing-studio/api-contract/worker';
+import { uuidV7 } from '../../../platform/ids/uuid-v7';
+import { WorkerError } from '../domain/worker-errors';
+import type { TaskManifest } from '../domain/worker-tasks';
+import type { R2WorkerObjectStore } from './r2-worker-object-store';
+
+const LEASE_MS = 60_000;
+const OFFLINE_MS = 45_000;
+const RETRY_BACKOFF_MS = 15_000;
+const GPU_TASK_TYPES = ['DESUB', 'TRANSCRIBE_OCR', 'TRANSCRIBE_ASR', 'GENERATE_INITIAL_TTS', 'REGENERATE_SEGMENT', 'SEPARATE_AUDIO', 'RENDER'] as const;
+const leaseInclude = { pipelineTask: true, taskAttempt: true, workerSession: { include: { worker: { include: { approvedImage: true } }, credential: true } } } as const;
+type ActiveLease = Prisma.TaskLeaseGetPayload<{ include: typeof leaseInclude }>;
+
+export class PrismaWorkerTasksRepository {
+  constructor(private readonly prisma: PrismaClient, private readonly objects: R2WorkerObjectStore) {}
+
+  async idempotent<T>(scope: string, key: string, request: unknown, action: () => Promise<T>): Promise<T> {
+    const keyHash = createHash('sha256').update(key).digest('hex');
+    const requestHash = createHash('sha256').update(JSON.stringify(request)).digest('hex');
+    const prior = await this.prisma.idempotencyRecord.findUnique({ where: { scope_key: { scope, key: keyHash } } });
+    if (prior) { if (prior.requestHash !== requestHash) throw new WorkerError('IDEMPOTENCY_KEY_REUSED', 'Idempotency-Key was reused with another request'); return prior.responseBody as unknown as T; }
+    const result = await action();
+    await this.prisma.idempotencyRecord.create({ data: { id: uuidV7(), scope, key: keyHash, requestHash, responseBody: result as unknown as Prisma.InputJsonValue, responseEtag: '' } });
+    return result;
+  }
+
+  async claim(prefix: string, credentialHash: string, sessionId: string) {
+    await this.reapExpired();
+    const claimed = await this.prisma.$transaction(async (tx) => {
+      const session = await this.session(tx, prefix, credentialHash, sessionId, true);
+      const capacity = capacityOf(session.capacity);
+      if (capacity.availableTaskSlots < 1 || await tx.taskLease.count({ where: { workerSessionId: session.id, releasedAt: null } })) return { task: null, desiredStatus: session.worker.desiredStatus };
+      const resourceClass: ResourceClass = session.worker.role === 'BATCH_MEDIA' ? 'GPU_BATCH' : 'GPU_TTS_INTERACTIVE';
+      const ids = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT pt.id
+        FROM pipeline_tasks pt
+        JOIN pipeline_jobs pj ON pj.id = pt.pipeline_job_id
+        WHERE pt.status = 'READY'::"PipelineTaskStatus"
+          AND pt.resource_class = ${resourceClass}::"ResourceClass"
+          AND (pt.ready_at IS NULL OR pt.ready_at <= NOW())
+          AND pt.attempt_count < pt.max_attempts
+          AND pj.status <> 'CANCELLED'::"PipelineJobStatus"
+          AND pt.required_capabilities <@ ${session.capabilities}::text[]
+          AND (pt.minimum_vram_mb IS NULL OR pt.minimum_vram_mb <= ${capacity.vramFreeMb ?? 0})
+          AND (pt.minimum_scratch_bytes IS NULL OR pt.minimum_scratch_bytes <= ${BigInt(capacity.scratchFreeBytes)})
+          AND pt.task_type::text = pt.configuration->>'kind'
+          AND jsonb_typeof(pt.input_manifest->'inputs') = 'array'
+          AND jsonb_typeof(pt.input_manifest->'outputs') = 'array'
+          AND NOT EXISTS (SELECT 1 FROM task_leases tl WHERE tl.pipeline_task_id = pt.id AND tl.released_at IS NULL)
+        ORDER BY pt.priority DESC, pt.ready_at ASC NULLS FIRST, pt.id ASC
+        FOR UPDATE OF pt SKIP LOCKED
+        LIMIT 1
+      `);
+      if (!ids[0]) return { task: null, desiredStatus: session.worker.desiredStatus };
+      const task = await tx.pipelineTask.findUniqueOrThrow({ where: { id: ids[0].id } });
+      const snapshot = parseSnapshot(task.taskType, task.configuration, task.inputManifest);
+      const assets = await this.inputAssets(tx, snapshot.manifest);
+      const now = new Date();
+      const expiresAt = new Date(now.valueOf() + LEASE_MS);
+      const attemptNumber = task.attemptCount + 1;
+      const attemptId = uuidV7();
+      const leaseId = uuidV7();
+      const latestFence = await tx.taskLease.aggregate({ where: { pipelineTaskId: task.id }, _max: { fencingToken: true } });
+      const fencingToken = (latestFence._max.fencingToken ?? 0n) + 1n;
+      await tx.taskAttempt.create({ data: { id: attemptId, pipelineTaskId: task.id, attemptNumber, executorKind: 'WORKER', executorInstanceId: session.workerId, workerSessionId: session.id, status: 'STARTED', startedAt: now, queueWaitMs: task.readyAt ? BigInt(Math.max(0, now.valueOf() - task.readyAt.valueOf())) : null } });
+      await tx.taskLease.create({ data: { id: leaseId, pipelineTaskId: task.id, taskAttemptId: attemptId, executorKind: 'WORKER', executorInstanceId: session.workerId, workerSessionId: session.id, fencingToken, leasedAt: now, renewedAt: now, expiresAt } });
+      await tx.pipelineTask.update({ where: { id: task.id }, data: { status: 'LEASED', attemptCount: attemptNumber, version: { increment: 1 } } });
+      await tx.worker.update({ where: { id: session.workerId }, data: { observedStatus: 'BUSY', version: { increment: 1 } } });
+      return { desiredStatus: session.worker.desiredStatus, task, snapshot, assets, attemptId, leaseId, fencingToken, expiresAt };
+    });
+    if (!claimed.task) return { task: null, retryAfterSeconds: 2, desiredStatus: claimed.desiredStatus };
+    const inputs = await Promise.all(claimed.assets.map(async ({ descriptor, asset }) => ({ ...descriptor, download: await this.objects.download(asset, claimed.expiresAt) })));
+    const response: ClaimedTask = { taskId: claimed.task.id, attemptId: claimed.attemptId, leaseId: claimed.leaseId, fencingToken: claimed.fencingToken.toString(), taskType: claimed.snapshot.taskType, payloadVersion: 1, leaseExpiresAt: claimed.expiresAt.toISOString(), renewAfterSeconds: 20, requirements: { resourceClass: claimed.task.resourceClass as 'GPU_BATCH' | 'GPU_TTS_INTERACTIVE', requiredCapabilities: claimed.task.requiredCapabilities, minimumVramMb: claimed.task.minimumVramMb, minimumScratchBytes: claimed.task.minimumScratchBytes?.toString() ?? null, expectedRuntimeSeconds: claimed.task.expectedRuntimeSeconds }, configuration: claimed.snapshot.configuration, inputs, outputs: claimed.snapshot.manifest.outputs };
+    return { task: response, retryAfterSeconds: 0, desiredStatus: claimed.desiredStatus };
+  }
+
+  start(prefix: string, credentialHash: string, taskId: string, attemptId: string, leaseId: string, fencingToken: bigint) { return this.withLease(prefix, credentialHash, taskId, attemptId, leaseId, fencingToken, async (tx, lease) => { if (lease.pipelineTask.status === 'LEASED') await tx.pipelineTask.update({ where: { id: taskId }, data: { status: 'RUNNING', version: { increment: 1 } } }); else if (lease.pipelineTask.status !== 'RUNNING') stale(); return this.actionView(tx, leaseId); }); }
+  renew(prefix: string, credentialHash: string, taskId: string, attemptId: string, leaseId: string, fencingToken: bigint) { return this.withLease(prefix, credentialHash, taskId, attemptId, leaseId, fencingToken, async (tx) => { await tx.taskLease.update({ where: { id: leaseId }, data: { renewedAt: new Date(), expiresAt: new Date(Date.now() + LEASE_MS) } }); return this.actionView(tx, leaseId); }); }
+  progress(prefix: string, credentialHash: string, taskId: string, attemptId: string, input: TaskProgressRequest) { return this.withLease(prefix, credentialHash, taskId, attemptId, input.leaseId, BigInt(input.fencingToken), async (tx, lease) => { if (lease.pipelineTask.status !== 'RUNNING') stale(); if (input.progressBps < lease.pipelineTask.progressBps) throw new WorkerError('TASK_PROGRESS_REGRESSION', 'Task progress cannot decrease'); await tx.pipelineTask.update({ where: { id: taskId }, data: { progressBps: input.progressBps, progressDetailSafe: input.detailSafe ?? null, version: { increment: 1 } } }); return this.actionView(tx, input.leaseId); }); }
+
+  async inputGrant(prefix: string, credentialHash: string, taskId: string, attemptId: string, assetId: string, leaseId: string, fencingToken: bigint) {
+    const found = await this.withLease(prefix, credentialHash, taskId, attemptId, leaseId, fencingToken, async (tx, lease) => { const snapshot = parseSnapshot(lease.pipelineTask.taskType, lease.pipelineTask.configuration, lease.pipelineTask.inputManifest); if (!snapshot.manifest.inputs.some((item) => item.assetId === assetId)) throw new WorkerError('ASSET_NOT_OWNED_BY_ATTEMPT', 'Asset is not an input of this task'); const asset = await tx.asset.findUnique({ where: { id: assetId } }); if (!asset || asset.status !== 'AVAILABLE') throw new WorkerError('ASSET_NOT_AVAILABLE', 'Input asset is not available'); return { asset, expiresAt: lease.expiresAt }; });
+    return this.objects.download(found.asset, found.expiresAt);
+  }
+
+  async createOutput(prefix: string, credentialHash: string, taskId: string, attemptId: string, input: OutputGrantRequest) {
+    const created = await this.withLease(prefix, credentialHash, taskId, attemptId, input.leaseId, BigInt(input.fencingToken), async (tx, lease) => {
+      const snapshot = parseSnapshot(lease.pipelineTask.taskType, lease.pipelineTask.configuration, lease.pipelineTask.inputManifest);
+      const specification = snapshot.manifest.outputs.find((item) => item.slot === input.slot);
+      if (!specification || !specification.allowedContentTypes.includes(input.contentType) || BigInt(input.byteSize) > BigInt(specification.maxByteSize)) throw new WorkerError('TASK_OUTPUT_INVALID', 'Output does not match its declared slot');
+      const count = await tx.asset.count({ where: { createdByAttemptId: attemptId, metadata: { path: ['workerOutput', 'slot'], equals: input.slot } } });
+      if (count >= specification.maxItems) throw new WorkerError('TASK_OUTPUT_INVALID', 'Output slot cardinality was exceeded');
+      const settings = await tx.systemSetting.findUnique({ where: { singletonKey: 'DEFAULT' } }); if (!settings) throw new WorkerError('ASSET_NOT_AVAILABLE', 'Object storage is not configured');
+      const assetId = uuidV7();
+      const objectKey = `worker/${taskId}/${attemptId}/${assetId}/${safeName(input.fileName)}`;
+      const asset = await tx.asset.create({ data: { id: assetId, storageBackend: 'R2', bucket: settings.storageBucket, objectKey, fileName: input.fileName, status: 'PENDING', checksumSha256: input.checksumSha256, byteSize: BigInt(input.byteSize), contentType: input.contentType, createdByAttemptId: attemptId, metadata: { workerOutput: { slot: input.slot, kind: specification.kind, maxByteSize: specification.maxByteSize, allowedContentTypes: specification.allowedContentTypes }, custom: input.metadata } as Prisma.InputJsonValue } });
+      return { asset, expiresAt: lease.expiresAt, slot: input.slot };
+    });
+    return this.objects.upload(created.asset, created.expiresAt, created.slot);
+  }
+
+  async refreshOutput(prefix: string, credentialHash: string, taskId: string, attemptId: string, assetId: string, leaseId: string, fencingToken: bigint) { const found = await this.outputAsset(prefix, credentialHash, taskId, attemptId, assetId, leaseId, fencingToken); const slot = outputMeta(found.asset).slot; return this.objects.upload(found.asset, found.expiresAt, slot); }
+  async commitOutput(prefix: string, credentialHash: string, taskId: string, attemptId: string, assetId: string, input: CommitOutputRequest) { const found = await this.outputAsset(prefix, credentialHash, taskId, attemptId, assetId, input.leaseId, BigInt(input.fencingToken)); if (found.asset.byteSize !== BigInt(input.byteSize) || found.asset.checksumSha256 !== input.checksumSha256) throw new WorkerError('TASK_OUTPUT_INVALID', 'Committed output does not match the upload grant'); if (found.asset.status === 'PENDING') { await this.objects.verify(found.asset); await this.prisma.asset.update({ where: { id: assetId }, data: { status: 'AVAILABLE', uploadedAt: new Date(), verifiedAt: new Date(), version: { increment: 1 } } }); } const asset = await this.prisma.asset.findUniqueOrThrow({ where: { id: assetId } }); return { assetId, slot: outputMeta(asset).slot, status: 'AVAILABLE' as const, contentType: asset.contentType!, byteSize: asset.byteSize!.toString(), checksumSha256: asset.checksumSha256! }; }
+
+  complete(prefix: string, credentialHash: string, taskId: string, attemptId: string, input: CompleteTaskRequest) { return this.withLease(prefix, credentialHash, taskId, attemptId, input.leaseId, BigInt(input.fencingToken), async (tx, lease) => { if (lease.pipelineTask.status !== 'RUNNING') stale(); const snapshot = parseSnapshot(lease.pipelineTask.taskType, lease.pipelineTask.configuration, lease.pipelineTask.inputManifest); await validateOutputs(tx, attemptId, snapshot.manifest, input.outputs); const now = new Date(); await tx.taskAttempt.update({ where: { id: attemptId }, data: { status: 'SUCCEEDED', finishedAt: now, ...metricData(input.metrics), metricsSafe: { result: input.result } as Prisma.InputJsonValue } }); await tx.pipelineTask.update({ where: { id: taskId }, data: { status: 'SUCCEEDED', progressBps: 10_000, version: { increment: 1 } } }); await tx.taskLease.update({ where: { id: input.leaseId }, data: { releasedAt: now, releaseReason: 'SUCCEEDED' } }); return this.actionView(tx, input.leaseId); }); }
+  fail(prefix: string, credentialHash: string, taskId: string, attemptId: string, input: FailTaskRequest) { return this.withLease(prefix, credentialHash, taskId, attemptId, input.leaseId, BigInt(input.fencingToken), async (tx, lease) => { const now = new Date(); const retry = lease.pipelineTask.attemptCount < lease.pipelineTask.maxAttempts; await tx.taskAttempt.update({ where: { id: attemptId }, data: { status: 'FAILED', finishedAt: now, errorCode: input.code, errorDetailSafe: input.detailSafe, ...metricData(input.metrics) } }); await tx.pipelineTask.update({ where: { id: taskId }, data: { status: retry ? 'READY' : 'FAILED', readyAt: retry ? new Date(now.valueOf() + RETRY_BACKOFF_MS) : null, version: { increment: 1 } } }); await tx.taskLease.update({ where: { id: input.leaseId }, data: { releasedAt: now, releaseReason: input.code } }); return this.actionView(tx, input.leaseId); }); }
+
+  async reapExpired() { const now = new Date(); const expired = await this.prisma.taskLease.findMany({ where: { releasedAt: null, expiresAt: { lte: now } }, select: { id: true, pipelineTaskId: true, taskAttemptId: true, pipelineTask: { select: { attemptCount: true, maxAttempts: true } } }, take: 100 }); for (const lease of expired) await this.prisma.$transaction(async (tx) => { const released = await tx.taskLease.updateMany({ where: { id: lease.id, releasedAt: null, expiresAt: { lte: new Date() } }, data: { releasedAt: new Date(), releaseReason: 'LEASE_EXPIRED' } }); if (!released.count) return; const retry = lease.pipelineTask.attemptCount < lease.pipelineTask.maxAttempts; await tx.taskAttempt.update({ where: { id: lease.taskAttemptId }, data: { status: 'TIMED_OUT', finishedAt: new Date(), errorCode: 'LEASE_EXPIRED', errorDetailSafe: 'Worker lease expired' } }); await tx.pipelineTask.update({ where: { id: lease.pipelineTaskId }, data: { status: retry ? 'READY' : 'FAILED', readyAt: retry ? new Date(Date.now() + RETRY_BACKOFF_MS) : null, version: { increment: 1 } } }); }); }
+
+  private withLease<T>(prefix: string, credentialHash: string, taskId: string, attemptId: string, leaseId: string, fencingToken: bigint, action: (tx: Prisma.TransactionClient, lease: ActiveLease) => Promise<T>) { return this.prisma.$transaction(async (tx) => { const lease = await tx.taskLease.findUnique({ where: { id: leaseId }, include: leaseInclude }); if (!lease || lease.pipelineTaskId !== taskId || lease.taskAttemptId !== attemptId || lease.fencingToken !== fencingToken || !lease.workerSession) stale(); const session = lease.workerSession; if (session.credential.credentialPrefix !== prefix || session.credential.credentialHash !== credentialHash || session.credential.revokedAt) throw new WorkerError('WORKER_CREDENTIAL_REVOKED', 'Worker credential is invalid'); if (session.endedAt || lease.workerSessionId !== lease.taskAttempt.workerSessionId) stale(); if (lease.releasedAt) stale(); if (lease.expiresAt <= new Date()) throw new WorkerError('TASK_LEASE_EXPIRED', 'Task lease has expired'); if (lease.pipelineTask.status === 'CANCELLED') throw new WorkerError('TASK_CANCELLED', 'Task was cancelled'); return action(tx, lease as ActiveLease); }); }
+  private async session(tx: Prisma.TransactionClient, prefix: string, credentialHash: string, sessionId: string, forClaim: boolean) { const session = await tx.workerSession.findUnique({ where: { id: sessionId }, include: { worker: { include: { approvedImage: true } }, credential: true } }); if (!session || session.credential.credentialPrefix !== prefix || session.credential.credentialHash !== credentialHash || session.credential.revokedAt) throw new WorkerError('WORKER_CREDENTIAL_REVOKED', 'Worker credential is invalid'); if (session.endedAt) throw new WorkerError('WORKER_SESSION_NOT_CURRENT', 'Worker session is not current'); if (session.worker.desiredStatus === 'REVOKED') throw new WorkerError('WORKER_NOT_ACTIVE', 'Worker is not active'); if (forClaim && session.worker.desiredStatus === 'DRAINING') throw new WorkerError('WORKER_DRAINING', 'Worker is draining'); if (session.lastHeartbeatAt < new Date(Date.now() - OFFLINE_MS)) throw new WorkerError('WORKER_NOT_ACTIVE', 'Worker heartbeat is stale'); if (session.worker.approvedImage.status !== 'ACTIVE' || session.imageDigest !== session.worker.approvedImage.imageDigest || session.contractVersion !== session.worker.approvedImage.contractVersion) throw new WorkerError('WORKER_VERSION_MISMATCH', 'Worker image or contract is no longer approved'); return session; }
+  private async inputAssets(tx: Prisma.TransactionClient, manifest: TaskManifest) { const result: Array<{ descriptor: TaskManifest['inputs'][number]; asset: Asset }> = []; for (const descriptor of manifest.inputs) { const asset = await tx.asset.findUnique({ where: { id: descriptor.assetId } }); if (!asset || asset.status !== 'AVAILABLE' || !asset.contentType || asset.byteSize === null) throw new WorkerError('ASSET_NOT_AVAILABLE', 'A task input asset is not available'); result.push({ descriptor, asset }); } return result; }
+  private async outputAsset(prefix: string, credentialHash: string, taskId: string, attemptId: string, assetId: string, leaseId: string, fencingToken: bigint) { return this.withLease(prefix, credentialHash, taskId, attemptId, leaseId, fencingToken, async (tx, lease) => { const asset = await tx.asset.findUnique({ where: { id: assetId } }); if (!asset) throw new WorkerError('ASSET_NOT_FOUND', 'Output asset was not found'); if (asset.createdByAttemptId !== attemptId) throw new WorkerError('ASSET_NOT_OWNED_BY_ATTEMPT', 'Output asset does not belong to this attempt'); if (!['PENDING', 'AVAILABLE'].includes(asset.status)) throw new WorkerError('ASSET_NOT_AVAILABLE', 'Output asset is unavailable'); return { asset, expiresAt: lease.expiresAt }; }); }
+  private async actionView(tx: Prisma.TransactionClient, leaseId: string) { const lease = await tx.taskLease.findUniqueOrThrow({ where: { id: leaseId }, include: { pipelineTask: true, taskAttempt: true, workerSession: { include: { worker: true } } } }); if (!lease.workerSession) stale(); return { taskId: lease.pipelineTaskId, attemptId: lease.taskAttemptId, leaseId: lease.id, taskStatus: wireStatus(lease.pipelineTask.status), leaseExpiresAt: lease.releasedAt ? null : lease.expiresAt.toISOString(), cancelRequested: lease.pipelineTask.status === 'CANCELLED', desiredStatus: lease.workerSession.worker.desiredStatus }; }
+}
+
+function parseSnapshot(taskType: string, configuration: Prisma.JsonValue, inputManifest: Prisma.JsonValue): { taskType: WorkerTaskType; configuration: TaskConfiguration; manifest: TaskManifest } { if (!GPU_TASK_TYPES.includes(taskType as typeof GPU_TASK_TYPES[number])) throw new WorkerError('TASK_NOT_CLAIMABLE', 'Task type is not executable by a GPU worker'); const config = record(configuration); const manifest = record(inputManifest); if (config.kind !== taskType || !Array.isArray(manifest.inputs) || !Array.isArray(manifest.outputs)) throw new WorkerError('TASK_NOT_CLAIMABLE', 'Task execution snapshot is invalid'); return { taskType: taskType as WorkerTaskType, configuration: configuration as TaskConfiguration, manifest: inputManifest as unknown as TaskManifest }; }
+function capacityOf(value: Prisma.JsonValue) { const capacity = record(value); const scratchFreeBytes = typeof capacity.scratchFreeBytes === 'string' && /^\d+$/u.test(capacity.scratchFreeBytes) ? capacity.scratchFreeBytes : '0'; return { availableTaskSlots: typeof capacity.availableTaskSlots === 'number' ? capacity.availableTaskSlots : 0, vramFreeMb: typeof capacity.vramFreeMb === 'number' ? capacity.vramFreeMb : undefined, scratchFreeBytes }; }
+function record(value: Prisma.JsonValue | unknown): Record<string, unknown> { return typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {}; }
+function outputMeta(asset: { metadata: unknown }) { const meta = record(record(asset.metadata).workerOutput); if (typeof meta.slot !== 'string') throw new WorkerError('TASK_OUTPUT_INVALID', 'Output asset metadata is invalid'); return { slot: meta.slot }; }
+function metricData(metrics: TaskMetrics): Prisma.TaskAttemptUpdateInput { return { ...(metrics.downloadMs === undefined ? {} : { downloadMs: BigInt(metrics.downloadMs) }), ...(metrics.modelLoadMs === undefined ? {} : { modelLoadMs: BigInt(metrics.modelLoadMs) }), ...(metrics.executionMs === undefined ? {} : { executionMs: BigInt(metrics.executionMs) }), ...(metrics.uploadMs === undefined ? {} : { uploadMs: BigInt(metrics.uploadMs) }), ...(metrics.gpuActiveMs === undefined ? {} : { gpuActiveMs: BigInt(metrics.gpuActiveMs) }), ...(metrics.peakVramMb === undefined ? {} : { peakVramMb: metrics.peakVramMb }), ...(metrics.inputBytes === undefined ? {} : { inputBytes: BigInt(metrics.inputBytes) }), ...(metrics.outputBytes === undefined ? {} : { outputBytes: BigInt(metrics.outputBytes) }), ...(metrics.exitCode === undefined ? {} : { exitCode: metrics.exitCode }) }; }
+async function validateOutputs(tx: Prisma.TransactionClient, attemptId: string, manifest: TaskManifest, references: Array<{ slot: string; assetId: string }>) { const assets = await tx.asset.findMany({ where: { id: { in: references.map((item) => item.assetId) }, createdByAttemptId: attemptId, status: 'AVAILABLE' } }); for (const spec of manifest.outputs) { const ids = references.filter((item) => item.slot === spec.slot).map((item) => item.assetId); const matched = assets.filter((asset) => ids.includes(asset.id) && outputMeta(asset).slot === spec.slot); if (matched.length < spec.minItems || matched.length > spec.maxItems) throw new WorkerError('TASK_OUTPUT_INVALID', 'Required task outputs are not available'); } if (assets.length !== references.length) throw new WorkerError('ASSET_NOT_OWNED_BY_ATTEMPT', 'An output does not belong to this attempt'); }
+function wireStatus(status: string): 'LEASED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' { if (['LEASED', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'].includes(status)) return status as 'LEASED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED'; return 'FAILED'; }
+function safeName(value: string) { return value.replace(/[^A-Za-z0-9._-]/gu, '_').slice(0, 255) || 'output.bin'; }
+function stale(): never { throw new WorkerError('STALE_TASK_ATTEMPT', 'Task attempt is no longer current'); }

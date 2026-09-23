@@ -11,6 +11,7 @@ describeWithDatabase('Studio API with PostgreSQL', () => {
   let userId: string; let sourceId: string; let channelId: string; let voiceAssetId: string;
   beforeAll(async () => {
     prisma = new PrismaClient({ datasources: { db: { url: databaseUrl! } } });
+    await prisma.idempotencyRecord.deleteMany({ where: { scope: { startsWith: 'STUDIO_' } } });
     userId = uuidV7(); sourceId = uuidV7(); channelId = uuidV7(); voiceId = uuidV7(); videoId = uuidV7(); segmentId = uuidV7(); const revisionId = uuidV7();
     await prisma.user.create({ data: { id: userId, displayName: 'Studio test' } });
     voiceAssetId = uuidV7();
@@ -30,6 +31,7 @@ describeWithDatabase('Studio API with PostgreSQL', () => {
     const jobIds = jobs?.map(({ id }) => id) ?? [];
     await prisma?.pipelineTask.deleteMany({ where: { pipelineJobId: { in: jobIds } } });
     await prisma?.pipelineJob.deleteMany({ where: { id: { in: jobIds } } });
+    await prisma?.idempotencyRecord.deleteMany({ where: { scope: { startsWith: 'STUDIO_' } } });
     await prisma?.videoSegment.update({ where: { id: segmentId }, data: { currentRevisionId: null } });
     await prisma?.segmentAudioRevision.deleteMany({ where: { videoSegmentId: segmentId } });
     await prisma?.segmentRevision.deleteMany({ where: { videoSegmentId: segmentId } });

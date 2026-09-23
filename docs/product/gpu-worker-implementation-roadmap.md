@@ -53,18 +53,18 @@
 
 ## 2. Control Plane task execution API
 
-- [ ] **Hoàn tất API cấp và quản lý task lease.**
-  - [ ] Hoàn thiện migration/index/constraint cần cho attempt, lease, fencing và
+- [x] **Hoàn tất API cấp và quản lý task lease.**
+  - [x] Hoàn thiện migration/index/constraint cần cho attempt, lease, fencing và
     progress dựa trên database design hiện có.
-  - [ ] Implement claim atomically bằng PostgreSQL row lock và
+  - [x] Implement claim atomically bằng PostgreSQL row lock và
     `FOR UPDATE SKIP LOCKED`.
-  - [ ] Implement start, renew, progress, complete và fail với kiểm tra session,
+  - [x] Implement start, renew, progress, complete và fail với kiểm tra session,
     role, lease deadline và fencing token.
-  - [ ] Implement cancel propagation, lease expiry/reaper, retry/backoff và giải
+  - [x] Implement cancel propagation, lease expiry/reaper, retry/backoff và giải
     phóng task an toàn khi Worker mất kết nối.
-  - [ ] Chỉ complete task sau khi output bắt buộc đã upload, kiểm tra checksum và
+  - [x] Chỉ complete task sau khi output bắt buộc đã upload, kiểm tra checksum và
     commit vào asset registry.
-  - [ ] Thêm integration test cho concurrent claim, duplicate request, stale
+  - [x] Thêm integration test cho concurrent claim, duplicate request, stale
     completion, expired lease, cancel race và Worker offline.
 
 ## 3. Python Worker Agent foundation
