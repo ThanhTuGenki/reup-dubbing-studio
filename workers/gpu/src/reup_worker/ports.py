@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Protocol
 from uuid import UUID
 
+from reup_worker.control_plane import SessionState
 from reup_worker_contract.models.claimed_task import ClaimedTask
 from reup_worker_contract.models.complete_task_request import CompleteTaskRequest
 from reup_worker_contract.models.fail_task_request import FailTaskRequest
@@ -16,9 +17,11 @@ from reup_worker_contract.models.task_output_reference import TaskOutputReferenc
 from reup_worker_contract.models.task_progress_request import TaskProgressRequest
 from reup_worker_contract.models.worker_desired_status import WorkerDesiredStatus
 
-from reup_worker.control_plane import SessionState
-
 ProgressReporter = Callable[[int, str | None], Awaitable[None]]
+
+
+class TaskExecutionCancelled(Exception):
+    """Raised by an executor after it has observed the Agent cancellation signal."""
 
 
 @dataclass

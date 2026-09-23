@@ -84,15 +84,15 @@
 
 ## 4. Fake executor end-to-end
 
-- [ ] **Hoàn tất một task giả chạy xuyên suốt Control Plane ↔ Worker.**
-  - [ ] Tạo fake task adapter có thể success, fail, timeout, báo progress và nhận
+- [x] **Hoàn tất một task giả chạy xuyên suốt Control Plane ↔ Worker.**
+  - [x] Tạo fake task adapter có thể success, fail, timeout, báo progress và nhận
     cancel mà không cần model/GPU.
-  - [ ] Chạy xuyên suốt enroll → session → heartbeat → claim → renew → complete.
-  - [ ] Kiểm thử Worker chết giữa task, restart Agent, lease hết hạn và attempt cũ
+  - [x] Chạy xuyên suốt enroll → session → heartbeat → claim → renew → complete.
+  - [x] Kiểm thử Worker chết giữa task, restart Agent, lease hết hạn và attempt cũ
     không thể commit kết quả muộn.
-  - [ ] Kiểm thử drain ngăn claim mới và chuyển `SAFE_TO_TERMINATE` khi không còn
+  - [x] Kiểm thử drain ngăn claim mới và chuyển `SAFE_TO_TERMINATE` khi không còn
     lease hoạt động.
-  - [ ] Cập nhật Queue/Studio qua event hiện có và xác nhận UI phản ánh trạng thái
+  - [x] Cập nhật Queue/Studio qua event hiện có và xác nhận UI phản ánh trạng thái
     task thật thay vì fixture.
 
 ## 5. Asset transfer và workspace lifecycle

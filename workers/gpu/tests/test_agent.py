@@ -2,6 +2,11 @@ import asyncio
 from pathlib import Path
 from uuid import UUID
 
+from reup_worker.agent import WorkerAgent
+from reup_worker.control_plane import SessionState
+from reup_worker.credential_store import CredentialStore
+from reup_worker.fake_executor import FakeExecutorConfig, FakeTaskExecutor
+from reup_worker.ports import ExecutionResult, ProgressReporter
 from reup_worker_contract.models.claimed_task import ClaimedTask
 from reup_worker_contract.models.complete_task_request import CompleteTaskRequest
 from reup_worker_contract.models.fail_task_request import FailTaskRequest
@@ -10,11 +15,6 @@ from reup_worker_contract.models.heartbeat_envelope import HeartbeatEnvelope
 from reup_worker_contract.models.session_identity import SessionIdentity
 from reup_worker_contract.models.task_action_envelope import TaskActionEnvelope
 from reup_worker_contract.models.task_progress_request import TaskProgressRequest
-
-from reup_worker.agent import WorkerAgent
-from reup_worker.control_plane import SessionState
-from reup_worker.credential_store import CredentialStore
-from reup_worker.ports import ExecutionResult, ProgressReporter
 
 SESSION_ID = "0191f3d2-7f5b-7abc-8b2e-123456789b01"
 TASK_ID = "0191f3d2-7f5b-7abc-8b2e-123456789b02"
@@ -38,7 +38,10 @@ class FakeControlPlane:
         self.claims = 0
         self.progress_values: list[int] = []
         self.completed: CompleteTaskRequest | None = None
+        self.failed: FailTaskRequest | None = None
         self.heartbeats: list[Heartbeat] = []
+        self.renewals = 0
+        self.cancel_active_lease = False
 
     async def enroll(self, token: str, identity: SessionIdentity) -> tuple[str, SessionState]:
         del token, identity
@@ -58,7 +61,7 @@ class FakeControlPlane:
                     "workerId": SESSION_ID,
                     "sessionId": SESSION_ID,
                     "desiredStatus": "ACTIVE",
-                    "cancelLeaseIds": [],
+                    "cancelLeaseIds": [str(self.task.lease_id)] if self.cancel_active_lease and self.claims else [],
                 },
                 "meta": {"requestId": SESSION_ID},
             }
@@ -73,6 +76,7 @@ class FakeControlPlane:
         return action(task, "RUNNING")
 
     async def renew(self, task: ClaimedTask) -> TaskActionEnvelope:
+        self.renewals += 1
         return action(task, "RUNNING")
 
     async def progress(self, task: ClaimedTask, body: TaskProgressRequest) -> TaskActionEnvelope:
@@ -84,7 +88,8 @@ class FakeControlPlane:
         return action(task, "SUCCEEDED")
 
     async def fail(self, task: ClaimedTask, body: FailTaskRequest) -> TaskActionEnvelope:
-        raise AssertionError(f"unexpected failure: {body.code}")
+        self.failed = body
+        return action(task, "FAILED")
 
     async def close(self) -> None:
         return None
@@ -101,6 +106,44 @@ async def test_agent_enrolls_runs_one_task_and_stops_on_drain(tmp_path: Path) ->
     assert control_plane.completed.result.to_dict() == {"adapter": "fake"}
     assert control_plane.claims == 2
     assert control_plane.heartbeats
+
+
+async def test_agent_renews_a_slow_fake_task(tmp_path: Path) -> None:
+    task = claimed_task()
+    task.renew_after_seconds = 1
+    control_plane = FakeControlPlane(task)
+    executor = FakeTaskExecutor(FakeExecutorConfig(step_delay_seconds=0.4))
+    agent = WorkerAgent(control_plane, CredentialStore(tmp_path / "credential"), identity(), executor, "enr_test")
+
+    await agent.run()
+
+    assert control_plane.renewals >= 1
+    assert control_plane.completed is not None
+
+
+async def test_agent_reports_fake_failure_and_timeout(tmp_path: Path) -> None:
+    for behavior, expected_code in (("fail", "INFERENCE_FAILED"), ("timeout", "PROCESS_TIMEOUT")):
+        control_plane = FakeControlPlane(claimed_task())
+        executor = FakeTaskExecutor(FakeExecutorConfig(behavior=behavior))  # type: ignore[arg-type]
+        credential = CredentialStore(tmp_path / behavior)
+        await WorkerAgent(control_plane, credential, identity(), executor, "enr_test").run()
+
+        assert control_plane.completed is None
+        assert control_plane.failed is not None
+        assert control_plane.failed.code == expected_code
+
+
+async def test_agent_propagates_control_plane_cancel_to_fake_executor(tmp_path: Path) -> None:
+    control_plane = FakeControlPlane(claimed_task())
+    control_plane.cancel_active_lease = True
+    executor = FakeTaskExecutor(FakeExecutorConfig(behavior="wait-for-cancel"))
+    agent = WorkerAgent(control_plane, CredentialStore(tmp_path / "credential"), identity(), executor, "enr_test")
+
+    await asyncio.wait_for(agent.run(), timeout=2)
+
+    assert control_plane.completed is None
+    assert control_plane.failed is None
+    assert any(beat.active_lease_ids for beat in control_plane.heartbeats)
 
 
 def identity() -> SessionIdentity:

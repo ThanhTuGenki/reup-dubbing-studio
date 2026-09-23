@@ -41,5 +41,14 @@ mọi mutation. Credential sau enroll được ghi atomically với permission `
 `.state/`, `.work/`, `.env` và virtual environment đều không được commit.
 
 `TaskExecutor` là boundary cho adapter. Foundation hiện cố ý không chứa model
-ASR/OCR/Demucs/FFmpeg/OmniVoice; adapter thật và fake executor được thêm ở các
+ASR/OCR/Demucs/FFmpeg/OmniVoice. Fake executor có thể chạy toàn bộ lifecycle mà
+không cần GPU và được bật bằng `REUP_WORKER_EXECUTOR=fake`. Có thể đặt
+`REUP_WORKER_FAKE_BEHAVIOR` thành `success`, `fail`, `timeout` hoặc
+`wait-for-cancel` để kiểm thử Control Plane; adapter thật được thêm ở các
 milestone kế tiếp mà không thay wire model hoặc vòng đời Agent.
+
+Luồng fake được nghiệm thu qua hai lớp: pytest chạy Agent với Control Plane giả
+để ép từng behavior, còn integration test PostgreSQL chạy lifecycle HTTP thật,
+restart/lease fencing, workflow event và projection Queue. `queue.invalidate`
+chỉ mang định danh/version an toàn; Queue và Studio luôn refetch REST thay vì
+dùng payload SSE làm nguồn dữ liệu.

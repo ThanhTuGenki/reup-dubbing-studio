@@ -2,6 +2,7 @@ from pathlib import Path
 
 from pydantic import Field, HttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from reup_worker_contract.models.worker_role import WorkerRole
 
 
@@ -19,6 +20,23 @@ class WorkerSettings(BaseSettings):
     enrollment_token: str | None = Field(default=None, repr=False)
     heartbeat_interval_seconds: int = Field(default=15, ge=5, le=60)
     task_timeout_seconds: int = Field(default=3600, ge=1)
+    executor: str = "missing"
+    fake_behavior: str = "success"
+    fake_step_delay_seconds: float = Field(default=0.01, ge=0.001, le=60)
+
+    @field_validator("executor")
+    @classmethod
+    def validate_executor(cls, value: str) -> str:
+        if value not in {"missing", "fake"}:
+            raise ValueError("executor must be 'missing' or 'fake'")
+        return value
+
+    @field_validator("fake_behavior")
+    @classmethod
+    def validate_fake_behavior(cls, value: str) -> str:
+        if value not in {"success", "fail", "timeout", "wait-for-cancel"}:
+            raise ValueError("unsupported fake behavior")
+        return value
 
     @field_validator("image_digest")
     @classmethod

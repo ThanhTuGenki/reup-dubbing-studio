@@ -107,9 +107,36 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     expect(after).toMatchObject({ desiredStatus: 'ACTIVE', observedStatus: 'READY', version: before.version });
   });
 
+  it('runs a no-GPU task lifecycle and projects real task state to Queue and Studio events', async () => {
+    const worker = await registeredWorker('fake-e2e');
+    const { taskId, jobId } = await workerTaskFixture(false);
+    expect((await heartbeat(worker, { sequence: '1' })).statusCode).toBe(200);
+    const headers = { authorization: `Bearer ${worker.credential}`, 'idempotency-key': randomUUID() };
+    const claim = await app.inject({ method: 'POST', url: '/worker/v1/tasks/claim', headers, payload: { sessionId: worker.sessionId, waitSeconds: 0 } });
+    expect(claim.statusCode).toBe(200);
+    const task = claim.json().data.task;
+    const lease = { leaseId: task.leaseId, fencingToken: task.fencingToken };
+
+    expect((await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${task.attemptId}/start`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: lease })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${task.attemptId}/renew`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: lease })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${task.attemptId}/progress`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: { ...lease, progressBps: 5000, detailSafe: 'fake:5000' } })).statusCode).toBe(200);
+    const completed = await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${task.attemptId}/complete`, headers: { ...headers, 'idempotency-key': randomUUID() }, payload: { ...lease, outputs: [], result: { adapter: 'fake' }, metrics: { executionMs: 10 } } });
+    expect(completed.statusCode).toBe(200);
+    expect(completed.json().data.taskStatus).toBe('SUCCEEDED');
+
+    const queue = await app.inject({ method: 'GET', url: `/v1/queue/jobs/${jobId}` });
+    expect(queue.statusCode).toBe(200);
+    expect(queue.json().data).toMatchObject({ status: 'SUCCEEDED', progress: { percent: 100 }, tasks: [{ id: taskId, status: 'SUCCEEDED', progressPercent: 100 }] });
+    const events = await prisma.workflowEvent.findMany({ where: { pipelineTaskId: taskId }, orderBy: { occurredAt: 'asc' } });
+    expect(events.map((event) => event.eventType)).toEqual(['TASK_LEASED', 'TASK_STARTED', 'TASK_PROGRESS_REPORTED', 'TASK_SUCCEEDED']);
+    const invalidations = await prisma.outboxMessage.findMany({ where: { aggregateId: jobId, eventType: 'queue.invalidate' } });
+    expect(invalidations).toHaveLength(4);
+    expect(invalidations.at(-1)?.payloadSafe).toMatchObject({ videoId: expect.any(String), jobId, taskId, reason: 'TASK_SUCCEEDED' });
+  });
+
   it('claims atomically, enforces monotonic progress and fences an expired attempt', async () => {
     const worker = await registeredWorker('task-lifecycle');
-    const taskId = await workerTaskFixture();
+    const { taskId } = await workerTaskFixture();
     const claim = () => app.inject({ method: 'POST', url: '/worker/v1/tasks/claim', headers: { authorization: `Bearer ${worker.credential}`, 'idempotency-key': randomUUID() }, payload: { sessionId: worker.sessionId, waitSeconds: 0 } });
     const claims = await Promise.all([claim(), claim()]);
     expect(claims.map((response) => response.statusCode)).toEqual([200, 200]);
@@ -140,6 +167,11 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     await claim();
     const timedOut = await prisma.taskAttempt.findUniqueOrThrow({ where: { id: first.attemptId } });
     expect(timedOut.status).toBe('TIMED_OUT');
+    const restarted = await app.inject({ method: 'POST', url: '/worker/v1/sessions', headers: { authorization: `Bearer ${worker.credential}`, 'idempotency-key': randomUUID() }, payload: { ...worker.identity, sessionNonce: uuidV7() } });
+    expect(restarted.statusCode).toBe(201);
+    const oldSession = worker.sessionId;
+    worker.sessionId = restarted.json().data.session.id;
+    expect((await prisma.workerSession.findUniqueOrThrow({ where: { id: oldSession } })).endReason).toBe('REPLACED');
     await prisma.pipelineTask.update({ where: { id: taskId }, data: { readyAt: new Date(Date.now() - 1_000) } });
     const second = (await claim()).json().data.task;
     expect(second.fencingToken).toBe('2');
@@ -148,6 +180,9 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     const stale = await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${first.attemptId}/renew`, headers: { ...actionHeaders, 'idempotency-key': randomUUID() }, payload: leaseBody });
     expect(stale.statusCode).toBe(409);
     expect(stale.json().code).toBe('STALE_TASK_ATTEMPT');
+    const lateCompletion = await app.inject({ method: 'POST', url: `/worker/v1/tasks/${taskId}/attempts/${first.attemptId}/complete`, headers: { ...actionHeaders, 'idempotency-key': randomUUID() }, payload: { ...leaseBody, outputs: [], result: {}, metrics: {} } });
+    expect(lateCompletion.statusCode).toBe(409);
+    expect(lateCompletion.json().code).toBe('STALE_TASK_ATTEMPT');
     const detail = (await app.inject({ method: 'GET', url: `/v1/workers/${worker.workerId}` })).json().data;
     const drain = await app.inject({ method: 'POST', url: `/v1/workers/${worker.workerId}/drain`, headers: { 'if-match': `"${detail.version}"`, 'idempotency-key': randomUUID() } });
     expect(drain.statusCode).toBe(200);
@@ -165,6 +200,8 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     const cancelSignal = await heartbeat(worker, { sequence: '2', currentTaskCount: 1, activeLeaseIds: [second.leaseId] });
     expect(cancelSignal.statusCode).toBe(200);
     expect(cancelSignal.json().data.cancelLeaseIds).toContain(second.leaseId);
+    const safe = await app.inject({ method: 'GET', url: `/v1/workers/${worker.workerId}` });
+    expect(safe.json().data).toMatchObject({ desiredStatus: 'DRAINING', observedStatus: 'SAFE_TO_TERMINATE', safeToTerminate: true });
 
     const offline = await registeredWorker('task-offline');
     await prisma.workerSession.update({ where: { id: offline.sessionId }, data: { lastHeartbeatAt: new Date(Date.now() - 46_000) } });
@@ -191,20 +228,23 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     return app.inject({ method: 'POST', url: `/worker/v1/sessions/${worker.sessionId}/heartbeat`, headers: { authorization: `Bearer ${worker.credential}`, 'idempotency-key': randomUUID() }, payload: { sequence: '1', sentAt: new Date().toISOString(), capacity: worker.identity.capacity, currentTaskCount: 0, activeLeaseIds: [], telemetry: { gpuUtilPercent: 0 }, agentVersion: worker.identity.agentVersion, contractVersion: worker.identity.contractVersion, ...overrides } });
   }
 
-  async function workerTaskFixture() {
+  async function workerTaskFixture(requiresOutput = true) {
     const userId = uuidV7(); const channelId = uuidV7(); const sourceId = uuidV7(); const videoId = uuidV7(); const jobId = uuidV7(); const taskId = uuidV7();
     await prisma.user.create({ data: { id: userId, displayName: 'Worker task test' } });
     await prisma.channelProfile.create({ data: { id: channelId, name: 'Worker task channel', normalizedName: `worker-task-${channelId}`, status: 'ACTIVE', targetLanguage: 'vi', subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.srt' } });
     const now = new Date();
     await prisma.sourceContent.create({ data: { id: sourceId, platform: 'DOUYIN', externalId: `worker-task-${sourceId}`, contentType: 'VIDEO', title: 'Worker task video', durationMs: 1_000, availability: 'AVAILABLE', firstSeenAt: now, lastSeenAt: now } });
     await prisma.video.create({ data: { id: videoId, sourceContentId: sourceId, channelProfileId: channelId, status: 'PROCESSING', sourceLanguage: 'zh', targetLanguage: 'vi', createdById: userId } });
-    await prisma.pipelineJob.create({ data: { id: jobId, videoId, kind: 'RERENDER', status: 'WAITING_FOR_GPU', pipelineVersion: 'worker-task-test', profileSnapshot: {}, requestedOutputs: {}, tasks: { create: { id: taskId, taskType: 'RENDER', resourceClass: 'GPU_BATCH', status: 'READY', readyAt: now, inputManifest: { inputs: [], outputs: [{ slot: 'video-16x9', kind: 'OUTPUT_VIDEO', minItems: 1, maxItems: 1, allowedContentTypes: ['video/mp4'], maxByteSize: '1000000000' }] }, configuration: { kind: 'RENDER', subtitleMode: 'EXTERNAL_ONLY', variants: [{ variant: 'FULL_16X9', outputSlot: 'video-16x9' }] }, requiredCapabilities: ['media.render.ffmpeg.v1'], minimumVramMb: 1, minimumScratchBytes: 1 } } } });
-    return taskId;
+    const outputs = requiresOutput ? [{ slot: 'video-16x9', kind: 'OUTPUT_VIDEO', minItems: 1, maxItems: 1, allowedContentTypes: ['video/mp4'], maxByteSize: '1000000000' }] : [];
+    await prisma.pipelineJob.create({ data: { id: jobId, videoId, kind: 'RERENDER', status: 'WAITING_FOR_GPU', pipelineVersion: 'worker-task-test', profileSnapshot: {}, requestedOutputs: {}, tasks: { create: { id: taskId, taskType: 'RENDER', resourceClass: 'GPU_BATCH', status: 'READY', readyAt: now, inputManifest: { inputs: [], outputs }, configuration: { kind: 'RENDER', subtitleMode: 'EXTERNAL_ONLY', variants: requiresOutput ? [{ variant: 'FULL_16X9', outputSlot: 'video-16x9' }] : [] }, requiredCapabilities: ['media.render.ffmpeg.v1'], minimumVramMb: 1, minimumScratchBytes: 1 } } } });
+    return { taskId, jobId };
   }
 
   async function cleanWorkerFixtures() {
     const jobs = await prisma.pipelineJob.findMany({ where: { pipelineVersion: 'worker-task-test' }, select: { id: true, videoId: true, video: { select: { sourceContentId: true, channelProfileId: true, createdById: true } } } });
     const jobIds = jobs.map((row) => row.id); const videoIds = jobs.map((row) => row.videoId);
+    await prisma.outboxMessage.deleteMany({ where: { aggregateId: { in: jobIds } } });
+    await prisma.workflowEvent.deleteMany({ where: { pipelineJobId: { in: jobIds } } });
     await prisma.taskLease.deleteMany({ where: { pipelineTask: { pipelineJobId: { in: jobIds } } } });
     await prisma.taskAttempt.deleteMany({ where: { pipelineTask: { pipelineJobId: { in: jobIds } } } });
     await prisma.pipelineTask.deleteMany({ where: { pipelineJobId: { in: jobIds } } });
