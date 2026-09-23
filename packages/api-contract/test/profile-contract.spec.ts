@@ -26,7 +26,9 @@ describe('generated Profile contract', () => {
 
   it('keeps resolved and inherited shapes required at the package boundary', () => {
     expectTypeOf<ChannelProfileEnvelope['data']>().toHaveProperty('pipeline');
+    expectTypeOf<ChannelProfileEnvelope['data']['pipeline']['removeHardSubEnabled']>().toEqualTypeOf<boolean>();
     expectTypeOf<SeriesProfile['overrides']['targetLanguage']>().toEqualTypeOf<string | null>();
+    expectTypeOf<SeriesProfile['overrides']['removeHardSubEnabled']>().toEqualTypeOf<boolean | null>();
     expectTypeOf<SeriesProfile['inheritance']['targetLanguage']>().toEqualTypeOf<'CHANNEL' | 'SERIES'>();
     expectTypeOf<PreviewGrant['method']>().toEqualTypeOf<'GET'>();
     expect(previewSeriesProfileAsset).toBeTypeOf('function');

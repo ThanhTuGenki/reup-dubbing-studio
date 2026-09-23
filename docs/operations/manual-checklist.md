@@ -46,6 +46,11 @@ if the chosen test video requires them).
 
 ## 2. Measure the subtitle mask, then install and probe video-subtitle-remover (Task 4)
 
+This acceptance section only applies to a Profile whose effective
+`removeHardSubEnabled` is `true`. The Web/API MVP defaults it to `false`; when it
+is off, do not require a mask and do not treat the DESUB probe as a release
+blocker for that run.
+
 The mask is the first artifact you must produce, and the only fully manual
 input in the whole pipeline — every later step (desub, OCR framing,
 `reup run --mask`) depends on getting it right. Measure it from a real frame

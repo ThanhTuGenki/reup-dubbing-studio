@@ -40,7 +40,7 @@ const pipeline = z.object({
   voiceMode: z.enum(['SINGLE', 'DUAL', 'MULTI_AUTO']), subtitleLanguage: z.string(),
   subtitleFilenameRule: z.string(), subtitleMaxLineLength: z.number().int().nullable(),
   ttsSpeed: z.number(), timingPolicy: z.enum(['PRESERVE_SEGMENT', 'FIT_SEGMENT', 'ALLOW_DRIFT']),
-  output16x9Enabled: z.boolean(), output9x16Enabled: z.boolean(),
+  removeHardSubEnabled: z.boolean(), output16x9Enabled: z.boolean(), output9x16Enabled: z.boolean(),
 });
 const asset = z.object({
   linkId: uuid, assetId: uuid, role: z.enum(['INTRO', 'OUTRO', 'LOGO', 'WATERMARK', 'MASK_REFERENCE_FRAME']),
@@ -66,7 +66,7 @@ const overrides = z.object({
   voiceMode: z.enum(['SINGLE', 'DUAL', 'MULTI_AUTO']).nullable(), subtitleLanguage: z.string().nullable(),
   subtitleFilenameRule: z.string().nullable(), subtitleMaxLineLength: z.number().int().nullable(),
   ttsSpeed: z.number().nullable(), timingPolicy: z.enum(['PRESERVE_SEGMENT', 'FIT_SEGMENT', 'ALLOW_DRIFT']).nullable(),
-  output16x9Enabled: z.boolean().nullable(), output9x16Enabled: z.boolean().nullable(),
+  removeHardSubEnabled: z.boolean().nullable(), output16x9Enabled: z.boolean().nullable(), output9x16Enabled: z.boolean().nullable(),
 });
 const series = z.object({
   id: uuid, channelProfileId: uuid, name: z.string(), status, overrides,
@@ -76,6 +76,7 @@ const series = z.object({
     voiceMode: z.enum(['CHANNEL', 'SERIES']), subtitleLanguage: z.enum(['CHANNEL', 'SERIES']),
     subtitleFilenameRule: z.enum(['CHANNEL', 'SERIES']), subtitleMaxLineLength: z.enum(['CHANNEL', 'SERIES']),
     ttsSpeed: z.enum(['CHANNEL', 'SERIES']), timingPolicy: z.enum(['CHANNEL', 'SERIES']),
+    removeHardSubEnabled: z.enum(['CHANNEL', 'SERIES']),
     output16x9Enabled: z.enum(['CHANNEL', 'SERIES']), output9x16Enabled: z.enum(['CHANNEL', 'SERIES']),
   }),
   mask: z.object({ x: z.number(), y: z.number(), width: z.number(), height: z.number() }).nullable(),

@@ -13,6 +13,7 @@ export type PipelineConfig = {
   subtitleMaxLineLength: number | null;
   ttsSpeed: number;
   timingPolicy: TimingPolicy;
+  removeHardSubEnabled: boolean;
   output16x9Enabled: boolean;
   output9x16Enabled: boolean;
 };
@@ -71,6 +72,7 @@ export type SeriesOverrides = {
   subtitleMaxLineLength: number | null;
   ttsSpeed: number | null;
   timingPolicy: TimingPolicy | null;
+  removeHardSubEnabled: boolean | null;
   output16x9Enabled: boolean | null;
   output9x16Enabled: boolean | null;
 };

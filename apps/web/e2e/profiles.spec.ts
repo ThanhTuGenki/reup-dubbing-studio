@@ -2,9 +2,9 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
 const requestId = '0191f3d2-7f5b-7abc-8b2e-123456789abd';
-const pipeline = { targetLanguage: 'vi', defaultVoiceProfileId: null, voiceMode: 'SINGLE', subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.vi.srt', subtitleMaxLineLength: 42, ttsSpeed: 1, timingPolicy: 'FIT_SEGMENT', output16x9Enabled: true, output9x16Enabled: false };
+const pipeline = { targetLanguage: 'vi', defaultVoiceProfileId: null, voiceMode: 'SINGLE', subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.vi.srt', subtitleMaxLineLength: 42, ttsSpeed: 1, timingPolicy: 'FIT_SEGMENT', removeHardSubEnabled: false, output16x9Enabled: true, output9x16Enabled: false };
 const channel = { id: '0191f3d2-7f5b-7abc-8b2e-123456789ac0', name: 'Kênh Việt hóa', status: 'ACTIVE', pipeline, content: { voiceRules: {}, ctaTemplate: null, metadataTemplate: {}, baseKeywords: [] }, destinations: [], assets: [], readiness: 'READY', readinessIssues: [], version: 3, createdAt: '2026-09-18T08:00:00.000Z', updatedAt: '2026-09-20T08:00:00.000Z' };
-const series = { id: '0191f3d2-7f5b-7abc-8b2e-123456789ac1', channelProfileId: channel.id, name: 'Tổng tài tập ngắn', status: 'ACTIVE', overrides: { targetLanguage: null, defaultVoiceProfileId: null, voiceMode: null, subtitleLanguage: null, subtitleFilenameRule: null, subtitleMaxLineLength: null, ttsSpeed: 1.1, timingPolicy: null, output16x9Enabled: null, output9x16Enabled: true }, effectiveConfig: { ...pipeline, ttsSpeed: 1.1, output9x16Enabled: true }, inheritance: { targetLanguage: 'CHANNEL', defaultVoiceProfileId: 'CHANNEL', voiceMode: 'CHANNEL', subtitleLanguage: 'CHANNEL', subtitleFilenameRule: 'CHANNEL', subtitleMaxLineLength: 'CHANNEL', ttsSpeed: 'SERIES', timingPolicy: 'CHANNEL', output16x9Enabled: 'CHANNEL', output9x16Enabled: 'SERIES' }, mask: { x: 0.1, y: 0.8, width: 0.8, height: 0.1 }, assets: [], readiness: 'READY', readinessIssues: [], version: 2, parentVersion: 3, createdAt: '2026-09-19T08:00:00.000Z', updatedAt: '2026-09-20T09:00:00.000Z' };
+const series = { id: '0191f3d2-7f5b-7abc-8b2e-123456789ac1', channelProfileId: channel.id, name: 'Tổng tài tập ngắn', status: 'ACTIVE', overrides: { targetLanguage: null, defaultVoiceProfileId: null, voiceMode: null, subtitleLanguage: null, subtitleFilenameRule: null, subtitleMaxLineLength: null, ttsSpeed: 1.1, timingPolicy: null, removeHardSubEnabled: null, output16x9Enabled: null, output9x16Enabled: true }, effectiveConfig: { ...pipeline, ttsSpeed: 1.1, output9x16Enabled: true }, inheritance: { targetLanguage: 'CHANNEL', defaultVoiceProfileId: 'CHANNEL', voiceMode: 'CHANNEL', subtitleLanguage: 'CHANNEL', subtitleFilenameRule: 'CHANNEL', subtitleMaxLineLength: 'CHANNEL', ttsSpeed: 'SERIES', timingPolicy: 'CHANNEL', removeHardSubEnabled: 'CHANNEL', output16x9Enabled: 'CHANNEL', output9x16Enabled: 'SERIES' }, mask: { x: 0.1, y: 0.8, width: 0.8, height: 0.1 }, assets: [], readiness: 'READY', readinessIssues: [], version: 2, parentVersion: 3, createdAt: '2026-09-19T08:00:00.000Z', updatedAt: '2026-09-20T09:00:00.000Z' };
 const reviewPolicy = { ownerType: 'CHANNEL', ownerProfileId: channel.id, stored: { castGate: 'NOT_REQUIRED', scriptGate: 'MANUAL_REQUIRED', ttsGate: 'MANUAL_REQUIRED', renderGate: 'MANUAL_REQUIRED', publishContentGate: 'MANUAL_REQUIRED', autoRequestRender: false }, effective: { castGate: 'NOT_REQUIRED', scriptGate: 'MANUAL_REQUIRED', ttsGate: 'MANUAL_REQUIRED', renderGate: 'MANUAL_REQUIRED', publishContentGate: 'MANUAL_REQUIRED', autoRequestRender: false }, inheritance: { castGate: 'CHANNEL', scriptGate: 'CHANNEL', ttsGate: 'CHANNEL', renderGate: 'CHANNEL', publishContentGate: 'CHANNEL', autoRequestRender: 'CHANNEL' }, version: 2, parentPolicyVersion: null, updatedAt: '2026-09-20T09:00:00.000Z' };
 
 async function mockProfiles(page: Page) {
@@ -41,6 +41,14 @@ test('Profiles list remains usable without horizontal page overflow on mobile', 
   await page.goto('/channel-profiles');
   await expect(page.getByText('Kênh Việt hóa')).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
+
+test('defaults hard-sub removal to off in a new Channel Profile', async ({ page }) => {
+  await mockProfiles(page);
+  await page.goto('/channel-profiles');
+  await page.getByRole('button', { name: 'Tạo Channel' }).click();
+  await expect(page.getByRole('switch', { name: 'Xóa hard-sub' })).not.toBeChecked();
+  await expect(page.getByText(/Mặc định tắt cho MVP/u)).toBeVisible();
 });
 
 test('opens and edits Review Policy without mobile overflow', async ({ page }) => {

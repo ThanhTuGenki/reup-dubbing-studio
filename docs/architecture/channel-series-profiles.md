@@ -1,7 +1,7 @@
 # Channel và Series Profiles
 
 - **Trạng thái:** `ACCEPTED` cho MVP Web + API.
-- **Cập nhật:** 2026-09-19.
+- **Cập nhật:** 2026-09-23.
 - **Nguồn chuẩn cho:** ownership, inheritance, schema logic, lifecycle, readiness,
   effective configuration và REST contract của Channel/Series Profile.
 - **Không phải nguồn chuẩn cho:** OpenAPI đã generate, implementation Prisma,
@@ -43,6 +43,7 @@ khi một identity slice thực sự được triển khai.
 | Subtitle language/rule/max line | Bắt buộc hoặc default typed | Có thể override | Merge từng field |
 | Default voice | Có thể `null` | Có thể override | Series override hoặc Channel |
 | TTS speed/timing policy | Bắt buộc | Có thể override | Merge từng field |
+| Xóa hard-sub | Mặc định `false` | Có thể override | Series nếu khác `null`, ngược lại Channel |
 | Output 16:9/9:16 | Bắt buộc | Có thể override | Merge từng field |
 | Content voice/CTA/template/keywords | Channel sở hữu | Không override trong MVP | Channel |
 | Destination | Channel sở hữu | Không override | Channel |
@@ -89,9 +90,13 @@ và trả `readinessIssues: string[]` bằng code ổn định. MVP dùng ít nh
 - `PARENT_CHANNEL_NOT_ACTIVE`
 
 Channel cần ngôn ngữ, pipeline settings hợp lệ, ít nhất một output và voice sẵn
-sàng trước khi `ACTIVE`. Series thừa hưởng readiness của parent; `DUAL` hoặc
-`MULTI_AUTO` còn cần cast hợp lệ. Nếu Series cấu hình mask thì phải có đủ rectangle
-và reference frame. Lifecycle và readiness là hai khái niệm riêng.
+sàng trước khi `ACTIVE`. `removeHardSubEnabled` mặc định `false`; chỉ khi giá trị
+hiệu lực là `true` thì Series phải có đủ mask rectangle và reference frame.
+Mask đã lưu được giữ lại khi tắt để có thể tái sử dụng và không làm profile mất
+readiness. Video lẻ chỉ dùng Channel không có nơi lưu mask nên Channel bật xóa
+hard-sub không đạt readiness. Series thừa hưởng readiness của parent nhưng thay
+điều kiện mask bằng cấu hình hiệu lực của chính Series; `DUAL` hoặc `MULTI_AUTO`
+còn cần cast hợp lệ. Lifecycle và readiness là hai khái niệm riêng.
 
 Voice Profile chưa được triển khai trong slice này, nên FK voice được phép `null`.
 Profile có thể lưu `DRAFT`; activation phải trả lỗi an toàn nếu voice bắt buộc
@@ -113,6 +118,7 @@ subtitle_filename_rule       text
 subtitle_max_line_length     integer nullable
 tts_speed                    numeric(5,3)
 timing_policy                PRESERVE_SEGMENT | FIT_SEGMENT | ALLOW_DRIFT
+remove_hard_sub_enabled      boolean default false
 output_16x9_enabled          boolean
 output_9x16_enabled          boolean
 content_voice_rules          jsonb
@@ -170,6 +176,7 @@ subtitle_filename_rule_override text nullable
 subtitle_max_line_length_override integer nullable
 tts_speed_override              numeric(5,3) nullable
 timing_policy_override          PRESERVE_SEGMENT | FIT_SEGMENT | ALLOW_DRIFT nullable
+remove_hard_sub_override        boolean nullable
 output_16x9_override            boolean nullable
 output_9x16_override            boolean nullable
 mask_x                          numeric(9,8) nullable
@@ -189,6 +196,8 @@ phải tạo series mới để tránh đổi nghĩa của job/history.
 
 Mask là một rectangle cố định theo series, trong coordinate space normalized
 `0..1`. Không lưu `mask_coordinate_space`, pixel, polygon hoặc keyframe trong MVP.
+Mask là cấu hình hỗ trợ, không đồng nghĩa stage xóa hard-sub đang bật; field
+`removeHardSubEnabled` trong effective pipeline mới quyết định hành vi đó.
 
 Database/application cùng enforce:
 
@@ -253,8 +262,9 @@ Khi tạo ingest/job, API phải resolve và validate lại trong transaction, s
 lưu snapshot đầy đủ tối thiểu gồm:
 
 - profile/series IDs và versions;
-- effective pipeline/subtitle/output/content config;
-- mask normalized và reference asset identity;
+- effective pipeline/subtitle/output/content config, gồm cờ xóa hard-sub;
+- mask normalized và reference asset identity nếu đã cấu hình; executor chỉ dùng
+  chúng khi `pipeline.removeHardSubEnabled` là `true`;
 - current profile asset IDs + immutable object/checksum identity;
 - destination metadata cần cho publish package;
 - voice/cast IDs và versions;
@@ -347,7 +357,9 @@ Mutation errors dùng code ổn định:
 Màn Profile có hai tab Channel/Series, filter riêng, list và detail drawer. Form
 Channel chỉnh defaults theo nhóm; form Series luôn hiển thị giá trị hiệu lực và
 control “kế thừa/ghi đè” trên từng field. Mask editor đọc natural dimensions từ
-reference frame, hỗ trợ nhập số và kéo/resize rectangle, rồi lưu normalized.
+reference frame, hỗ trợ nhập số và kéo/resize rectangle, rồi lưu normalized. Mask
+editor chỉ hoạt động khi cấu hình xóa hard-sub hiệu lực được bật; trạng thái mặc
+định của Channel và Series mới là tắt.
 
 Web dùng generated client + TanStack Query, không gọi API thủ công hoặc tự merge
 inheritance. Mọi mutation xử lý `VERSION_CONFLICT` bằng refetch và yêu cầu người

@@ -73,7 +73,7 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
       pipeline: {
         targetLanguage: 'vi', defaultVoiceProfileId: voiceId, voiceMode: 'SINGLE',
         subtitleLanguage: 'vi', subtitleFilenameRule: '{slug}.vi.srt', subtitleMaxLineLength: 42,
-        ttsSpeed: 1, timingPolicy: 'FIT_SEGMENT', output16x9Enabled: true, output9x16Enabled: false,
+        ttsSpeed: 1, timingPolicy: 'FIT_SEGMENT', removeHardSubEnabled: false, output16x9Enabled: true, output9x16Enabled: false,
       },
       content: { voiceRules: { tone: 'warm' }, ctaTemplate: null, metadataTemplate: {}, baseKeywords: ['phim'] },
       destinations: [{ platform: 'YOUTUBE', externalId: 'UC-test', displayName: 'Main', isRequired: true, isActive: true, platformConfig: {} }],
@@ -109,14 +109,14 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
       headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000021' },
       payload: {
         channelProfileId: channelId, name: 'Drama',
-        overrides: { ttsSpeed: 1.1, output9x16Enabled: true },
+        overrides: { ttsSpeed: 1.1, removeHardSubEnabled: true, output9x16Enabled: true },
         mask: { x: 0.1, y: 0.8, width: 0.8, height: 0.1 },
       },
     });
     expect(createSeries.statusCode).toBe(201);
     expect(createSeries.headers.etag).toBe('"1:2"');
     expect(createSeries.json().data).toMatchObject({
-      effectiveConfig: { targetLanguage: 'vi', ttsSpeed: 1.1, output9x16Enabled: true },
+      effectiveConfig: { targetLanguage: 'vi', ttsSpeed: 1.1, removeHardSubEnabled: true, output9x16Enabled: true },
       inheritance: { targetLanguage: 'CHANNEL', ttsSpeed: 'SERIES' },
       readinessIssues: ['MASK_REFERENCE_ASSET_REQUIRED'],
     });
@@ -197,6 +197,39 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     expect(response.json()).toMatchObject({ code: 'PROFILE_MASK_INVALID' });
   });
 
+  it('keeps a stored mask optional while hard-sub removal is disabled', async () => {
+    const response = await app.inject({
+      method: 'POST', url: '/v1/series-profiles',
+      headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000025' },
+      payload: {
+        channelProfileId: channelId, name: 'Mask disabled for MVP',
+        overrides: { removeHardSubEnabled: false },
+        mask: { x: 0.1, y: 0.8, width: 0.8, height: 0.1 },
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json().data).toMatchObject({
+      effectiveConfig: { removeHardSubEnabled: false },
+      readiness: 'READY', readinessIssues: [],
+    });
+  });
+
+  it('requires a mask when hard-sub removal is enabled', async () => {
+    const response = await app.inject({
+      method: 'POST', url: '/v1/series-profiles',
+      headers: { 'idempotency-key': '01994429-ec00-7000-8000-000000000026' },
+      payload: {
+        channelProfileId: channelId, name: 'Hard-sub removal without mask',
+        overrides: { removeHardSubEnabled: true },
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json().data).toMatchObject({
+      effectiveConfig: { removeHardSubEnabled: true },
+      readiness: 'NEEDS_CONFIGURATION', readinessIssues: ['MASK_REQUIRED'],
+    });
+  });
+
   it('rejects null for non-nullable pipeline fields without reaching Prisma', async () => {
     const response = await app.inject({
       method: 'PATCH', url: `/v1/channel-profiles/${channelId}`,
@@ -226,7 +259,7 @@ describeWithDatabase('Channel and Series Profile API with PostgreSQL', () => {
     expect(captured).toMatchObject({
       schemaVersion: 2,
       profile: { channelProfileId: channelId, channelProfileVersion: 3, seriesProfileId: snapshotSeriesId, seriesProfileVersion: 2 },
-      pipeline: { targetLanguage: 'vi', subtitleMaxLineLength: 50, ttsSpeed: 1.2 },
+      pipeline: { targetLanguage: 'vi', subtitleMaxLineLength: 50, ttsSpeed: 1.2, removeHardSubEnabled: false },
       defaultVoice: {
         profileId: voiceId, version: 1, sampleLinkId: voiceSampleId, sampleAssetId: voiceAssetId,
         sampleRevision: 1, sampleLanguage: 'vi', requestedLanguage: 'vi', usedCrossLingualFallback: false,

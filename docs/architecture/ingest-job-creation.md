@@ -337,6 +337,10 @@ Profile snapshot dùng contract `schemaVersion: 2` hiện có và được lưu 
 Job retry/task execution chỉ đọc snapshot đã lưu. Create không giữ transaction
 trong lúc gọi mạng hoặc tải media.
 
+Snapshot luôn có `pipeline.removeHardSubEnabled`; mặc định là `false`. Việc lập
+lịch stage `DESUB` về sau chỉ được thực hiện khi cờ này là `true`. Trong MVP Web +
+API hiện tại, cờ được snapshot nhưng không triển khai Worker/GPU stage.
+
 ## 8. Acceptance criteria
 
 - Preflight một và nhiều item trả disposition theo đúng thứ tự request.
