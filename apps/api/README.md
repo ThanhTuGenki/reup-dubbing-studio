@@ -1,79 +1,53 @@
 # Control Plane API
 
-`apps/api` là NestJS/Fastify Control Plane. Foundation hiện tại chỉ cung cấp
-HTTP platform và health probes; không kết nối database, queue, object storage,
-worker hay provider nào.
+NestJS/Fastify Control Plane cho Reup Dubbing Studio. API quản lý Settings,
+Profiles, Voices, Discovery, Ingest/Queue, Workers, Library, Studio, Review
+Policy, Publishing và Dashboard. PostgreSQL là nguồn chuẩn; API không chạy tác
+vụ media/GPU nặng trong HTTP request.
 
-## Yêu cầu và cấu hình
+## Chạy local
 
-- Node.js 24 và pnpm 10.28.0 theo cấu hình workspace.
-- Sao chép `.env.example` thành `.env` trước khi chạy local.
-- Development chỉ chấp nhận `CORS_ORIGINS=http://localhost:5173`.
-- Production yêu cầu allowlist origin tường minh, không rỗng và không dùng `*`.
-- `TRUST_PROXY=false` khi chạy trực tiếp; chỉ cấu hình IP/CIDR proxy thực sự tin cậy.
-
-Không thêm credential vào `.env.example`. Cấu hình được kiểm tra trước khi server
-mở port; thông báo startup không in lại giá trị cấu hình lỗi.
+Yêu cầu Node.js 24, pnpm 10.28 và PostgreSQL. Từ repository root:
 
 ```bash
 pnpm install --frozen-lockfile
 cp apps/api/.env.example apps/api/.env
-```
-
-## Chạy và build
-
-```bash
+pnpm --filter @reup-dubbing-studio/api prisma:generate
+pnpm --filter @reup-dubbing-studio/api prisma:migrate:deploy
 pnpm --filter @reup-dubbing-studio/api dev
-pnpm --filter @reup-dubbing-studio/api build
-pnpm --filter @reup-dubbing-studio/api start
 ```
 
-`dev` chạy watch mode. `start` chạy artifact `dist/main.js`, vì vậy phải build
-trước. Production log là JSON trên stdout; development dùng định dạng dễ đọc.
-
-## Health probes
+`SETTINGS_ENCRYPTION_KEY` phải là 32 byte base64 và nằm ngoài Git. Không dùng
+credential production trong local/test. Health probes:
 
 ```bash
 curl -i http://localhost:3000/v1/health/live
 curl -i http://localhost:3000/v1/health/ready
 ```
 
-Cả hai trả `200`, payload `{ data: { status: "ok" }, meta: { requestId } }` và
-`X-Request-Id` trùng `meta.requestId`. Readiness chỉ xác nhận bootstrap/config;
-nó không mô phỏng trạng thái dependency chưa tồn tại.
-
 ## Quality gates
-
-Từ gốc repository:
 
 ```bash
 pnpm lint
 pnpm typecheck
-pnpm test
-pnpm test:e2e
+pnpm contract:verify
+pnpm --filter @reup-dubbing-studio/api test
+TEST_DATABASE_URL=postgresql://... pnpm --filter @reup-dubbing-studio/api test:e2e
 pnpm depcruise
-pnpm contract:lint
+pnpm --filter @reup-dubbing-studio/api build
 ```
 
-Rate limit hiện lưu trong bộ nhớ của từng API instance. Giới hạn phân tán hoặc
-gateway là công việc hạ tầng riêng. API không chạy FFmpeg, media/GPU hay tác vụ
-dài hạn trong HTTP request.
+Integration test PostgreSQL tự dọn fixture nhưng phải dùng database test riêng.
+Không trỏ `TEST_DATABASE_URL` vào database development hoặc production.
 
-## Đặt code cho slice sau
+## Ranh giới an toàn
 
-```text
-src/
-├── platform/                 # capability kỹ thuật, không chứa business rule
-├── modules/<slice>/          # chỉ tạo khi có hành vi thật
-│   ├── http/web/             # inbound adapter theo consumer
-│   ├── application/          # use case và port
-│   ├── domain/               # rule thuần, không framework/I/O
-│   └── infrastructure/       # outbound adapter
-├── app.module.ts             # composition root
-└── main.ts
-```
+- Single workspace, chưa có login; không public API trực tiếp ra Internet.
+- Input ngoài DTO contract bị từ chối; lỗi 5xx không trả stack/raw detail.
+- Cookie/API key/R2 key lưu mã hóa; enrollment credential chỉ lưu hash và raw
+  secret chỉ trả đúng một lần.
+- Resource response không chứa bucket, object key hoặc signed URL lâu dài.
+- SSE chỉ báo invalidation; Web refetch REST sau event/reconnect.
+- OpenAPI trong `contracts/openapi/` là nguồn chuẩn duy nhất cho wire model.
 
-Không dựng module/layer/DTO/port rỗng. Xem
-[`api-hexagonal-slices`](../../docs/architecture/decisions/2026-09-14-api-hexagonal-slices.md)
-cho dependency direction và [`web.openapi.yaml`](../../contracts/openapi/web.openapi.yaml)
-cho contract health hiện có.
+Runbook đầy đủ: [Control Plane Web/API](../../docs/operations/control-plane-web-api.md).
