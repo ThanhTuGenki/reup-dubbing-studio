@@ -147,7 +147,7 @@
 
 - [x] Hoàn thiện navigation, breadcrumb, command/search và deep-link toàn hệ thống.
 - [x] Hoàn thiện toast/SSE transient; không tạo notification center persistent.
-- [ ] Chạy accessibility và responsive QA cho các viewport đã chốt.
+- [x] Chạy accessibility và responsive QA cho các viewport đã chốt.
 - [ ] Chạy contract test, integration test và Playwright cho các flow chính.
 - [ ] Rà soát security: secret redaction, presigned URL, input validation và audit.
 - [ ] Rà soát performance: query/index, bundle splitting và list virtualization khi
