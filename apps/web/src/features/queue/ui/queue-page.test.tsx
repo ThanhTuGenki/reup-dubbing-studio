@@ -86,6 +86,33 @@ describe('QueuePage', () => {
     await waitFor(() => expect(requests).toBeGreaterThanOrEqual(2));
   });
 
+  it('renders the latest task progress after a worker invalidation event', async () => {
+    const source = new FakeEventSource();
+    vi.stubGlobal('EventSource', vi.fn(() => source));
+    let completed = false;
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/queue/jobs`, () => HttpResponse.json({
+      ...queueListEnvelope,
+      data: {
+        ...queueListEnvelope.data,
+        items: queueListEnvelope.data.items.map((job) => completed ? {
+          ...job,
+          status: 'SUCCEEDED',
+          currentTask: job.currentTask ? { ...job.currentTask, status: 'SUCCEEDED', progressPercent: 100, progressDetail: 'fake:9000' } : null,
+          progress: { percent: 100, completedTasks: 1, totalTasks: 1 },
+          actions: { canRetry: false, canCancel: false },
+        } : job),
+      },
+    })));
+    renderApp(<QueuePage />, { route: '/queue' });
+    expect((await screen.findAllByText('25% · 0/1')).length).toBeGreaterThan(0);
+
+    completed = true;
+    act(() => source.emit('queue.invalidate', new MessageEvent('queue.invalidate', { data: JSON.stringify({ reason: 'TASK_SUCCEEDED' }) })));
+
+    expect((await screen.findAllByText('100% · 1/1')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Hoàn thành').length).toBeGreaterThan(0);
+  });
+
   it('refreshes stale detail after a version conflict', async () => {
     const user = userEvent.setup();
     let detailRequests = 0;

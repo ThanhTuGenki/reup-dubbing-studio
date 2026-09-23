@@ -22,7 +22,7 @@ from reup_worker_contract.types import UNSET
 
 from .control_plane import ControlPlaneError, SessionState
 from .credential_store import CredentialStore
-from .ports import ControlPlane, ExecutionResult, ProgressReporter, TaskExecutor
+from .ports import ControlPlane, ExecutionResult, ProgressReporter, TaskExecutionCancelled, TaskExecutor
 
 log = structlog.get_logger()
 
@@ -131,6 +131,8 @@ class WorkerAgent:
         except TimeoutError:
             await self._safe_fail(task, "PROCESS_TIMEOUT", "Task process exceeded its configured timeout", started)
         except TaskCancellationRequested:
+            return
+        except TaskExecutionCancelled:
             return
         except asyncio.CancelledError:
             raise
