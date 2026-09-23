@@ -1,0 +1,218 @@
+from http import HTTPStatus
+from typing import Any, cast
+from uuid import UUID
+
+import httpx
+
+from ... import errors
+from ...client import AuthenticatedClient, Client
+from ...models.commit_output_request import CommitOutputRequest
+from ...models.committed_output_envelope import CommittedOutputEnvelope
+from ...models.problem_details import ProblemDetails
+from ...types import UNSET, Response
+
+
+def _get_kwargs(
+    task_id: UUID,
+    attempt_id: UUID,
+    asset_id: UUID,
+    *,
+    body: CommitOutputRequest,
+    idempotency_key: str,
+) -> dict[str, Any]:
+    headers: dict[str, Any] = {}
+    headers["Idempotency-Key"] = idempotency_key
+
+    _kwargs: dict[str, Any] = {
+        "method": "post",
+        "url": "/tasks/{task_id}/attempts/{attempt_id}/outputs/{asset_id}/commit".format(
+            task_id=task_id,
+            attempt_id=attempt_id,
+            asset_id=asset_id,
+        ),
+    }
+
+    _kwargs["json"] = body.to_dict()
+
+    headers["Content-Type"] = "application/json"
+
+    _kwargs["headers"] = headers
+    return _kwargs
+
+
+def _parse_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> CommittedOutputEnvelope | ProblemDetails:
+    if response.status_code == 200:
+        response_200 = CommittedOutputEnvelope.from_dict(response.json())
+
+        return response_200
+
+    response_default = ProblemDetails.from_dict(response.json())
+
+    return response_default
+
+
+def _build_response(
+    *, client: AuthenticatedClient | Client, response: httpx.Response
+) -> Response[CommittedOutputEnvelope | ProblemDetails]:
+    return Response(
+        status_code=HTTPStatus(response.status_code),
+        content=response.content,
+        headers=response.headers,
+        parsed=_parse_response(client=client, response=response),
+    )
+
+
+def sync_detailed(
+    task_id: UUID,
+    attempt_id: UUID,
+    asset_id: UUID,
+    *,
+    client: AuthenticatedClient | Client,
+    body: CommitOutputRequest,
+    idempotency_key: str,
+) -> Response[CommittedOutputEnvelope | ProblemDetails]:
+    """Verify an uploaded task output and mark the asset available
+
+    Args:
+        task_id (UUID):
+        attempt_id (UUID):
+        asset_id (UUID):
+        idempotency_key (str):
+        body (CommitOutputRequest):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[CommittedOutputEnvelope | ProblemDetails]
+    """
+
+    kwargs = _get_kwargs(
+        task_id=task_id,
+        attempt_id=attempt_id,
+        asset_id=asset_id,
+        body=body,
+        idempotency_key=idempotency_key,
+    )
+
+    response = client.get_httpx_client().request(
+        **kwargs,
+    )
+
+    return _build_response(client=client, response=response)
+
+
+def sync(
+    task_id: UUID,
+    attempt_id: UUID,
+    asset_id: UUID,
+    *,
+    client: AuthenticatedClient | Client,
+    body: CommitOutputRequest,
+    idempotency_key: str,
+) -> CommittedOutputEnvelope | ProblemDetails | None:
+    """Verify an uploaded task output and mark the asset available
+
+    Args:
+        task_id (UUID):
+        attempt_id (UUID):
+        asset_id (UUID):
+        idempotency_key (str):
+        body (CommitOutputRequest):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        CommittedOutputEnvelope | ProblemDetails
+    """
+
+    return sync_detailed(
+        task_id=task_id,
+        attempt_id=attempt_id,
+        asset_id=asset_id,
+        client=client,
+        body=body,
+        idempotency_key=idempotency_key,
+    ).parsed
+
+
+async def asyncio_detailed(
+    task_id: UUID,
+    attempt_id: UUID,
+    asset_id: UUID,
+    *,
+    client: AuthenticatedClient | Client,
+    body: CommitOutputRequest,
+    idempotency_key: str,
+) -> Response[CommittedOutputEnvelope | ProblemDetails]:
+    """Verify an uploaded task output and mark the asset available
+
+    Args:
+        task_id (UUID):
+        attempt_id (UUID):
+        asset_id (UUID):
+        idempotency_key (str):
+        body (CommitOutputRequest):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        Response[CommittedOutputEnvelope | ProblemDetails]
+    """
+
+    kwargs = _get_kwargs(
+        task_id=task_id,
+        attempt_id=attempt_id,
+        asset_id=asset_id,
+        body=body,
+        idempotency_key=idempotency_key,
+    )
+
+    response = await client.get_async_httpx_client().request(**kwargs)
+
+    return _build_response(client=client, response=response)
+
+
+async def asyncio(
+    task_id: UUID,
+    attempt_id: UUID,
+    asset_id: UUID,
+    *,
+    client: AuthenticatedClient | Client,
+    body: CommitOutputRequest,
+    idempotency_key: str,
+) -> CommittedOutputEnvelope | ProblemDetails | None:
+    """Verify an uploaded task output and mark the asset available
+
+    Args:
+        task_id (UUID):
+        attempt_id (UUID):
+        asset_id (UUID):
+        idempotency_key (str):
+        body (CommitOutputRequest):
+
+    Raises:
+        errors.UnexpectedStatus: If the server returns an undocumented status code and Client.raise_on_unexpected_status is True.
+        httpx.TimeoutException: If the request takes longer than Client.timeout.
+
+    Returns:
+        CommittedOutputEnvelope | ProblemDetails
+    """
+
+    return (
+        await asyncio_detailed(
+            task_id=task_id,
+            attempt_id=attempt_id,
+            asset_id=asset_id,
+            client=client,
+            body=body,
+            idempotency_key=idempotency_key,
+        )
+    ).parsed
