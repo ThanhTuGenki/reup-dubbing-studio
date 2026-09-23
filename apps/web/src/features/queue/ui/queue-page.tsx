@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQueryInvalidationStream } from '@/shared/api/use-query-invalidation-stream';
 import { ListState } from '@/shared/ui/list-state';
+import { useTransientStreamToast } from '@/shared/ui/use-transient-stream-toast';
 import { DISPLAY_TIMEZONE } from '@/shared/lib/display-time';
 import { useQuerySelection } from '@/shared/lib/use-query-selection';
 import { cancelJob, QueueApiError, queueEventsUrl, retryJob } from '../api/queue-api';
@@ -38,7 +39,8 @@ export function QueuePage() {
   const detail = useQuery({ ...queueJobQuery(selected ?? EMPTY_ID), enabled: Boolean(selected) });
   const attempts = useQuery({ ...queueAttemptsQuery(selected ?? EMPTY_ID), enabled: Boolean(selected) });
   const actionKeys = useRef(new Map<string, string>());
-  useQueryInvalidationStream({ url: queueEventsUrl(), queryKeys: [queueKeys.all], eventName: 'queue.invalidate', enabled: typeof EventSource !== 'undefined' });
+  const streamState = useQueryInvalidationStream({ url: queueEventsUrl(), queryKeys: [queueKeys.all], eventName: 'queue.invalidate', enabled: typeof EventSource !== 'undefined' });
+  useTransientStreamToast({ id: 'queue-event-stream', label: 'hàng đợi', state: streamState });
 
   const action = useMutation({
     mutationFn: async (kindValue: 'cancel' | 'retry') => {
