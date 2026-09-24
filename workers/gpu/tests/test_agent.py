@@ -7,6 +7,7 @@ from reup_worker.control_plane import SessionState
 from reup_worker.credential_store import CredentialStore
 from reup_worker.fake_executor import FakeExecutorConfig, FakeTaskExecutor
 from reup_worker.ports import ExecutionResult, ProgressReporter
+from reup_worker.workspace import WorkspaceLifecycle
 from reup_worker_contract.models.claimed_task import ClaimedTask
 from reup_worker_contract.models.complete_task_request import CompleteTaskRequest
 from reup_worker_contract.models.fail_task_request import FailTaskRequest
@@ -106,6 +107,24 @@ async def test_agent_enrolls_runs_one_task_and_stops_on_drain(tmp_path: Path) ->
     assert control_plane.completed.result.to_dict() == {"adapter": "fake"}
     assert control_plane.claims == 2
     assert control_plane.heartbeats
+
+
+async def test_agent_cleans_successful_attempt_workspace(tmp_path: Path) -> None:
+    control_plane = FakeControlPlane(claimed_task())
+    lifecycle = WorkspaceLifecycle(tmp_path / "work", success_retention_seconds=0)
+    agent = WorkerAgent(
+        control_plane,
+        CredentialStore(tmp_path / "credential"),
+        identity(),
+        FakeExecutor(),
+        "enr_test",
+        lifecycle,
+    )
+
+    await agent.run()
+
+    assert not (tmp_path / "work" / ATTEMPT_ID).exists()
+    assert (tmp_path / "work" / ".diagnostics" / f"{ATTEMPT_ID}.json").is_file()
 
 
 async def test_agent_renews_a_slow_fake_task(tmp_path: Path) -> None:

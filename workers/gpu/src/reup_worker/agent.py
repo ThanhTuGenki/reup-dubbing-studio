@@ -23,6 +23,7 @@ from reup_worker_contract.types import UNSET
 from .control_plane import ControlPlaneError, SessionState
 from .credential_store import CredentialStore
 from .ports import ControlPlane, ExecutionResult, ProgressReporter, TaskExecutionCancelled, TaskExecutor
+from .workspace import WorkspaceLifecycle
 
 log = structlog.get_logger()
 
@@ -39,12 +40,14 @@ class WorkerAgent:
         identity: SessionIdentity,
         executor: TaskExecutor,
         enrollment_token: str | None,
+        workspace_lifecycle: WorkspaceLifecycle | None = None,
     ) -> None:
         self._control_plane = control_plane
         self._credentials = credential_store
         self._identity = identity
         self._executor = executor
         self._enrollment_token = enrollment_token
+        self._workspaces = workspace_lifecycle
         self._stopping = asyncio.Event()
         self._cancel_requested = asyncio.Event()
         self._active_task: ClaimedTask | None = None
@@ -119,7 +122,11 @@ class WorkerAgent:
         self._cancel_requested.clear()
         started = time.monotonic()
         renewer: asyncio.Task[None] | None = None
+        succeeded = False
+        diagnostic: dict[str, object] = {"status": "cancelled"}
         try:
+            if self._workspaces:
+                self._workspaces.create(str(task.attempt_id))
             action = await self._control_plane.start(task)
             if action.data.cancel_requested:
                 return
@@ -128,7 +135,10 @@ class WorkerAgent:
             if self._cancel_requested.is_set():
                 return
             await self._complete(task, result, started)
+            succeeded = True
+            diagnostic = {"status": "succeeded"}
         except TimeoutError:
+            diagnostic = {"status": "failed", "code": "PROCESS_TIMEOUT"}
             await self._safe_fail(task, "PROCESS_TIMEOUT", "Task process exceeded its configured timeout", started)
         except TaskCancellationRequested:
             return
@@ -140,6 +150,7 @@ class WorkerAgent:
             if error.code not in {"STALE_TASK_ATTEMPT", "TASK_CANCELLED", "TASK_LEASE_EXPIRED"}:
                 log.error("control_plane_task_error", code=error.code)
         except Exception as error:
+            diagnostic = {"status": "failed", "errorType": type(error).__name__}
             await self._safe_fail(task, "INFERENCE_FAILED", f"Executor failed: {type(error).__name__}", started)
         finally:
             if renewer:
@@ -148,6 +159,8 @@ class WorkerAgent:
                     await renewer
             self._active_task = None
             self._cancel_requested.clear()
+            if self._workspaces:
+                self._workspaces.finish(str(task.attempt_id), succeeded=succeeded, diagnostic=diagnostic)
 
     async def _renew_loop(self, task: ClaimedTask) -> None:
         while True:
