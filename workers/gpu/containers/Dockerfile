@@ -29,8 +29,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
 COPY --from=uv /uv /usr/local/bin/uv
 
 RUN test "${TARGETARCH}" = "amd64" \
-    && apt-get update \
-    && apt-get install --yes --no-install-recommends ca-certificates ffmpeg libgl1 libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get update -o Acquire::Retries=5 \
+    && apt-get install --yes --no-install-recommends -o Acquire::Retries=5 ca-certificates ffmpeg libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/* \
     && uv python install 3.11 \
     && uv venv --python 3.11 "${VIRTUAL_ENV}"
