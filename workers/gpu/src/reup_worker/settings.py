@@ -31,8 +31,8 @@ class WorkerSettings(BaseSettings):
     @field_validator("executor")
     @classmethod
     def validate_executor(cls, value: str) -> str:
-        if value not in {"missing", "fake"}:
-            raise ValueError("executor must be 'missing' or 'fake'")
+        if value not in {"missing", "fake", "batch"}:
+            raise ValueError("executor must be 'missing', 'fake', or 'batch'")
         return value
 
     @field_validator("fake_behavior")

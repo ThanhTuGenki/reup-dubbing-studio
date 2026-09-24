@@ -1,0 +1,1 @@
+"""Batch media task adapters."""

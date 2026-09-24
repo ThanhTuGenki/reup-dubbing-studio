@@ -76,3 +76,21 @@ MinIO tạm ở `127.0.0.1:59000` và đặt các biến
 `REUP_WORKER_TEST_S3_ENDPOINT`, `REUP_WORKER_TEST_S3_ACCESS_KEY`,
 `REUP_WORKER_TEST_S3_SECRET_KEY`; suite mặc định skip test này nếu endpoint không
 được cấu hình.
+
+## Batch Media executor
+
+Đặt `REUP_WORKER_EXECUTOR=batch` cho image `BATCH_MEDIA`. Executor tải input qua
+`AssetTransfer`, dispatch theo `taskType`, sau đó upload và commit đúng output
+slot. Bốn adapter MVP được đăng ký:
+
+- `TRANSCRIBE_ASR`: faster-whisper, output transcript JSON v1;
+- `TRANSCRIBE_OCR`: PaddleOCR/OpenCV, output cùng transcript JSON v1;
+- `SEPARATE_AUDIO`: Demucs `htdemucs`, output background WAV;
+- `RENDER`: FFmpeg H.264/AAC 16:9 hoặc 9:16, delay/mix dub theo metadata và
+  tuyệt đối không burn-in subtitle.
+
+Local foundation không cài model nặng. ASR/OCR/Demucs được import/chạy trong
+subprocess và sẽ được pin trong Batch Media container; local test dùng fake
+process, riêng FFmpeg chạy một fixture media ngắn thật. `DESUB` không được đăng
+ký và image MVP không quảng bá `media.desub.v1`, nên hard-sub mặc định tắt không
+load model hay tạo artifact. SRT rời thuộc task CPU `EXPORT_SRT` ở Control Plane.
