@@ -6,15 +6,19 @@ from uuid import UUID
 
 from reup_worker.control_plane import SessionState
 from reup_worker_contract.models.claimed_task import ClaimedTask
+from reup_worker_contract.models.committed_output import CommittedOutput
 from reup_worker_contract.models.complete_task_request import CompleteTaskRequest
+from reup_worker_contract.models.download_grant import DownloadGrant
 from reup_worker_contract.models.fail_task_request import FailTaskRequest
 from reup_worker_contract.models.heartbeat import Heartbeat
 from reup_worker_contract.models.heartbeat_envelope import HeartbeatEnvelope
+from reup_worker_contract.models.output_grant_request import OutputGrantRequest
 from reup_worker_contract.models.session_identity import SessionIdentity
 from reup_worker_contract.models.task_action_envelope import TaskActionEnvelope
 from reup_worker_contract.models.task_metrics import TaskMetrics
 from reup_worker_contract.models.task_output_reference import TaskOutputReference
 from reup_worker_contract.models.task_progress_request import TaskProgressRequest
+from reup_worker_contract.models.upload_grant import UploadGrant
 from reup_worker_contract.models.worker_desired_status import WorkerDesiredStatus
 
 ProgressReporter = Callable[[int, str | None], Awaitable[None]]
@@ -48,3 +52,12 @@ class ControlPlane(Protocol):
     async def complete(self, task: ClaimedTask, body: CompleteTaskRequest) -> TaskActionEnvelope: ...
     async def fail(self, task: ClaimedTask, body: FailTaskRequest) -> TaskActionEnvelope: ...
     async def close(self) -> None: ...
+
+
+class AssetControlPlane(Protocol):
+    async def refresh_input(self, task: ClaimedTask, asset_id: UUID) -> DownloadGrant: ...
+    async def request_output(self, task: ClaimedTask, body: OutputGrantRequest) -> UploadGrant: ...
+    async def refresh_output(self, task: ClaimedTask, asset_id: UUID) -> UploadGrant: ...
+    async def commit_output(
+        self, task: ClaimedTask, asset_id: UUID, byte_size: str, checksum: str
+    ) -> CommittedOutput: ...

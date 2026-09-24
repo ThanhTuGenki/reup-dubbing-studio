@@ -21,7 +21,7 @@ class IsolatedProcessRunner:
 
     async def run(self, attempt_id: str, command: Sequence[str]) -> ProcessResult:
         workspace = self._workspace(attempt_id)
-        workspace.mkdir(mode=0o700, parents=True, exist_ok=False)
+        workspace.mkdir(mode=0o700, parents=True, exist_ok=True)
         process = await asyncio.create_subprocess_exec(
             *command,
             cwd=workspace,

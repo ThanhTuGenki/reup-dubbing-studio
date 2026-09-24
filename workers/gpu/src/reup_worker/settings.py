@@ -23,6 +23,10 @@ class WorkerSettings(BaseSettings):
     executor: str = "missing"
     fake_behavior: str = "success"
     fake_step_delay_seconds: float = Field(default=0.01, ge=0.001, le=60)
+    max_input_bytes: int = Field(default=10 * 1024 * 1024 * 1024, ge=1)
+    allow_http_asset_urls: bool = False
+    success_workspace_retention_seconds: int = Field(default=0, ge=0)
+    failure_workspace_retention_seconds: int = Field(default=3600, ge=0)
 
     @field_validator("executor")
     @classmethod

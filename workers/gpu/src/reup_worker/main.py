@@ -12,6 +12,7 @@ from .fake_executor import FakeExecutorConfig, FakeTaskExecutor
 from .ports import ExecutionResult, ProgressReporter
 from .runtime import build_identity
 from .settings import WorkerSettings
+from .workspace import WorkspaceLifecycle
 
 
 class MissingAdapterExecutor:
@@ -32,6 +33,11 @@ async def run() -> None:
         identity=build_identity(settings),
         executor=build_executor(settings),
         enrollment_token=settings.enrollment_token,
+        workspace_lifecycle=WorkspaceLifecycle(
+            settings.workspace_root,
+            success_retention_seconds=settings.success_workspace_retention_seconds,
+            failure_retention_seconds=settings.failure_workspace_retention_seconds,
+        ),
     )
     loop = asyncio.get_running_loop()
     for name in (signal.SIGINT, signal.SIGTERM):

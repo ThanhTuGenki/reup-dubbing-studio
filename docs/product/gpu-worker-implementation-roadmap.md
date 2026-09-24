@@ -97,14 +97,16 @@
 
 ## 5. Asset transfer và workspace lifecycle
 
-- [ ] **Hoàn tất luồng asset thật không phụ thuộc GPU.**
-  - [ ] Implement download input bằng presigned URL, streaming và checksum.
-  - [ ] Implement multipart/resumable upload khi cần, HEAD/checksum verification
+- [x] **Hoàn tất luồng asset thật không phụ thuộc GPU.**
+  - [x] Implement download input bằng presigned URL, streaming và checksum.
+  - [x] Implement multipart/resumable upload khi cần, HEAD/checksum verification
     và output commit idempotent.
-  - [ ] Chống path traversal, giới hạn dung lượng, content type và thời hạn URL.
-  - [ ] Dọn workspace theo retention sau success/failure nhưng giữ log chẩn đoán
+    MVP dùng single PUT có thể retry toàn object vì output hiện tại tối đa 1 GB,
+    thấp hơn giới hạn 5 GiB; multipart contract chỉ cần mở khi tăng giới hạn này.
+  - [x] Chống path traversal, giới hạn dung lượng, content type và thời hạn URL.
+  - [x] Dọn workspace theo retention sau success/failure nhưng giữ log chẩn đoán
     an toàn theo policy.
-  - [ ] Integration test bằng S3-compatible test environment và fixture nhỏ.
+  - [x] Integration test bằng S3-compatible test environment và fixture nhỏ.
 
 ## 6. Batch Media Worker adapters
 

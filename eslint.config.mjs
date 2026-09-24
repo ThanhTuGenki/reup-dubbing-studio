@@ -6,6 +6,7 @@ export default [
       'packages/api-contract/src/generated/**',
       'packages/api-contract/src/generated-worker/**',
       'Project-As-Complete-Opendesign-Design-System/**',
+      '**/.venv/**',
     ],
   },
   ...sharedConfig,

@@ -52,3 +52,27 @@ Luồng fake được nghiệm thu qua hai lớp: pytest chạy Agent với Cont
 restart/lease fencing, workflow event và projection Queue. `queue.invalidate`
 chỉ mang định danh/version an toàn; Queue và Studio luôn refetch REST thay vì
 dùng payload SSE làm nguồn dữ liệu.
+
+## Asset transfer và workspace
+
+`AssetTransfer` chỉ dùng grant ngắn hạn trong contract: input được tải streaming
+vào workspace của attempt, giới hạn byte và kiểm tra SHA-256 trước khi atomic
+rename. Output phải nằm trong `outputs/`, đúng content type/giới hạn slot, được
+PUT streaming rồi mới gọi commit; Control Plane xác minh lại HEAD, kích thước,
+content type và checksum. Commit dùng idempotency key ổn định. Nếu PUT đứt hoặc
+grant hết hạn, Worker xin grant mới và gửi lại nguyên object an toàn.
+
+MVP dùng single PUT cho output dưới giới hạn S3 5 GiB; manifest hiện tại giới hạn
+video ở 1 GB nên chưa cần multipart. Worker từ chối rõ ràng file lớn hơn 5 GiB;
+khi product cho phép output lớn hơn ngưỡng này phải mở rộng OpenAPI bằng
+multipart grant trước, không tự giữ S3 credential dài hạn trong Worker.
+
+Workspace thành công mặc định xóa ngay. Workspace lỗi giữ một giờ để chẩn đoán,
+sau đó reaper xóa; diagnostic JSON tách riêng, bị giới hạn kích thước và redact
+secret. Có thể đổi retention bằng biến môi trường trong `.env.example`.
+
+Test S3-compatible được chạy với endpoint riêng qua `make test-s3`. Ví dụ dùng
+MinIO tạm ở `127.0.0.1:59000` và đặt các biến
+`REUP_WORKER_TEST_S3_ENDPOINT`, `REUP_WORKER_TEST_S3_ACCESS_KEY`,
+`REUP_WORKER_TEST_S3_SECRET_KEY`; suite mặc định skip test này nếu endpoint không
+được cấu hình.
