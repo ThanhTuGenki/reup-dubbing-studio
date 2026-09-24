@@ -29,6 +29,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 COPY --from=uv /uv /usr/local/bin/uv
 
 RUN test "${TARGETARCH}" = "amd64" \
+    && sed -i 's|http://archive.ubuntu.com/ubuntu/|http://archive.ubuntu.mirror.rafal.ca/ubuntu/|g; s|http://security.ubuntu.com/ubuntu/|http://archive.ubuntu.mirror.rafal.ca/ubuntu/|g' /etc/apt/sources.list \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get update -o Acquire::Retries=5 \
     && apt-get install --yes --no-install-recommends -o Acquire::Retries=5 ca-certificates ffmpeg libgl1 libglib2.0-0 \
