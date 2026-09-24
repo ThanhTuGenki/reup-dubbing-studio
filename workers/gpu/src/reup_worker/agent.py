@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import inspect
 import time
 from datetime import UTC, datetime
 from uuid import UUID
@@ -80,6 +81,11 @@ class WorkerAgent:
             heartbeat.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat
+            close_executor = getattr(self._executor, "close", None)
+            if callable(close_executor):
+                closing = close_executor()
+                if inspect.isawaitable(closing):
+                    await closing
             await self._control_plane.close()
 
     async def _open_session(self) -> SessionState:

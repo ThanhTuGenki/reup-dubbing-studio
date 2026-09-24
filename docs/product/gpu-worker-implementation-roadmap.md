@@ -110,14 +110,15 @@
 
 ## 6. Batch Media Worker adapters
 
-- [ ] **Hoàn tất các adapter media không cần OmniVoice.**
-  - [ ] Implement ASR adapter và chuẩn hóa transcript/timestamp output.
-  - [ ] Implement OCR adapter nếu vẫn cần sau khi review chất lượng ASR/OCR.
-  - [ ] Implement Demucs adapter để tách vocal/background.
-  - [ ] Implement audio timing/mix, SRT rời và FFmpeg render cho output 16:9/9:16.
-  - [ ] Giữ hard-sub adapter sau feature flag; khi flag tắt phải skip hoàn toàn
+- [x] **Hoàn tất các adapter media không cần OmniVoice.**
+  - [x] Implement ASR adapter và chuẩn hóa transcript/timestamp output.
+  - [x] Implement OCR adapter để chạy song song ASR cho benchmark MVP.
+  - [x] Implement Demucs adapter để tách vocal/background.
+  - [x] Implement audio timing/mix và FFmpeg render cho output 16:9/9:16;
+    giữ subtitle ở file SRT rời do task CPU `EXPORT_SRT` sở hữu.
+  - [x] Giữ hard-sub adapter sau feature flag; khi flag tắt phải skip hoàn toàn
     model, mask validation và artifact của bước DESUB.
-  - [ ] Unit/integration test local bằng fake process và media fixture ngắn; test
+  - [x] Unit/integration test local bằng fake process và media fixture ngắn; test
     CUDA/model thật được để dành cho mốc GPU acceptance.
 
 ## 7. Interactive TTS Worker adapters

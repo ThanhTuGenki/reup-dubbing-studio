@@ -237,6 +237,45 @@ Presigned grant hết hạn có thể xin lại cho cùng pending asset khi leas
 lực. Grant TTL không vượt lease còn lại. URL và signed header không persist hoặc
 ghi log.
 
+### 6.2 Chuẩn adapter Batch Media v1
+
+`ASR_JSON` và `OCR_JSON` dùng cùng envelope chuẩn hóa để Control Plane có thể so
+sánh/hợp nhất mà không phụ thuộc output riêng của model:
+
+```json
+{
+  "version": 1,
+  "source": "ASR",
+  "language": "zh",
+  "segments": [
+    { "startMs": 0, "endMs": 1250, "text": "...", "confidence": 0.98 }
+  ]
+}
+```
+
+Timestamp phải tăng đơn điệu, dùng millisecond và segment không rỗng. OCR vẫn
+đọc `RAW`; ASR dùng faster-whisper và OCR dùng PaddleOCR trong subprocess để lỗi
+model không làm chết Agent. Dependency model/CUDA được pin ở image Batch Media,
+không đưa vào môi trường local nền tảng.
+
+`SEPARATE_AUDIO` chạy Demucs `htdemucs --two-stems vocals`; output chuẩn của task
+là `BACKGROUND_AUDIO` WAV. Vocal stem chỉ là diagnostic cục bộ và không upload
+trong MVP.
+
+`RENDER` dùng các logical input sau:
+
+- đúng một visual `RAW` khi hard-sub removal tắt, hoặc `DESUBBED` khi bật;
+- đúng một `BACKGROUND_AUDIO`;
+- một hoặc nhiều `DUB_AUDIO`, metadata gồm `ordinal`, `targetStartMs` và tùy chọn
+  `gainDb`;
+- variant `FULL_16X9` hoặc `VERTICAL_9X16` từ configuration snapshot.
+
+FFmpeg delay/mix dub theo timestamp, scale + pad giữ aspect ratio, encode H.264
+và AAC. `subtitleMode=EXTERNAL_ONLY` cấm burn-in; task CPU `EXPORT_SRT` vẫn sở
+hữu file SRT rời. Batch executor không đăng ký adapter/capability `DESUB` trong
+image MVP, vì vậy khi flag mặc định tắt không tải model, validate mask hay tạo
+artifact `DESUBBED`.
+
 ## 7. Hard-sub optional/default off
 
 ### 7.1 Khi tắt — flow mặc định MVP
