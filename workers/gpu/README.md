@@ -95,6 +95,12 @@ process, riêng FFmpeg chạy một fixture media ngắn thật. `DESUB` không 
 ký và image MVP không quảng bá `media.desub.v1`, nên hard-sub mặc định tắt không
 load model hay tạo artifact. SRT rời thuộc task CPU `EXPORT_SRT` ở Control Plane.
 
+Image Batch giữ ASR, OCR/Paddle và Demucs/PyTorch trong ba Python environment
+nội bộ tách biệt. Paddle GPU và PyTorch CUDA khóa các phiên bản thư viện NVIDIA
+Python không tương thích, nên không được gộp hoặc ép resolver; Agent chọn đúng
+interpreter qua `REUP_WORKER_ASR_PYTHON`, `REUP_WORKER_OCR_PYTHON` và
+`REUP_WORKER_DEMUCS_PYTHON`.
+
 ## Interactive TTS executor
 
 Image Interactive TTS dùng `REUP_WORKER_EXECUTOR=interactive-tts`, role

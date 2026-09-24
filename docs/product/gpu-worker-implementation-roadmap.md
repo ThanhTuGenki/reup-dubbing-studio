@@ -137,14 +137,14 @@
 
 ## 8. Container image và CI/CD
 
-- [ ] **Hoàn tất image có thể pull lên máy thuê GPU.**
-  - [ ] Tạo image tách biệt cho `BATCH_MEDIA` và `INTERACTIVE_TTS`.
-  - [ ] Pin base CUDA/runtime, dependency và model compatibility; chạy bằng user
+- [x] **Hoàn tất image có thể pull lên máy thuê GPU.**
+  - [x] Tạo image tách biệt cho `BATCH_MEDIA` và `INTERACTIVE_TTS`.
+  - [x] Pin base CUDA/runtime, dependency và model compatibility; chạy bằng user
     không phải root khi khả thi.
-  - [ ] Build `linux/amd64` qua GitHub Actions hoặc remote builder, không coi image
+  - [x] Build `linux/amd64` qua GitHub Actions hoặc remote builder, không coi image
     build trên Apple Silicon là artifact production.
-  - [ ] Thêm image smoke test, SBOM/security scan, version và immutable digest.
-  - [ ] Verify image approval, enroll và contract-version compatibility với
+  - [x] Thêm image smoke test, SBOM/security scan, version và immutable digest.
+  - [x] Verify image approval, enroll và contract-version compatibility với
     Control Plane.
 
 ## 9. Nghiệm thu trên GPU thuê

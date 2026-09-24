@@ -76,7 +76,7 @@ def build_executor(
         return BatchMediaExecutor(
             settings.workspace_root,
             assets,
-            batch_adapters(runner),
+            batch_adapters(runner, settings),
         )
     if settings.executor == "interactive-tts":
         if settings.role != "INTERACTIVE_TTS":
@@ -109,11 +109,11 @@ def build_executor(
     return MissingAdapterExecutor()
 
 
-def batch_adapters(runner: IsolatedProcessRunner) -> dict[str, MediaAdapter]:
+def batch_adapters(runner: IsolatedProcessRunner, settings: WorkerSettings | None = None) -> dict[str, MediaAdapter]:
     return {
-        "TRANSCRIBE_ASR": AsrAdapter(runner),
-        "TRANSCRIBE_OCR": OcrAdapter(runner),
-        "SEPARATE_AUDIO": DemucsAdapter(runner),
+        "TRANSCRIBE_ASR": AsrAdapter(runner, settings.asr_python if settings else "python"),
+        "TRANSCRIBE_OCR": OcrAdapter(runner, settings.ocr_python if settings else "python"),
+        "SEPARATE_AUDIO": DemucsAdapter(runner, settings.demucs_python if settings else "python"),
         "RENDER": FfmpegRenderAdapter(runner),
     }
 

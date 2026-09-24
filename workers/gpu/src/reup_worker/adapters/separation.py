@@ -13,8 +13,9 @@ from .transcription import output_slot
 
 
 class DemucsAdapter:
-    def __init__(self, runner: CommandRunner) -> None:
+    def __init__(self, runner: CommandRunner, python_executable: str = sys.executable) -> None:
         self._runner = runner
+        self._python = python_executable
 
     async def run(
         self,
@@ -33,7 +34,7 @@ class DemucsAdapter:
         result = await self._runner.run(
             str(task.attempt_id),
             [
-                sys.executable,
+                self._python,
                 "-m",
                 "demucs",
                 "--two-stems",
