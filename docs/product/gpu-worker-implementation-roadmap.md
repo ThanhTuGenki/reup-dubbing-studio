@@ -123,16 +123,16 @@
 
 ## 7. Interactive TTS Worker adapters
 
-- [ ] **Hoàn tất OmniVoice adapter.**
-  - [ ] Pin phiên bản OmniVoice, PyTorch, CUDA và dependency tương thích trong
+- [x] **Hoàn tất OmniVoice adapter.**
+  - [x] Pin phiên bản OmniVoice, PyTorch, CUDA và dependency tương thích trong
     image riêng của Interactive TTS Worker.
-  - [ ] Implement initial TTS, regenerate một segment, target duration và WAV
+  - [x] Implement initial TTS, regenerate một segment, target duration và WAV
     output theo contract.
-  - [ ] Implement voice prompt/cache lifecycle mà không nhúng secret hoặc signed
+  - [x] Implement voice prompt/cache lifecycle mà không nhúng secret hoặc signed
     URL vào log.
-  - [ ] Giữ model nóng trong session, concurrency 1 và restart subprocess có kiểm
+  - [x] Giữ model nóng trong session, concurrency 1 và restart subprocess có kiểm
     soát khi VRAM tăng hoặc inference lỗi.
-  - [ ] Ghi rõ license gate: không dùng pretrained model cho production thương
+  - [x] Ghi rõ license gate: không dùng pretrained model cho production thương
     mại cho tới khi quyền sử dụng được giải quyết.
 
 ## 8. Container image và CI/CD
