@@ -27,6 +27,9 @@ class WorkerSettings(BaseSettings):
     allow_http_asset_urls: bool = False
     success_workspace_retention_seconds: int = Field(default=0, ge=0)
     failure_workspace_retention_seconds: int = Field(default=3600, ge=0)
+    asr_python: str = "python"
+    ocr_python: str = "python"
+    demucs_python: str = "python"
     tts_model_id: str = "k2-fsa/OmniVoice"
     tts_model_revision: str = "c5fdb5ccb189668d56333f77ba2629f4cd7535f4"
     tts_audio_tokenizer_id: str = "eustlb/higgs-audio-v2-tokenizer"

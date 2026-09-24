@@ -13,8 +13,9 @@ from .command import CommandRunner, require_success
 
 
 class AsrAdapter:
-    def __init__(self, runner: CommandRunner) -> None:
+    def __init__(self, runner: CommandRunner, python_executable: str = sys.executable) -> None:
         self._runner = runner
+        self._python = python_executable
 
     async def run(
         self,
@@ -33,7 +34,7 @@ class AsrAdapter:
         result = await self._runner.run(
             str(task.attempt_id),
             [
-                sys.executable,
+                self._python,
                 "-m",
                 "reup_worker.tools.asr",
                 "--input",
@@ -53,8 +54,9 @@ class AsrAdapter:
 
 
 class OcrAdapter:
-    def __init__(self, runner: CommandRunner) -> None:
+    def __init__(self, runner: CommandRunner, python_executable: str = sys.executable) -> None:
         self._runner = runner
+        self._python = python_executable
 
     async def run(
         self,
@@ -73,7 +75,7 @@ class OcrAdapter:
         result = await self._runner.run(
             str(task.attempt_id),
             [
-                sys.executable,
+                self._python,
                 "-m",
                 "reup_worker.tools.ocr",
                 "--input",

@@ -1,0 +1,16 @@
+.git
+.github
+**/.env
+**/.state
+**/.work
+**/.venv
+**/.mypy_cache
+**/.pytest_cache
+**/.ruff_cache
+**/__pycache__
+**/node_modules
+**/dist
+**/coverage
+**/tests
+**/*.pyc
+Project-As-Complete-Opendesign-Design-System
