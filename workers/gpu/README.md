@@ -94,3 +94,22 @@ subprocess và sẽ được pin trong Batch Media container; local test dùng f
 process, riêng FFmpeg chạy một fixture media ngắn thật. `DESUB` không được đăng
 ký và image MVP không quảng bá `media.desub.v1`, nên hard-sub mặc định tắt không
 load model hay tạo artifact. SRT rời thuộc task CPU `EXPORT_SRT` ở Control Plane.
+
+## Interactive TTS executor
+
+Image Interactive TTS dùng `REUP_WORKER_EXECUTOR=interactive-tts`, role
+`INTERACTIVE_TTS` và capability `tts.omnivoice.v1`. Agent tải `VOICE_SAMPLE`
+hoặc `VOICE_PROMPT`, cache prompt theo voice/language/checksum/model revision,
+giữ OmniVoice trong subprocess chạy nóng và upload WAV 24 kHz riêng cho từng
+segment. Regenerate chỉ chấp nhận đúng một segment. Subprocess tự restart sau số
+request cấu hình, khi VRAM vượt ngưỡng, timeout hoặc inference lỗi; GPU
+concurrency của Agent vẫn là 1.
+
+CUDA dependencies được pin riêng tại `tts/requirements.lock`, không cài vào môi
+trường M1. Model chính thức được khóa theo Hugging Face revision
+`c5fdb5ccb189668d56333f77ba2629f4cd7535f4`; source OmniVoice đã kiểm tra tại Git
+commit `08be0b4ccbac3e13e374e86fbfead4b4cac343e2`. Audio tokenizer phụ thuộc cũng
+được khóa ở revision `528e871c2a26c4f0f7773b9754e2e1acae20899d`. Code là Apache-2.0 nhưng pretrained
+weights là CC-BY-NC. `REUP_WORKER_TTS_USAGE_MODE=production-commercial` vì vậy
+bị chặn khi license vẫn là `CC_BY_NC`; chỉ đổi gate sau khi có weights/quyền sử
+dụng thương mại được xác minh, không suy diễn từ license của code.

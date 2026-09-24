@@ -106,6 +106,16 @@ class BatchMediaExecutor:
             raise TaskExecutionCancelled
 
 
+class InteractiveTtsExecutor(BatchMediaExecutor):
+    def __init__(self, workspace_root: Path, assets: TaskAssets, adapter: MediaAdapter, runtime: Any) -> None:
+        super().__init__(workspace_root, assets, {"GENERATE_INITIAL_TTS": adapter, "REGENERATE_SEGMENT": adapter})
+        self._runtime = runtime
+
+    async def close(self) -> None:
+        await self._runtime.close()
+        await super().close()
+
+
 def output_specification(specifications: list[TaskOutputSpecification], slot: str) -> TaskOutputSpecification:
     matches = [item for item in specifications if item.slot == slot]
     if len(matches) != 1:

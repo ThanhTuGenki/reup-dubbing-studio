@@ -11,7 +11,7 @@ from .adapters.separation import DemucsAdapter
 from .adapters.transcription import AsrAdapter, OcrAdapter
 from .agent import WorkerAgent
 from .assets import AssetTransfer
-from .batch_executor import BatchMediaExecutor
+from .batch_executor import BatchMediaExecutor, InteractiveTtsExecutor
 from .control_plane import GeneratedControlPlane
 from .credential_store import CredentialStore
 from .fake_executor import FakeExecutorConfig, FakeTaskExecutor
@@ -19,6 +19,7 @@ from .ports import ExecutionResult, ProgressReporter
 from .process import IsolatedProcessRunner
 from .runtime import build_identity
 from .settings import WorkerSettings
+from .tts import OmniVoiceAdapter, OmniVoiceProcess, OmniVoiceProcessConfig, VoicePromptCache
 from .workspace import WorkspaceLifecycle
 
 
@@ -54,7 +55,7 @@ async def run() -> None:
 
 def build_executor(
     settings: WorkerSettings, control_plane: GeneratedControlPlane
-) -> MissingAdapterExecutor | FakeTaskExecutor | BatchMediaExecutor:
+) -> MissingAdapterExecutor | FakeTaskExecutor | BatchMediaExecutor | InteractiveTtsExecutor:
     if settings.executor == "fake":
         return FakeTaskExecutor(
             FakeExecutorConfig(
@@ -77,6 +78,34 @@ def build_executor(
             assets,
             batch_adapters(runner),
         )
+    if settings.executor == "interactive-tts":
+        if settings.role != "INTERACTIVE_TTS":
+            raise ValueError("interactive TTS executor requires the INTERACTIVE_TTS role")
+        if settings.tts_usage_mode == "production-commercial" and settings.tts_model_license == "CC_BY_NC":
+            raise ValueError("CC-BY-NC OmniVoice weights are blocked for commercial production")
+        runtime = OmniVoiceProcess(
+            OmniVoiceProcessConfig(
+                model_id=settings.tts_model_id,
+                model_revision=settings.tts_model_revision,
+                audio_tokenizer_id=settings.tts_audio_tokenizer_id,
+                audio_tokenizer_revision=settings.tts_audio_tokenizer_revision,
+                model_cache_root=settings.tts_model_cache_root,
+                timeout_seconds=settings.tts_request_timeout_seconds,
+                max_requests=settings.tts_max_requests_before_restart,
+                max_vram_mb=settings.tts_max_vram_mb_before_restart,
+            )
+        )
+        assets = AssetTransfer(
+            control_plane,
+            settings.workspace_root,
+            max_input_bytes=settings.max_input_bytes,
+            allow_http=settings.allow_http_asset_urls,
+        )
+        adapter = OmniVoiceAdapter(
+            runtime,
+            VoicePromptCache(settings.tts_prompt_cache_root, settings.tts_model_revision),
+        )
+        return InteractiveTtsExecutor(settings.workspace_root, assets, adapter, runtime)
     return MissingAdapterExecutor()
 
 
