@@ -22,6 +22,22 @@ checklist step; leave a section marked "not yet run" until it is.
 - Warm p50/p95 latency, peak VRAM and 100-request stability:
 - License/commercial-rights status:
 
+## GPU Worker acceptance (roadmap milestone 9)
+
+- Status: not yet run
+- Provider / region / hourly rate:
+- Billing start / stop / total cost:
+- Batch image digest:
+- Interactive TTS image digest:
+- GPU / VRAM / driver / CUDA:
+- ASR cold/warm p50/p95 / peak VRAM:
+- OCR cold/warm p50/p95 / peak VRAM:
+- Demucs cold/warm p50/p95 / peak VRAM:
+- FFmpeg cold/warm p50/p95 / peak VRAM:
+- OmniVoice request count / p50/p95 / peak VRAM / observed process starts:
+- Output and quality review notes:
+- Runtime failures / follow-ups:
+
 ## (a) Desub quality
 
 Look at 5 random timestamps in `desubbed.mp4` (spread across the video): is

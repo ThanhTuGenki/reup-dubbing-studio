@@ -119,3 +119,11 @@ commit `08be0b4ccbac3e13e374e86fbfead4b4cac343e2`. Audio tokenizer phụ thuộc
 weights là CC-BY-NC. `REUP_WORKER_TTS_USAGE_MODE=production-commercial` vì vậy
 bị chặn khi license vẫn là `CC_BY_NC`; chỉ đổi gate sau khi có weights/quyền sử
 dụng thương mại được xác minh, không suy diễn từ license của code.
+
+## GPU acceptance harness
+
+CLI `reup-gpu-acceptance` ghi evidence JSON cho inventory, command benchmark và
+OmniVoice load test giữ model nóng. Kết quả local nằm trong `acceptance/` và bị
+Git ignore; chỉ kết luận đã review mới được ghi vào tài liệu vận hành. Cách chạy
+trên image immutable và tiêu chí đạt nằm tại
+`docs/operations/gpu-worker-acceptance.md`.

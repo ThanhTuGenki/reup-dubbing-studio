@@ -1,4 +1,4 @@
-.PHONY: contract lint typecheck test test-s3 check run
+.PHONY: contract lint typecheck test test-s3 check run acceptance-inventory
 
 contract:
 	uv run openapi-python-client generate --path ../../contracts/openapi/worker.openapi.yaml --config openapi-python-client.yaml --meta none --output-path src/reup_worker_contract --overwrite
@@ -26,3 +26,6 @@ check: lint typecheck test
 
 run:
 	uv run reup-gpu-worker
+
+acceptance-inventory:
+	uv run reup-gpu-acceptance inventory --output acceptance/inventory.json
