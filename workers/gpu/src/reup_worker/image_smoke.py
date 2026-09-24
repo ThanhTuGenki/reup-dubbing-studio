@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import importlib.metadata
 import os
 import shutil
@@ -24,6 +25,7 @@ def main() -> None:
             importlib.metadata.version(package)
     if not shutil.which("ffmpeg"):
         raise RuntimeError("Worker image requires FFmpeg")
+    importlib.import_module("reup_worker.acceptance")
     print(f"{arguments.role} image smoke check passed")
 
 
