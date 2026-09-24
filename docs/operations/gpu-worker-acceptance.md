@@ -5,6 +5,13 @@ Mốc nghiệm thu GPU chỉ được chạy trên image immutable đã duyệt 
 từ kết quả trên Apple Silicon. Mỗi lần chạy phải giữ lại JSON do
 `reup-gpu-acceptance` sinh ra và chép kết luận vào `acceptance-log.md`.
 
+Container EzyCloudX được thuê ngày 2026-09-24 không có Docker CLI/daemon bên
+trong. Vì vậy các lệnh `docker run` dưới đây chỉ dùng được khi provider cho phép
+chạy image trực tiếp hoặc cấp Docker daemon. Lần chạy bằng OCI unpack + `proot`
+trên container sẵn có chỉ là phép thử chẩn đoán: nó cần chèn thư viện driver từ
+host, có thể làm lệch latency, và không thay thế nghiệm thu image immutable.
+Xem `acceptance-log.md` trước khi dùng lại kết quả của lần chạy đó.
+
 ## Điều kiện trước khi thuê
 
 - Chốt provider, region, GPU, giá theo giờ và trần chi phí với người sở hữu dự án.
