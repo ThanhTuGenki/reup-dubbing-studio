@@ -18,6 +18,7 @@ LABEL org.opencontainers.image.source="https://github.com/ThanhTuGenki/reup-dubb
 
 ENV DEBIAN_FRONTEND=noninteractive \
     UV_LINK_MODE=copy \
+    UV_HTTP_TIMEOUT=600 \
     UV_PYTHON_INSTALL_DIR=/opt/uv-python \
     VIRTUAL_ENV=/opt/reup-worker \
     PATH=/opt/reup-worker/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
