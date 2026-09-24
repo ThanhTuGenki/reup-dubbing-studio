@@ -35,3 +35,7 @@ Không bake enrollment token, Control Plane credential, signed URL hoặc model
 cache vào image/SBOM. Image TTS mặc định `prototype` và CC-BY-NC; production
 thương mại vẫn bị license gate chặn cho tới khi approved weights đổi sang quyền
 thương mại đã được xác minh.
+
+Sau khi pull bằng digest, dùng
+`docs/operations/gpu-worker-acceptance.md` để thu inventory, latency, peak VRAM
+và stability evidence. Image build/smoke thành công không thay thế GPU acceptance.

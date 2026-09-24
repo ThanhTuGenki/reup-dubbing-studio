@@ -22,6 +22,7 @@ __pycache__/
 .ruff_cache/
 workers/gpu/.state/
 workers/gpu/.work/
+workers/gpu/acceptance/
 
 # Local tooling and editor files.
 .DS_Store
