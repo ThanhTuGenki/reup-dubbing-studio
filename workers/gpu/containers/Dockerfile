@@ -9,7 +9,7 @@ FROM ${CUDA_IMAGE} AS foundation
 ARG TARGETARCH
 ARG VCS_REF=unknown
 ARG IMAGE_VERSION=0.1.0
-ARG CONTRACT_VERSION=1
+ARG CONTRACT_VERSION=2
 
 LABEL org.opencontainers.image.source="https://github.com/ThanhTuGenki/reup-dubbing-studio" \
       org.opencontainers.image.revision="${VCS_REF}" \
@@ -50,22 +50,17 @@ RUN groupadd --gid 10001 reup \
 FROM foundation AS batch
 COPY workers/gpu/containers/batch-asr.requirements.lock /tmp/batch-asr.requirements.lock
 COPY workers/gpu/containers/batch-demucs.requirements.lock /tmp/batch-demucs.requirements.lock
-COPY workers/gpu/containers/batch-ocr.requirements.lock /tmp/batch-ocr.requirements.lock
 RUN uv pip install --python "${VIRTUAL_ENV}" --requirement /tmp/batch-asr.requirements.lock \
     && uv venv --python 3.11 /opt/reup-demucs \
     && uv pip install --python /opt/reup-demucs \
       --extra-index-url https://download.pytorch.org/whl/cu128 \
       --requirement /tmp/batch-demucs.requirements.lock \
     && uv pip install --python /opt/reup-demucs --no-deps . \
-    && uv venv --python 3.11 /opt/reup-ocr \
-    && uv pip install --python /opt/reup-ocr --requirement /tmp/batch-ocr.requirements.lock \
-    && uv pip install --python /opt/reup-ocr --no-deps . \
     && rm -rf /root/.cache /tmp/*
 ENV REUP_WORKER_ROLE=BATCH_MEDIA \
     REUP_WORKER_EXECUTOR=batch \
-    REUP_WORKER_CAPABILITIES=media.asr.faster-whisper.v1,media.ocr.paddle.v1,media.separate.demucs.v1,media.render.ffmpeg.v1 \
+    REUP_WORKER_CAPABILITIES=media.asr.faster-whisper.v1,media.separate.demucs.v1,media.render.ffmpeg.v1 \
     REUP_WORKER_ASR_PYTHON=/opt/reup-worker/bin/python \
-    REUP_WORKER_OCR_PYTHON=/opt/reup-ocr/bin/python \
     REUP_WORKER_DEMUCS_PYTHON=/opt/reup-demucs/bin/python \
     REUP_WORKER_CREDENTIAL_FILE=/var/lib/reup-worker/state/credential \
     REUP_WORKER_WORKSPACE_ROOT=/var/lib/reup-worker/work

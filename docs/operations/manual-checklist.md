@@ -52,8 +52,8 @@ is off, do not require a mask and do not treat the DESUB probe as a release
 blocker for that run.
 
 The mask is the first artifact you must produce, and the only fully manual
-input in the whole pipeline — every later step (desub, OCR framing,
-`reup run --mask`) depends on getting it right. Measure it from a real frame
+input in the whole pipeline — desub and `reup run --mask` depend on getting it
+right. Measure it from a real frame
 of `raw.mp4`:
 
 ```bash
@@ -107,34 +107,19 @@ Run desub on `clip.mp4`, open the output, and visually confirm the
 subtitle-burned region is clean. Record the run time in
 `docs/operations/acceptance-log.md`.
 
-## 3. Install `paddleocr`/`paddlepaddle` and run ASR + OCR on a real clip (Task 5)
+## 3. Run faster-whisper ASR on a real clip (Task 5)
 
 ```bash
-.venv/bin/pip install paddleocr paddlepaddle
 .venv/bin/python - <<'EOF'
 from pathlib import Path
 from reup.stt_asr import transcribe as asr
-from reup.stt_ocr import transcribe as ocr
 from reup.segments import save_segments
 clip = Path("data/videos/test/clip.mp4")   # clip 30s từ bước 2
 save_segments(asr(clip, model_size="small"), Path("data/videos/test/segments_asr.json"))
-save_segments(ocr(clip, (600, 700, 0, 1280), Path("data/videos/test")), Path("data/videos/test/segments_ocr.json"))
 EOF
 ```
 
 Notes:
-- The mask `(600, 700, 0, 1280)` must be adjusted to match the real clip's
-  subtitle band; it is `(ymin, ymax, xmin, xmax)` in pixels.
-- PaddleOCR's `predict()` output shape varies between versions. If the real
-  output doesn't match what `extract_texts` in `src/reup/stt_ocr.py`
-  currently handles, print `res` from a real call and adjust `extract_texts`
-  accordingly — it is a small, independently unit-tested pure function (see
-  `tests/test_stt_ocr.py::test_extract_texts_current_shape`,
-  `test_extract_texts_legacy_shape`, `test_extract_texts_empty_or_absent`),
-  so this should be a safe, localized change. Re-run
-  `.venv/bin/pytest tests/test_stt_ocr.py -v` after adjusting to confirm the
-  existing shape tests still pass, and add a new test case for the newly
-  observed shape.
 - `faster-whisper` is already a hard dependency (not installed in this
   step), so `asr(...)` will download the `small` Whisper model weights on
   first run — expect a network call and a multi-hundred-MB download.
@@ -210,7 +195,7 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 Sanity-check that `[llm] model` in `config.toml` names a model this account
 can actually call before committing to a full run — a typo or an
 unavailable model name will only surface once translation starts, after
-ingest/desub/OCR/ASR have already run:
+ingest/desub/ASR have already run:
 ```bash
 .venv/bin/python -c "
 import anthropic, tomllib
@@ -223,12 +208,12 @@ print('model OK')
 ```
 Then run the whole pipeline end to end on a **full video** (not a clip):
 ```bash
-.venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine omnivoice] [--stt ocr]
+.venv/bin/reup run <URL video có quyền dùng> --mask <đo từ frame thật> [--cookies data/cookies/bilibili.txt] [--engine omnivoice]
 .venv/bin/reup report <vid>
 ```
 `reup run` is resumable — re-running the same command after a failure skips
 every stage whose output artifact already exists. `reup report <vid>` prints
-a markdown table comparing OCR vs ASR text per segment plus every stage's
+a markdown table showing ASR text per segment plus every stage's
 timing from `timings.json`.
 
 Answer the four MVP acceptance questions and record the answers in
@@ -239,8 +224,8 @@ Answer the four MVP acceptance questions and record the answers in
   distracting smear/ghosting where the burned-in subtitles used to be)?
 - **(b) Dub naturalness** — listen to 3 minutes of `out_16x9.mp4`'s audio:
   is the synthesised Vietnamese voice natural enough to publish?
-- **(c) OCR vs ASR accuracy** — read the table from `reup report <vid>`:
-  which of the two transcripts is more accurate line-by-line?
+- **(c) ASR accuracy** — read the transcript from `reup report <vid>` and
+  compare representative lines with the source audio.
 - **(d) Per-stage cost** — read `timings.json` (echoed at the end of the
   `report` output) for how long each stage took on this Mac. Extrapolate to
   rented-GPU cost: rent one RunPod RTX 4090 instance (~US$0.40/hour), repeat

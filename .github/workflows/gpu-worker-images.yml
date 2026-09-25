@@ -74,7 +74,7 @@ jobs:
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
-            CONTRACT_VERSION=1
+            CONTRACT_VERSION=2
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
       - name: Smoke test image without model inference
@@ -122,7 +122,7 @@ jobs:
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
-            CONTRACT_VERSION=1
+            CONTRACT_VERSION=2
           cache-from: type=gha,scope=${{ matrix.target }}
           provenance: mode=max
           sbom: true

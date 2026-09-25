@@ -28,7 +28,6 @@ from .initial_tts_task_configuration_timing_policy import InitialTtsTaskConfigur
 from .lease_action_request import LeaseActionRequest
 from .meta import Meta
 from .normalized_mask import NormalizedMask
-from .ocr_task_configuration import OcrTaskConfiguration
 from .output_grant_request import OutputGrantRequest
 from .output_grant_request_metadata import OutputGrantRequestMetadata
 from .problem_details import ProblemDetails
@@ -96,7 +95,6 @@ __all__ = (
     "LeaseActionRequest",
     "Meta",
     "NormalizedMask",
-    "OcrTaskConfiguration",
     "OutputGrantRequest",
     "OutputGrantRequestMetadata",
     "ProblemDetails",

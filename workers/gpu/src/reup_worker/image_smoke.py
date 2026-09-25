@@ -38,7 +38,6 @@ def check_batch_environments() -> None:
             ("reup-dubbing-gpu-worker", "demucs", "torch", "torchaudio"),
             "demucs.separate",
         ),
-        "/opt/reup-ocr/bin/python": (("reup-dubbing-gpu-worker", "paddleocr", "paddlepaddle-gpu"), "paddleocr"),
     }
     for executable, (packages, module) in environments.items():
         command = "import importlib.metadata as m;" + ";".join(f"m.version({item!r})" for item in packages)

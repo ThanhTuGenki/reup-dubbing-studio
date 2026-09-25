@@ -24,6 +24,10 @@ checklist step; leave a section marked "not yet run" until it is.
 
 ## GPU Worker acceptance (roadmap milestone 9)
 
+> Product decision 2026-09-25: OCR/PaddleOCR was removed from the MVP. The OCR
+> measurements and failures below are retained as historical evidence and are
+> no longer an acceptance gate. Transcript generation uses faster-whisper only.
+
 ### 2026-09-25 — final-digest retest, partial
 
 Milestone 9 remains open. On an EzyCloudX
@@ -80,10 +84,11 @@ The cause of the GPU OCR stall is not established.
 A final one-frame GPU retry with `OMP_NUM_THREADS=1` also timed out after 45
 seconds while Paddle was preparing its PIR inference program; its log was
 saved locally. No OCR output was produced on this rental.
-These failures block stage acceptance and need native-runtime diagnosis.
+The ASR harness failure still needs native-runtime diagnosis. OCR is no longer a
+supported stage.
 
-**Remaining gates:** obtain successful OCR output and cold/warm metrics,
-resolve the repeated ASR warm crash, run every stage in the normal Worker
+**Remaining gates:** resolve the repeated ASR acceptance-harness crash, run every
+supported stage in the normal Worker
 runtime, review voice quality, capture final rental billing, and perform the
 capacity test on the required RTX 3060 12 GB. The 3090 VRAM observations do
 not establish 3060 support.
@@ -164,10 +169,10 @@ voice natural enough to publish?
 
 *Not yet run.*
 
-## (c) OCR vs ASR accuracy
+## (c) ASR accuracy
 
-Read the table from `reup report <vid>`: which of the two transcripts is
-more accurate line-by-line?
+Read the transcript from `reup report <vid>` and compare representative lines
+with the source audio.
 
 *Not yet run.*
 

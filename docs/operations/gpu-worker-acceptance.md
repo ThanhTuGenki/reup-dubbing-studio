@@ -16,8 +16,8 @@ Xem `acceptance-log.md` trước khi dùng lại kết quả của lần chạy 
 
 - Chốt provider, region, GPU, giá theo giờ và trần chi phí với người sở hữu dự án.
 - Dùng digest artifact từ workflow `GPU Worker images`, không dùng tag mutable.
-- Chuẩn bị một video ngắn có quyền sử dụng, có tiếng nói và hard-sub để so sánh
-  ASR/OCR; chuẩn bị voice sample cùng transcript chính xác cho OmniVoice.
+- Chuẩn bị một video ngắn có quyền sử dụng và có tiếng nói để kiểm tra ASR;
+  chuẩn bị voice sample cùng transcript chính xác cho OmniVoice.
 - Không đưa enrollment token, signed URL, cookie hoặc nội dung nhạy cảm vào JSON
   acceptance. Thư mục `workers/gpu/acceptance/` bị Git ignore.
 
@@ -41,7 +41,7 @@ container không thể xác minh hóa đơn của provider.
 ## Batch Media
 
 Dùng subcommand `command` để đo cold/warm latency và peak VRAM của đúng command
-trong image. Chạy ASR, OCR và Demucs bằng interpreter đã tách sẵn; mỗi output
+trong image. Chạy ASR và Demucs bằng interpreter đã tách sẵn; mỗi output
 được giữ trên volume evidence để review thủ công. Ví dụ ASR:
 
 ```bash
@@ -55,7 +55,6 @@ reup-gpu-acceptance command \
 
 Lặp cùng pattern cho:
 
-- OCR: `/opt/reup-ocr/bin/python -m reup_worker.tools.ocr`;
 - Demucs: `/opt/reup-demucs/bin/python -m demucs --two-stems vocals -n htdemucs`;
 - FFmpeg: command render H.264/AAC dùng cùng input và preset production.
 

@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from ..models.desub_task_configuration import DesubTaskConfiguration
     from ..models.execution_requirements import ExecutionRequirements
     from ..models.initial_tts_task_configuration import InitialTtsTaskConfiguration
-    from ..models.ocr_task_configuration import OcrTaskConfiguration
     from ..models.regenerate_tts_task_configuration import RegenerateTtsTaskConfiguration
     from ..models.render_task_configuration import RenderTaskConfiguration
     from ..models.separate_audio_task_configuration import SeparateAudioTaskConfiguration
@@ -42,8 +41,7 @@ class ClaimedTask:
         renew_after_seconds (int):
         requirements (ExecutionRequirements):
         configuration (AsrTaskConfiguration | DesubTaskConfiguration | InitialTtsTaskConfiguration |
-            OcrTaskConfiguration | RegenerateTtsTaskConfiguration | RenderTaskConfiguration |
-            SeparateAudioTaskConfiguration):
+            RegenerateTtsTaskConfiguration | RenderTaskConfiguration | SeparateAudioTaskConfiguration):
         inputs (list[TaskInputAsset]):
         outputs (list[TaskOutputSpecification]):
     """
@@ -61,7 +59,6 @@ class ClaimedTask:
         AsrTaskConfiguration
         | DesubTaskConfiguration
         | InitialTtsTaskConfiguration
-        | OcrTaskConfiguration
         | RegenerateTtsTaskConfiguration
         | RenderTaskConfiguration
         | SeparateAudioTaskConfiguration
@@ -74,7 +71,6 @@ class ClaimedTask:
         from ..models.desub_task_configuration import DesubTaskConfiguration
         from ..models.execution_requirements import ExecutionRequirements
         from ..models.initial_tts_task_configuration import InitialTtsTaskConfiguration
-        from ..models.ocr_task_configuration import OcrTaskConfiguration
         from ..models.regenerate_tts_task_configuration import RegenerateTtsTaskConfiguration
         from ..models.render_task_configuration import RenderTaskConfiguration
         from ..models.separate_audio_task_configuration import SeparateAudioTaskConfiguration
@@ -101,8 +97,6 @@ class ClaimedTask:
 
         configuration: dict[str, Any]
         if isinstance(self.configuration, DesubTaskConfiguration):
-            configuration = self.configuration.to_dict()
-        elif isinstance(self.configuration, OcrTaskConfiguration):
             configuration = self.configuration.to_dict()
         elif isinstance(self.configuration, AsrTaskConfiguration):
             configuration = self.configuration.to_dict()
@@ -152,7 +146,6 @@ class ClaimedTask:
         from ..models.desub_task_configuration import DesubTaskConfiguration
         from ..models.execution_requirements import ExecutionRequirements
         from ..models.initial_tts_task_configuration import InitialTtsTaskConfiguration
-        from ..models.ocr_task_configuration import OcrTaskConfiguration
         from ..models.regenerate_tts_task_configuration import RegenerateTtsTaskConfiguration
         from ..models.render_task_configuration import RenderTaskConfiguration
         from ..models.separate_audio_task_configuration import SeparateAudioTaskConfiguration
@@ -186,7 +179,6 @@ class ClaimedTask:
             AsrTaskConfiguration
             | DesubTaskConfiguration
             | InitialTtsTaskConfiguration
-            | OcrTaskConfiguration
             | RegenerateTtsTaskConfiguration
             | RenderTaskConfiguration
             | SeparateAudioTaskConfiguration
@@ -202,7 +194,7 @@ class ClaimedTask:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_task_configuration_type_1 = OcrTaskConfiguration.from_dict(data)
+                componentsschemas_task_configuration_type_1 = AsrTaskConfiguration.from_dict(data)
 
                 return componentsschemas_task_configuration_type_1
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -210,7 +202,7 @@ class ClaimedTask:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_task_configuration_type_2 = AsrTaskConfiguration.from_dict(data)
+                componentsschemas_task_configuration_type_2 = InitialTtsTaskConfiguration.from_dict(data)
 
                 return componentsschemas_task_configuration_type_2
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -218,7 +210,7 @@ class ClaimedTask:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_task_configuration_type_3 = InitialTtsTaskConfiguration.from_dict(data)
+                componentsschemas_task_configuration_type_3 = RegenerateTtsTaskConfiguration.from_dict(data)
 
                 return componentsschemas_task_configuration_type_3
             except (TypeError, ValueError, AttributeError, KeyError):
@@ -226,24 +218,16 @@ class ClaimedTask:
             try:
                 if not isinstance(data, dict):
                     raise TypeError()
-                componentsschemas_task_configuration_type_4 = RegenerateTtsTaskConfiguration.from_dict(data)
+                componentsschemas_task_configuration_type_4 = SeparateAudioTaskConfiguration.from_dict(data)
 
                 return componentsschemas_task_configuration_type_4
             except (TypeError, ValueError, AttributeError, KeyError):
                 pass
-            try:
-                if not isinstance(data, dict):
-                    raise TypeError()
-                componentsschemas_task_configuration_type_5 = SeparateAudioTaskConfiguration.from_dict(data)
-
-                return componentsschemas_task_configuration_type_5
-            except (TypeError, ValueError, AttributeError, KeyError):
-                pass
             if not isinstance(data, dict):
                 raise TypeError()
-            componentsschemas_task_configuration_type_6 = RenderTaskConfiguration.from_dict(data)
+            componentsschemas_task_configuration_type_5 = RenderTaskConfiguration.from_dict(data)
 
-            return componentsschemas_task_configuration_type_6
+            return componentsschemas_task_configuration_type_5
 
         configuration = _parse_configuration(d.pop("configuration"))
 

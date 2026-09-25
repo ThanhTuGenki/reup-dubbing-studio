@@ -9,7 +9,7 @@ import type { R2WorkerObjectStore } from './r2-worker-object-store';
 const LEASE_MS = 60_000;
 const OFFLINE_MS = 45_000;
 const RETRY_BACKOFF_MS = 15_000;
-const GPU_TASK_TYPES = ['DESUB', 'TRANSCRIBE_OCR', 'TRANSCRIBE_ASR', 'GENERATE_INITIAL_TTS', 'REGENERATE_SEGMENT', 'SEPARATE_AUDIO', 'RENDER'] as const;
+const GPU_TASK_TYPES = ['DESUB', 'TRANSCRIBE_ASR', 'GENERATE_INITIAL_TTS', 'REGENERATE_SEGMENT', 'SEPARATE_AUDIO', 'RENDER'] as const;
 const leaseInclude = { pipelineTask: true, taskAttempt: true, workerSession: { include: { worker: { include: { approvedImage: true } }, credential: true } } } as const;
 type ActiveLease = Prisma.TaskLeaseGetPayload<{ include: typeof leaseInclude }>;
 
