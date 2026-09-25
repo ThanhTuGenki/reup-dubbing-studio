@@ -24,6 +24,67 @@ checklist step; leave a section marked "not yet run" until it is.
 
 ## GPU Worker acceptance (roadmap milestone 9)
 
+### 2026-09-25 — final-digest retest, partial
+
+Milestone 9 remains open. On an EzyCloudX
+`na-01` RTX 3090 (24,576 MiB, NVIDIA driver 610.43.02; rental UI rate 9,900
+provider credits/hour), the final CI batch image digest
+`sha256:c383da610941d5ae895a576296e5922350a47b564c4c3e490b2f2501657a1a21`
+and TTS image digest
+`sha256:36349d8744627396c345316097d58e2568a35699d25903f3c26d671ff80c6325`
+were unpacked and exercised. This rented container still lacked a Docker
+daemon, so inference ran through `proot` with host NVIDIA driver libraries
+added to the unpacked images. The image bytes match the published digests,
+but this is not native Docker runtime or performance acceptance. Final billed
+duration and cost were unavailable.
+
+Fixtures were a 20-second excerpt of the user's 119.6-second Chinese video
+and a 9.67-second Vietnamese voice sample. The user confirmed the exact voice
+reference text: “Bạn đã bao giờ sống trong một ngôi nhà bị một thanh kiếm
+chém làm đôi chưa? Đó là lúc tôi dễ dàng học được cách làm mô hình tương tự.
+Đầu tiên, xây dựng khung cổng địa ngục cao 7 khối và 13 khối”. The video
+contains hard subtitles; removal remains outside this acceptance scope.
+Source fixtures, raw JSON, failure logs, three TTS WAVs, Demucs stems, and
+rendered MP4 are saved in Git-ignored
+`workers/gpu/acceptance/2026-09-25-rtx3090/`. The two transferred archives
+have SHA-256 `ae99616fc5e3ee8682a8bcd3fd1d265a77f2c2cd7948cb0c5b71dbffe634e6ab`
+(metrics) and `ab06bafa2c3216c5e637c2afbe79a450fd8f8d416bfa53b66e07f0d21c4dfc16`
+(media).
+
+| Stage on final digest | Cold (s) | Warm p50 / p95 (s) | Warm throughput, concurrency 1 | Peak VRAM (MiB) | Result |
+| --- | ---: | ---: | ---: | ---: | --- |
+| ASR, faster-whisper `medium` | 6.318 | unavailable | unavailable | 2,332 | Chinese transcript with timestamps; repeated warm harness runs exited `-11` (segfault) |
+| OCR, PaddleOCR | unavailable | unavailable | unavailable | unavailable | Stopped after loading cached `PP-OCRv6_medium_det`; no output or reliable latency |
+| Demucs `htdemucs` | 19.376 | 13.866 / 14.056 | 0.072 runs/s | 1,146 | Both vocal and background stems created |
+| FFmpeg H.264/AAC render | 21.503 | 20.178 / 20.735 | 0.050 renders/s | 4 | Valid 20.011-second MP4 created |
+| OmniVoice, 101 requests | Model load and prompt preparation excluded | 1.157 / 1.194 | 0.721 requests/s including restart | 5,258 | 101/101 valid 24 kHz WAVs; two process starts |
+
+OmniVoice mean latency was 1.388 seconds and maximum was 24.140 seconds,
+including the configured restart after request 100. The primary 101-request
+report used the user-confirmed reference text. An earlier report used an
+ASR-derived reference with one incorrect word and is retained only as
+diagnostic evidence. No human naturalness/pronunciation review is recorded.
+Official model weights remain CC-BY-NC, so commercial use is still gated.
+
+ASR cold inference succeeded, and one direct `proot` ASR invocation succeeded;
+repeated warm runs through `reup-gpu-acceptance command` failed with exit
+`-11`, including `OMP_NUM_THREADS=1`. OCR stalled both through the acceptance
+harness and direct `proot`. An invocation with `CUDA_VISIBLE_DEVICES=''` also
+stopped at the same point, so the cause cannot yet be assigned to CUDA.
+These failures block stage acceptance and need native-runtime diagnosis.
+
+**Remaining gates:** obtain successful OCR output and cold/warm metrics,
+resolve the repeated ASR warm crash, run every stage in the normal Worker
+runtime, review voice quality, capture final rental billing, and perform the
+capacity test on the required RTX 3060 12 GB. The 3090 VRAM observations do
+not establish 3060 support.
+
+### 2026-09-24 — earlier diagnostic run
+
+The measurements below used locally patched image contents and an 11-second
+synthetic fixture. They remain here for comparison and do not replace the
+final-digest retest above.
+
 - **Status: partial diagnostic run on 2026-09-24; milestone 9 is not accepted.**
   The rented machine was an EzyCloudX Docker GPU container without a Docker
   daemon. OCI images were unpacked and run with `proot` and host NVIDIA driver
