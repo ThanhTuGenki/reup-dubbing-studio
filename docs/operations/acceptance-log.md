@@ -77,6 +77,9 @@ inference but raised Paddle's `ConvertPirAttribute2RuntimeAttribute` oneDNN
 error. A one-frame CPU retry with `FLAGS_use_mkldnn=0` timed out after 90
 seconds during model setup. Its log is saved beside the other failure logs.
 The cause of the GPU OCR stall is not established.
+A final one-frame GPU retry with `OMP_NUM_THREADS=1` also timed out after 45
+seconds while Paddle was preparing its PIR inference program; its log was
+saved locally. No OCR output was produced on this rental.
 These failures block stage acceptance and need native-runtime diagnosis.
 
 **Remaining gates:** obtain successful OCR output and cold/warm metrics,
