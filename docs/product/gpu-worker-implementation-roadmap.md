@@ -152,7 +152,7 @@
 - [ ] **Hoàn tất GPU acceptance.**
   - [ ] Chọn GPU/region sau khi so sánh giá và khả dụng; ghi rõ model GPU, VRAM,
     driver, CUDA, image digest và chi phí phiên test.
-  - [ ] Chạy smoke test riêng cho ASR/OCR, Demucs, FFmpeg và OmniVoice.
+  - [ ] Chạy smoke test riêng cho faster-whisper ASR, Demucs, FFmpeg và OmniVoice.
   - [ ] Đo cold/warm latency, p50/p95, peak VRAM và throughput với concurrency 1.
   - [ ] Chạy ít nhất 100 request OmniVoice để phát hiện VRAM growth/OOM và kiểm
     chứng controlled restart.
@@ -163,6 +163,9 @@
 ## 10. Full pipeline MVP và vận hành
 
 - [ ] **Hoàn tất Worker MVP end-to-end.**
+  - [ ] Triển khai P0–P9 trong
+    [`full-pipeline-implementation-plan.md`](full-pipeline-implementation-plan.md);
+    chỉ thuê GPU sau khi gate local P0–P7 đạt.
   - [ ] Chạy một video có quyền sử dụng qua ingest → transcript → dịch/cast → TTS
     → review → Demucs/mix/render → MP4 và SRT rời.
   - [ ] Xác nhận flow mặc định không chạy hard-sub removal; chạy riêng feature
