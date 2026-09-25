@@ -69,8 +69,11 @@ Official model weights remain CC-BY-NC, so commercial use is still gated.
 ASR cold inference succeeded, and one direct `proot` ASR invocation succeeded;
 repeated warm runs through `reup-gpu-acceptance command` failed with exit
 `-11`, including `OMP_NUM_THREADS=1`. OCR stalled both through the acceptance
-harness and direct `proot`. An invocation with `CUDA_VISIBLE_DEVICES=''` also
-stopped at the same point, so the cause cannot yet be assigned to CUDA.
+harness and direct `proot`. One CPU run with `CUDA_VISIBLE_DEVICES=''` reached
+inference but raised Paddle's `ConvertPirAttribute2RuntimeAttribute` oneDNN
+error. A one-frame CPU retry with `FLAGS_use_mkldnn=0` timed out after 90
+seconds during model setup. Its log is saved beside the other failure logs.
+The cause of the GPU OCR stall is not established.
 These failures block stage acceptance and need native-runtime diagnosis.
 
 **Remaining gates:** obtain successful OCR output and cold/warm metrics,
