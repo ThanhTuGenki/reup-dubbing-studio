@@ -1,5 +1,11 @@
 # Manual Checklist — Reup Dubbing Studio MVP
 
+> Legacy CLI checklist. Its `reup run` commands describe the original phase-one
+> design and are not executable from the current Web/API repository. For the
+> current GPU images use `gpu-worker-acceptance.md`; for the local Web/API
+> preparation status use `acceptance-log.md`. Do not rent a GPU for the full
+> pipeline on the assumption that this CLI is already available.
+
 Every step below needs something this sandbox does not have: a rights-cleared
 video, a rented GPU, a multi-gigabyte model download, or a human ear/eye. They
 were deliberately deferred while building the pipeline. Work through them in
@@ -73,8 +79,8 @@ read off:
 
 The mask is always written and passed in that exact order,
 **`ymin,ymax,xmin,xmax`** — this is the order `_parse_mask` in `cli.py`
-expects, and the order every pipeline function (`desub.render_cmd`,
-`stt_ocr.frame_extract_cmd`) takes as its `mask: tuple[int, int, int, int]`
+expects, and the order the optional desub pipeline takes as its
+`mask: tuple[int, int, int, int]`
 argument. Check a few frames spread across the video (subtitle position is
 usually fixed, but confirm it doesn't move for on-screen graphics/credits).
 Record the mask you land on in `docs/operations/acceptance-log.md`.
@@ -114,7 +120,7 @@ subtitle-burned region is clean. Record the run time in
 from pathlib import Path
 from reup.stt_asr import transcribe as asr
 from reup.segments import save_segments
-clip = Path("data/videos/test/clip.mp4")   # clip 30s từ bước 2
+clip = Path("data/videos/test/clip.mp4")   # clip 30s từ video thật; không cần bật desub
 save_segments(asr(clip, model_size="small"), Path("data/videos/test/segments_asr.json"))
 EOF
 ```
@@ -131,7 +137,7 @@ Notes:
 
 ## 4. Real translation smoke test (Task 6)
 
-Translate a test clip's `segments_ocr.json` with the real `translate()`
+Translate a test clip's `segments_asr.json` with the real `translate()`
 (real Anthropic client, `ANTHROPIC_API_KEY` set — not a fake client), save
 the result as `script.json`, and read through it to judge translation
 quality. `reup run` already batches 50 lines per call via `stage_translate`
@@ -185,9 +191,9 @@ Run `demucs_cmd(...)` on a real test clip, use the resulting
 
 ## 8. Full pipeline acceptance pass (Task 10, brief Step 5)
 
-Once steps 1–7 above are done (real download works, desub template filled
-in, `paddleocr`/`paddlepaddle` installed, OmniVoice worker configured,
-demucs installed), export the Anthropic key `stage_translate`
+Once the required steps above are done (real download works, OmniVoice worker
+configured, Demucs installed, and optional desub configured only when enabled),
+export the Anthropic key `stage_translate`
 needs (the same one used in step 4 — `reup run` calls it just as much):
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."

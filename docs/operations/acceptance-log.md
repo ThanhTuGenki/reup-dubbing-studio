@@ -1,5 +1,33 @@
 # MVP Notes — Reup Dubbing Studio
 
+## Local preparation before the next GPU rental — 2026-09-25
+
+- Local API `http://localhost:3100` and Web `http://localhost:5173` are running;
+  PostgreSQL migrations are applied. These ports are local development settings.
+- Cloudflare R2 bucket `reup-dubbing-studio-storage` passes the application's
+  write/HEAD/read/delete probe. Bucket CORS allows `http://localhost:5173` with
+  `GET`, `PUT`, and `HEAD`; an actual `PUT` preflight returned HTTP 204.
+- Voice Profile `01a0d909-db86-7c7f-8a8a-07ca3fdea065` is `READY`. The user's
+  9.672-second `MinhQuanVoice.mp3` and confirmed transcript were uploaded via
+  the API's presigned grant, committed, and read back successfully. The user
+  confirmed commercial rights for this recording on 2026-09-25. This does not
+  change the separate CC-BY-NC license gate on OmniVoice model weights.
+- Channel Profile `01a0d90e-6532-7544-98ee-259ca515ec7e` is `ACTIVE` and
+  `READY`: Vietnamese target and subtitles, single voice, 16:9 output, and
+  `removeHardSubEnabled=false`.
+- The user's 119.633-second H.264/AAC video was staged privately at
+  `_acceptance/2026-09-25/video.mp4` in R2. HEAD returned 30,817,733 bytes;
+  the SHA-256 is `33d4cf635f19c114d0be19c6a2850e1c6374dd1e82e06a645789717af16f757d`.
+  This fixture is not yet an application Video asset.
+
+**Pre-rental gate remains open.** The current API only creates a `DOWNLOAD`
+task from a discovered source; it has no local MP4 import. No Control Plane
+runner executes `DOWNLOAD`, and no orchestration creates the remaining MVP
+tasks. Thus the current Web/API cannot yet process the staged video end to end
+or demonstrate Queue, Library, and Studio output transitions. These are code
+gaps to close before renting a GPU for Milestone 10; Content Agent credentials
+are not a prerequisite for the phase-one CLI MVP.
+
 This file is where every manual/acceptance result referenced by
 `docs/operations/manual-checklist.md` gets recorded: desub template probing notes, OmniVoice
 acceptance notes, and the four MVP acceptance questions from the final
