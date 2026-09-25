@@ -49,11 +49,12 @@ rendered MP4 are saved in Git-ignored
 `workers/gpu/acceptance/2026-09-25-rtx3090/`. The two transferred archives
 have SHA-256 `ae99616fc5e3ee8682a8bcd3fd1d265a77f2c2cd7948cb0c5b71dbffe634e6ab`
 (metrics) and `ab06bafa2c3216c5e637c2afbe79a450fd8f8d416bfa53b66e07f0d21c4dfc16`
-(media).
+(media). A later ASR retry archive has SHA-256
+`67a1654a048ad75e90f04803d0514e99348671d72573a4a7c6cc6946742b927f`.
 
 | Stage on final digest | Cold (s) | Warm p50 / p95 (s) | Warm throughput, concurrency 1 | Peak VRAM (MiB) | Result |
 | --- | ---: | ---: | ---: | ---: | --- |
-| ASR, faster-whisper `medium` | 6.318 | unavailable | unavailable | 2,332 | Chinese transcript with timestamps; repeated warm harness runs exited `-11` (segfault) |
+| ASR, faster-whisper `medium` | 6.318 | 5.032 / 5.034, direct `proot` | 0.200 runs/s | 2,332 | Chinese transcript with timestamps; three direct warm runs succeeded, while repeated acceptance-harness runs exited `-11` |
 | OCR, PaddleOCR | unavailable | unavailable | unavailable | unavailable | Stopped after loading cached `PP-OCRv6_medium_det`; no output or reliable latency |
 | Demucs `htdemucs` | 19.376 | 13.866 / 14.056 | 0.072 runs/s | 1,146 | Both vocal and background stems created |
 | FFmpeg H.264/AAC render | 21.503 | 20.178 / 20.735 | 0.050 renders/s | 4 | Valid 20.011-second MP4 created |
@@ -66,9 +67,11 @@ ASR-derived reference with one incorrect word and is retained only as
 diagnostic evidence. No human naturalness/pronunciation review is recorded.
 Official model weights remain CC-BY-NC, so commercial use is still gated.
 
-ASR cold inference succeeded, and one direct `proot` ASR invocation succeeded;
-repeated warm runs through `reup-gpu-acceptance command` failed with exit
-`-11`, including `OMP_NUM_THREADS=1`. OCR stalled both through the acceptance
+ASR cold inference succeeded, and a later direct `proot` benchmark completed
+three warm runs after one warmup. Repeated warm runs through
+`reup-gpu-acceptance command` failed with exit `-11`, including
+`OMP_NUM_THREADS=1`; the direct benchmark does not clear that harness failure.
+OCR stalled both through the acceptance
 harness and direct `proot`. One CPU run with `CUDA_VISIBLE_DEVICES=''` reached
 inference but raised Paddle's `ConvertPirAttribute2RuntimeAttribute` oneDNN
 error. A one-frame CPU retry with `FLAGS_use_mkldnn=0` timed out after 90
