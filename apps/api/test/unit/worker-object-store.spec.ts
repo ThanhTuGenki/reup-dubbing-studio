@@ -20,6 +20,25 @@ describe('Worker output object verification', () => {
     await expect(store.verify(asset)).rejects.toMatchObject({ code: 'ASSET_CHECKSUM_MISMATCH' });
   });
 
+  it('signs worker metadata as request headers so R2 accepts the upload', async () => {
+    const { store } = fixture();
+
+    const grant = await store.upload(
+      { ...asset, metadata: { maxByteSize: '1024' } },
+      new Date(Date.now() + 60_000),
+      'video-16x9',
+    );
+    const signedHeaders = new URL(grant.url).searchParams.get('X-Amz-SignedHeaders') ?? '';
+
+    expect(signedHeaders).toContain('x-amz-meta-sha256');
+    expect(signedHeaders).toContain('x-amz-meta-worker-slot');
+    expect(grant.headers).toEqual({
+      'content-type': 'video/mp4',
+      'x-amz-meta-sha256': 'a'.repeat(64),
+      'x-amz-meta-worker-slot': 'video-16x9',
+    });
+  });
+
   function fixture() {
     const cipher = new AesGcmCredentialCipher(Buffer.alloc(32, 8).toString('base64'));
     const encrypted = cipher.encrypt({ accessKeyId: 'test-access', secretAccessKey: 'test-secret' });

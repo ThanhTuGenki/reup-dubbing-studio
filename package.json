@@ -22,7 +22,8 @@
     "web:test": "pnpm --filter @reup-dubbing-studio/web test",
     "web:test:e2e": "pnpm --filter @reup-dubbing-studio/web test:e2e",
     "worker:contract": "make -C workers/gpu contract",
-    "worker:check": "make -C workers/gpu check"
+    "worker:check": "make -C workers/gpu check",
+    "smoke:local-pipeline": "node scripts/local-pipeline-smoke.mjs"
   },
   "devDependencies": {
     "@redocly/cli": "^2.53.2",
