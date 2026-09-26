@@ -8,6 +8,10 @@ model media và automated publishing nằm ngoài phạm vi; xem
 
 ## Khởi động
 
+Để chạy cả stack bằng Docker và cho GPU Worker thuê ngoài kết nối về, xem
+`control-plane-compose.md`. Các bước dưới đây dùng cho phát triển bằng pnpm trên
+host.
+
 1. Cài Node.js 24 và pnpm 10.28; chuẩn bị PostgreSQL riêng.
 2. Tạo `apps/api/.env` và `apps/web/.env` từ hai file example.
 3. Sinh Prisma client, áp migration rồi chạy API/Web:
