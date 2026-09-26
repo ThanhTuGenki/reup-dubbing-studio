@@ -15,11 +15,11 @@ run() { # name role token
   if [ ! -s "$dir/credential" ] && [ -z "$token" ]; then echo "$name: enrollment token required" >&2; return 1; fi
   (
     # Only Control Plane traffic may use the tailnet proxy; R2 and model downloads go direct.
-    export HTTPS_PROXY=http://127.0.0.1:1055 https_proxy=http://127.0.0.1:1055
+    if [ -n "${WORKER_PROXY:-}" ]; then export HTTPS_PROXY=$WORKER_PROXY https_proxy=$WORKER_PROXY HTTP_PROXY=$WORKER_PROXY http_proxy=$WORKER_PROXY; fi
     export NO_PROXY=localhost,127.0.0.1,.r2.cloudflarestorage.com,.huggingface.co,huggingface.co,.hf.co,dl.fbaipublicfiles.com,download.pytorch.org
     export no_proxy=$NO_PROXY
     export PYTHONUNBUFFERED=1 REUP_WORKER_CONTRACT_VERSION=2 \
-      REUP_WORKER_CONTROL_PLANE_URL="https://$CONTROL_PLANE_HOST/worker/v1" \
+      REUP_WORKER_CONTROL_PLANE_URL="$CONTROL_PLANE_URL" \
       REUP_WORKER_CREDENTIAL_FILE="$dir/credential" REUP_WORKER_WORKSPACE_ROOT="$dir/work" \
       HF_HOME="$ROOT/state/huggingface"
     [ -n "$token" ] && [ ! -s "$dir/credential" ] && export REUP_WORKER_ENROLLMENT_TOKEN=$token
