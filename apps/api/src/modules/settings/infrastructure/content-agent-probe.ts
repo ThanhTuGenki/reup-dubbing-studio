@@ -1,8 +1,13 @@
+import {
+  contentAgentEndpoint, DEFAULT_CONTENT_AGENT_BASE_URLS, type ContentAgentBaseUrls,
+} from '../../../platform/config/config';
 import type { ContentAgentProbe } from '../application/ports';
 import type { ConnectionTestResult } from '../domain/settings';
 import { SettingsError } from '../domain/settings-errors';
 
 export class HttpContentAgentProbe implements ContentAgentProbe {
+  constructor(private readonly baseUrls: ContentAgentBaseUrls = DEFAULT_CONTENT_AGENT_BASE_URLS) {}
+
   async test(input: Parameters<ContentAgentProbe['test']>[0]): Promise<ConnectionTestResult> {
     const startedAt = Date.now();
     const controller = new AbortController();
@@ -10,7 +15,7 @@ export class HttpContentAgentProbe implements ContentAgentProbe {
     try {
       const anthropic = input.provider === 'ANTHROPIC';
       const response = await fetch(
-        anthropic ? 'https://api.anthropic.com/v1/messages' : 'https://api.openai.com/v1/responses',
+        contentAgentEndpoint(input.provider, this.baseUrls),
         {
           method: 'POST',
           signal: controller.signal,

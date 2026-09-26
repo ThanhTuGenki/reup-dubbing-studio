@@ -1,6 +1,9 @@
 import { type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { Prisma, type PipelineTask, type PrismaClient } from '@prisma/client';
 
+import {
+  contentAgentEndpoint, DEFAULT_CONTENT_AGENT_BASE_URLS, type ContentAgentBaseUrls,
+} from '../../../platform/config/config';
 import { uuidV7 } from '../../../platform/ids/uuid-v7';
 import type { ProfileJobSnapshot } from '../../profiles';
 import type { AesGcmCredentialCipher } from '../../settings';
@@ -28,6 +31,7 @@ export class ControlPlaneRunner implements OnModuleInit, OnModuleDestroy {
     private readonly cipher: AesGcmCredentialCipher,
     private readonly orchestrator: PipelineOrchestrator,
     private readonly enabled = true,
+    private readonly contentAgentBaseUrls: ContentAgentBaseUrls = DEFAULT_CONTENT_AGENT_BASE_URLS,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -218,7 +222,7 @@ export class ControlPlaneRunner implements OnModuleInit, OnModuleDestroy {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 120_000);
     try {
-      const response = await fetch(anthropic ? 'https://api.anthropic.com/v1/messages' : 'https://api.openai.com/v1/responses', {
+      const response = await fetch(contentAgentEndpoint(anthropic ? 'ANTHROPIC' : 'OPENAI', this.contentAgentBaseUrls), {
         method: 'POST', signal: controller.signal,
         headers: anthropic
           ? { 'content-type': 'application/json', 'x-api-key': credential.apiKey, 'anthropic-version': '2023-06-01' }
