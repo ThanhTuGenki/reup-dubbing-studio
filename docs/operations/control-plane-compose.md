@@ -105,7 +105,7 @@ curl -fsS -X POST "https://<PUBLIC_HOST>/v1/worker-images" \
   `REUP_WORKER_CAPABILITIES`. API (`ROLE_CAPABILITIES` trong
   `workers.service.ts`) và pipeline DAG lại dùng `transcript.asr.v1` và
   `audio.separate.demucs.v1`. Hãy duyệt image bằng tên của API như ví dụ trên, và
-  override `REUP_WORKER_CAPABILITIES` khi chạy Worker ở bước 5. Worker chọn
+  override `REUP_WORKER_CAPABILITIES` (dạng JSON) khi chạy Worker ở bước 5. Worker chọn
   adapter theo `task_type`, nên override không làm thay đổi cách chạy task.
 
 Tiếp theo vào **Workers → Thêm worker**, chọn image vừa duyệt và nhập provider
@@ -113,7 +113,46 @@ cùng giá theo giờ. **Enrollment token chỉ hiện một lần**, cần ché
 
 ## 5. Chạy GPU Worker trên máy thuê
 
-Máy thuê phải join cùng tailnet. Trên VM có Docker và NVIDIA Container Toolkit:
+Máy thuê phải join cùng tailnet. Ở mọi cách chạy, `REUP_WORKER_CAPABILITIES`
+phải ở **dạng JSON**, ví dụ `["tts.omnivoice.v1"]`. Dạng phân tách bằng dấu phẩy
+như `ENV` trong Dockerfile sẽ làm agent crash lúc đọc settings, vì
+pydantic-settings parse JSON cho field kiểu tuple trước khi validator tách dấu
+phẩy kịp chạy.
+
+### 5a. Container không có Docker daemon (EzyCloudX)
+
+Chọn template `nvidia/cuda:12.4.1-devel-ubuntu22.04`, disk 100 GB, port 22. SSH
+vào bằng root rồi chạy:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ThanhTuGenki/reup-dubbing-studio/<ref>/workers/gpu/rental/bootstrap.sh \
+  | CONTROL_PLANE_HOST=<PUBLIC_HOST> TS_AUTHKEY=<tskey-auth-…> REUP_REF=<ref> bash
+```
+
+`bootstrap.sh` làm các việc sau:
+- Cài `ffmpeg` và `python3`.
+- Tải hai image đã duyệt **theo digest** qua `workers/gpu/rental/pull_image.py`,
+  kiểm tra sha256 từng layer, rồi chỉ bung `/opt` (Python 3.11 và các venv) cùng
+  thư viện CUDA/cuDNN của image vào `/opt/reup/cuda-lib`. Không build lại, không
+  dùng `proot`.
+- Chạy import smoke.
+- Join tailnet ở userspace mode, với HTTP proxy tại `127.0.0.1:1055`.
+
+Tổng dung lượng tải khoảng 15,6 GB. Venv TTS được đặt ở `/opt/reup-worker-tts`
+để không đè venv Batch.
+
+Tiếp theo tạo hai Worker trên UI (một `BATCH_MEDIA`, một `INTERACTIVE_TTS`).
+Token chỉ sống 15 phút, nên tạo xong phải chạy ngay:
+
+```bash
+reup-workers start <batch-token> <tts-token>
+reup-workers status     # hoặc: reup-workers logs
+```
+
+Chỉ traffic tới Control Plane đi qua proxy của tailnet. R2, Hugging Face và
+model Demucs được tải trực tiếp (`NO_PROXY`).
+
+### 5b. VM có Docker và NVIDIA Container Toolkit
 
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
@@ -124,22 +163,21 @@ curl -fsS https://<PUBLIC_HOST>/worker/v1/sessions -X POST -o /dev/null -w '%{ht
 docker run -d --name reup-worker-batch --gpus all --restart unless-stopped \
   -e REUP_WORKER_CONTROL_PLANE_URL=https://<PUBLIC_HOST>/worker/v1 \
   -e REUP_WORKER_IMAGE_DIGEST=sha256:<digest> \
+  -e REUP_WORKER_CONTRACT_VERSION=2 \
   -e REUP_WORKER_ENROLLMENT_TOKEN=<token> \
-  -e REUP_WORKER_CAPABILITIES=transcript.asr.v1,audio.separate.demucs.v1,media.render.ffmpeg.v1 \
+  -e 'REUP_WORKER_CAPABILITIES=["transcript.asr.v1","audio.separate.demucs.v1","media.render.ffmpeg.v1"]' \
   -v reup-worker:/var/lib/reup-worker \
   ghcr.io/thanhtugenki/gpu-worker-batch@sha256:<digest>
 ```
 
 Worker TTS chạy tương tự với image `gpu-worker-interactive-tts`, digest và token
-riêng, không cần override capability.
+riêng, và `REUP_WORKER_CAPABILITIES='["tts.omnivoice.v1"]'`.
 
+- Image build từ `348a334c` có giá trị mặc định `contract_version=1`, nên phải
+  đặt `REUP_WORKER_CONTRACT_VERSION=2` cho khớp với image đã duyệt.
 - Sau lần enroll đầu, credential được ghi vào
-  `/var/lib/reup-worker/state/credential`. Giữ nguyên volume khi restart và không
-  cần token nữa.
-- Nếu provider chỉ cấp container, không có TUN hay Docker daemon (như EzyCloudX
-  trong `gpu-worker-acceptance.md`), cần chạy `tailscaled --tun=userspace-networking`
-  và cho Worker đi qua proxy của tailscaled. Cách này **chưa được nghiệm thu**
-  trong repository; ghi kết quả vào `acceptance-log.md` nếu dùng.
+  `/var/lib/reup-worker/state/credential`. Giữ nguyên volume khi restart và
+  không cần token nữa.
 - Worker chuyển sang `READY` trên màn Workers. Job `WAITING_FOR_GPU` sẽ được claim.
 
 ## 6. Hoàn tất pipeline
