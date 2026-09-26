@@ -44,7 +44,8 @@ run() { # name role token
 }
 
 case ${1:-status} in
-  start) run batch BATCH_MEDIA "${2:-}"; run tts INTERACTIVE_TTS "${3:-}" ;;
+  # Each agent starts independently, so one missing token does not block the other.
+  start) status=0; run batch BATCH_MEDIA "${2:-}" || status=1; run tts INTERACTIVE_TTS "${3:-}" || status=1; exit $status ;;
   stop) for name in batch tts; do [ -f "$ROOT/state/$name.pid" ] && kill "$(cat "$ROOT/state/$name.pid")" 2>/dev/null && echo "$name stopped"; done; true ;;
   status) for name in batch tts; do
             if [ -f "$ROOT/state/$name.pid" ] && kill -0 "$(cat "$ROOT/state/$name.pid")" 2>/dev/null; then echo "$name: running"; else echo "$name: stopped"; fi
