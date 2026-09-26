@@ -32,21 +32,39 @@ run() { # name role token
         REUP_WORKER_CAPABILITIES='["transcript.asr.v1","audio.separate.demucs.v1","media.render.ffmpeg.v1"]' \
         REUP_WORKER_ASR_PYTHON=/opt/reup-worker/bin/python REUP_WORKER_DEMUCS_PYTHON=/opt/reup-demucs/bin/python \
         LD_LIBRARY_PATH="$ROOT/cuda-lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-      exec /opt/reup-worker/bin/python -m reup_worker.main
+      python=/opt/reup-worker/bin/python
+    else
+      export REUP_WORKER_ROLE=INTERACTIVE_TTS REUP_WORKER_EXECUTOR=interactive-tts \
+        REUP_WORKER_IMAGE_DIGEST="${TTS_IMAGE#*@}" REUP_WORKER_CAPABILITIES='["tts.omnivoice.v1"]' \
+        REUP_WORKER_TTS_MODEL_CACHE_ROOT="$dir/models/assembled" REUP_WORKER_TTS_PROMPT_CACHE_ROOT="$dir/voice-prompts"
+      python=/opt/reup-worker-tts/bin/python
     fi
-    export REUP_WORKER_ROLE=INTERACTIVE_TTS REUP_WORKER_EXECUTOR=interactive-tts \
-      REUP_WORKER_IMAGE_DIGEST="${TTS_IMAGE#*@}" REUP_WORKER_CAPABILITIES='["tts.omnivoice.v1"]' \
-      REUP_WORKER_TTS_MODEL_CACHE_ROOT="$dir/models/assembled" REUP_WORKER_TTS_PROMPT_CACHE_ROOT="$dir/voice-prompts"
-    exec /opt/reup-worker-tts/bin/python -m reup_worker.main
+    # Supervise: the agent exits on some transient Control Plane errors (e.g. a non-JSON 502
+    # while the API restarts). The credential persists, so restarting re-opens the session.
+    while true; do
+      "$python" -m reup_worker.main && code=0 || code=$?
+      unset REUP_WORKER_ENROLLMENT_TOKEN
+      echo "[reup-workers] $name agent exited with $code at $(date -u +%FT%TZ); restarting in 5s"
+      sleep 5
+    done
   ) >>"$dir.log" 2>&1 &
   echo $! >"$dir.pid"
-  echo "$name started (pid $!), log $dir.log"
+  echo "$name started (supervisor pid $!), log $dir.log"
+}
+
+stop_one() { # name: kill the supervisor loop and the agent it started
+  local pidfile=$ROOT/state/$1.pid pid
+  [ -f "$pidfile" ] || return 0
+  pid=$(cat "$pidfile")
+  pkill -TERM -P "$pid" 2>/dev/null || true
+  kill "$pid" 2>/dev/null && echo "$1 stopped"
+  rm -f "$pidfile"
 }
 
 case ${1:-status} in
   # Each agent starts independently, so one missing token does not block the other.
   start) status=0; run batch BATCH_MEDIA "${2:-}" || status=1; run tts INTERACTIVE_TTS "${3:-}" || status=1; exit $status ;;
-  stop) for name in batch tts; do [ -f "$ROOT/state/$name.pid" ] && kill "$(cat "$ROOT/state/$name.pid")" 2>/dev/null && echo "$name stopped"; done; true ;;
+  stop) stop_one batch; stop_one tts ;;
   status) for name in batch tts; do
             if [ -f "$ROOT/state/$name.pid" ] && kill -0 "$(cat "$ROOT/state/$name.pid")" 2>/dev/null; then echo "$name: running"; else echo "$name: stopped"; fi
           done; nvidia-smi --query-gpu=memory.used,memory.total,utilization.gpu --format=csv,noheader || true ;;
