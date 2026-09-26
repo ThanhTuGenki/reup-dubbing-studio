@@ -12,7 +12,7 @@ import { R2StorageProbe } from './infrastructure/r2-storage-probe';
 
 @Module({})
 export class SettingsModule {
-  static register(config: Pick<AppConfig, 'databaseUrl' | 'settingsEncryptionKey'>): DynamicModule {
+  static register(config: Pick<AppConfig, 'databaseUrl' | 'settingsEncryptionKey' | 'contentAgentBaseUrls'>): DynamicModule {
     return {
       module: SettingsModule,
       controllers: [SettingsController],
@@ -27,7 +27,7 @@ export class SettingsModule {
           provide: AesGcmCredentialCipher,
           useFactory: () => new AesGcmCredentialCipher(config.settingsEncryptionKey),
         },
-        HttpContentAgentProbe,
+        { provide: HttpContentAgentProbe, useFactory: () => new HttpContentAgentProbe(config.contentAgentBaseUrls) },
         R2StorageProbe,
         {
           provide: SettingsService,
