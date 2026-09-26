@@ -92,15 +92,21 @@ curl -fsS -X POST "https://<PUBLIC_HOST>/v1/worker-images" \
     "imageDigest": "sha256:<digest>",
     "registryRef": "ghcr.io/thanhtugenki/gpu-worker-batch@sha256:<digest>",
     "contractVersion": 2,
-    "capabilities": ["media.asr.faster-whisper.v1", "media.separate.demucs.v1", "media.render.ffmpeg.v1"]
+    "capabilities": ["transcript.asr.v1", "audio.separate.demucs.v1", "media.render.ffmpeg.v1"]
   }'
 ```
 
 - Image TTS dùng `"role": "INTERACTIVE_TTS"`, repository
   `gpu-worker-interactive-tts` và `"capabilities": ["tts.omnivoice.v1"]`.
 - `contractVersion` phải khớp label `io.reup.worker.contract-version` của image
-  (hiện tại là `2`). Capability phải khớp `REUP_WORKER_CAPABILITIES` trong
-  `workers/gpu/containers/Dockerfile`, nếu lệch thì enrollment bị từ chối.
+  (hiện tại là `2`).
+- **Lệch capability đã biết:** image Batch hiện khai báo
+  `media.asr.faster-whisper.v1` và `media.separate.demucs.v1` trong
+  `REUP_WORKER_CAPABILITIES`. API (`ROLE_CAPABILITIES` trong
+  `workers.service.ts`) và pipeline DAG lại dùng `transcript.asr.v1` và
+  `audio.separate.demucs.v1`. Hãy duyệt image bằng tên của API như ví dụ trên, và
+  override `REUP_WORKER_CAPABILITIES` khi chạy Worker ở bước 5. Worker chọn
+  adapter theo `task_type`, nên override không làm thay đổi cách chạy task.
 
 Tiếp theo vào **Workers → Thêm worker**, chọn image vừa duyệt và nhập provider
 cùng giá theo giờ. **Enrollment token chỉ hiện một lần**, cần chép lại ngay.
@@ -119,9 +125,13 @@ docker run -d --name reup-worker-batch --gpus all --restart unless-stopped \
   -e REUP_WORKER_CONTROL_PLANE_URL=https://<PUBLIC_HOST>/worker/v1 \
   -e REUP_WORKER_IMAGE_DIGEST=sha256:<digest> \
   -e REUP_WORKER_ENROLLMENT_TOKEN=<token> \
+  -e REUP_WORKER_CAPABILITIES=transcript.asr.v1,audio.separate.demucs.v1,media.render.ffmpeg.v1 \
   -v reup-worker:/var/lib/reup-worker \
   ghcr.io/thanhtugenki/gpu-worker-batch@sha256:<digest>
 ```
+
+Worker TTS chạy tương tự với image `gpu-worker-interactive-tts`, digest và token
+riêng, không cần override capability.
 
 - Sau lần enroll đầu, credential được ghi vào
   `/var/lib/reup-worker/state/credential`. Giữ nguyên volume khi restart và không
