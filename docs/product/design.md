@@ -24,7 +24,7 @@
 3. Media job được đưa vào queue. Nếu chưa có GPU, EzyCloudX hiện yêu cầu người
    dùng thuê Docker GPU/VM thủ công và chạy bootstrap command của app.
 4. Khi worker báo `READY`, app tự giao job theo vai trò: Batch Media Worker xử lý
-   OCR/ASR/Demucs/render và VSR khi được bật; Interactive TTS Worker chạy
+   ASR/Demucs/render và VSR khi được bật; Interactive TTS Worker chạy
    OmniVoice và được giữ nóng trong phiên Studio để nghe lại câu vừa sửa với độ
    trễ thấp.
 5. Worker trả về video đã lồng tiếng Việt và file SRT rời, không burn-in sub Việt.
@@ -135,7 +135,7 @@ Ba khối tách rời, nối nhau qua hàng đợi job + storage chung:
    - Ingest điều phối tải (yt-dlp) — tác vụ nhẹ, chạy tại đây.
 
 2. **GPU workers** (Docker GPU thuê theo giờ; khả năng tự bật/tắt phụ thuộc API provider)
-   - **Batch Media Worker:** xóa hard-sub, OCR/ASR, Demucs và final render; ưu tiên
+   - **Batch Media Worker:** xóa hard-sub, ASR, Demucs và final render; ưu tiên
      GPU VRAM cao, chỉ bật khi có media job.
    - **Interactive TTS Worker:** chỉ chạy OmniVoice; ưu tiên RTX 3060 12 GB và giữ
      model nóng trong phiên Studio để sinh lại từng câu mà không chờ cold start.
@@ -159,7 +159,7 @@ Ba khối tách rời, nối nhau qua hàng đợi job + storage chung:
 | Nơi chạy | Thành phần | Trạng thái hoạt động | Trách nhiệm |
 |---|---|---|---|
 | VPS | Web App, API/Pipeline Orchestrator, Job Queue, PostgreSQL, Content Agent | 24/7 | UI, điều phối, trạng thái, profile, nội dung SEO và bàn đăng bài |
-| EzyCloudX Docker GPU | Batch Media Worker | Thuê/xóa thủ công; bật khi có media job | VSR inpainting, OCR/ASR, Demucs và final render |
+| EzyCloudX Docker GPU | Batch Media Worker | Thuê/xóa thủ công; bật khi có media job | VSR inpainting, faster-whisper ASR, Demucs và final render |
 | EzyCloudX Docker GPU | Interactive TTS Worker | Giữ nóng trong phiên Studio; tắt sau phiên edit | OmniVoice initial dub, re-gen câu, preview audio và timing fit |
 | GitHub Actions + GHCR | CI/CD + Container Registry | Khi phát hành phiên bản worker | Build, kiểm tra và lưu Docker image GPU Worker theo version/digest để máy thuê pull |
 | Cloudflare R2 | Asset Store | Dịch vụ ngoài, dùng chung | Chuyển raw/desub/audio/MP4/SRT giữa VPS và GPU; cấp file cho người dùng tải |
@@ -241,7 +241,7 @@ từ Studio tới `na-01` và `eu-01` trước khi chọn mặc định.
 3. App sinh bootstrap command/token dùng một lần. Người dùng chạy command trên
    worker; worker kéo đúng image/version, kết nối queue/R2 và gửi heartbeat.
 4. Khi worker `READY`, app giao job theo `worker_role`; người dùng không cần chạy
-   từng lệnh VSR/OCR/OmniVoice/Demucs/render.
+   từng lệnh VSR/ASR/OmniVoice/Demucs/render.
 5. Worker upload kết quả lên R2, báo `SUCCEEDED`, sau đó chuyển sang `IDLE`.
 6. Batch Worker có idle TTL 10–15 phút. TTS Worker không dùng TTL ngắn trong lúc
    Studio còn phiên edit; app giữ model nóng rồi mới đặt `SAFE_TO_TERMINATE` khi
@@ -275,7 +275,7 @@ Git push/tag
 ```
 
 Hai image dùng chung Worker Agent base. Media image chứa FFmpeg, Video Subtitle
-Remover, OCR/ASR và Demucs; TTS image chỉ chứa OmniVoice, FlashInfer/CUDA tương
+Remover, faster-whisper ASR và Demucs; TTS image chỉ chứa OmniVoice, FlashInfer/CUDA tương
 thích và audio tooling tối thiểu. Model lớn, voice prompt và cache nằm trên volume
 hoặc R2; image không chứa API key, token đăng nhập hay credential R2 dài hạn.
 
@@ -398,7 +398,7 @@ TERMINATING → TERMINATED`.
    Job Queue  <----------------------------+
         |                                   |
         v                                   |
-   Batch Media Worker: OCR/ASR + optional desub -> Demucs
+   Batch Media Worker: faster-whisper ASR + optional desub -> Demucs
         |
         v
    VPS: dịch -> gán nhân vật
@@ -430,7 +430,7 @@ gán nhân vật theo câu → TTS theo câu → khớp lại timestamp gốc.
 |---|------|---------|----------|
 | 1 | Tải video gốc (kèm cookie auth) | yt-dlp | VPS |
 | 2 | Xóa hard-sub trong vùng mask khi effective Profile bật; mặc định skip | video-subtitle-remover (STTN/LAMA/ProPainter) | GPU |
-| 3 | Bóc lời từ `RAW`: **OCR hard-sub** (chính) + ASR (đối chiếu) → transcript + timestamp câu | PaddleOCR / faster-whisper | GPU |
+| 3 | Bóc lời từ audio của `RAW` → transcript + timestamp câu | faster-whisper | GPU |
 | 4 | Dịch transcript → kịch bản Việt theo câu | LLM (API) | VPS |
 | 5 | Gán nhân vật (nếu chế độ `multi-auto`) + **LLM chọn đoạn highlight** cho bản 9:16 | LLM | VPS |
 | 6 | OmniVoice tạo initial dub từng segment và preview có tiếng | OmniVoice | Interactive TTS Worker |
@@ -503,14 +503,12 @@ thầm thay engine trong production.
 Con người chỉ can thiệp 2 chỗ: **duyệt cast sheet 1 lần/bộ** và **sửa vài câu
 LLM gán sai**. Không chỉnh tuần tự từng câu.
 
-### 5.4 Bóc lời: OCR trước, ASR đối chiếu
-Hard-sub tiếng Trung = lời thoại đã có dạng chữ trên hình kèm timing chính xác.
-**OCR chính sub gốc (PaddleOCR)** thường chính xác hơn và timestamp khớp hơn nghe
-audio. Chiến lược: OCR làm nguồn chính, faster-whisper làm đối chiếu/dự phòng
-(video không có sub hoặc OCR kém). **MVP chạy cả hai trên cùng video để so sánh
-rồi chốt.** Bonus: vùng chữ OCR phát hiện được có thể dùng làm gợi ý mask xóa sub.
-OCR luôn đọc video `RAW`, kể cả khi DESUB được bật; file `DESUBBED` chỉ thay thế
-visual input của bước render, nếu không OCR sẽ mất chính vùng chữ cần nhận dạng.
+### 5.4 Bóc lời bằng faster-whisper
+MVP dùng một nguồn transcript duy nhất: faster-whisper nghe audio của video
+`RAW`, chia segment và trả text, timestamp cùng confidence. Pipeline không tạo
+task OCR, không cài PaddleOCR và không đọc hard-sub để tạo transcript. Người dùng
+có thể sửa transcript trong Studio khi ASR nhận sai. `DESUBBED`, khi được bật,
+chỉ thay thế visual input của bước render và không ảnh hưởng nguồn audio ASR.
 
 ### 5.5 Audio: tách nhạc nền bằng Demucs (đã chốt)
 Không ducking toàn bộ audio gốc (sẽ mất nhạc nền + hiệu ứng, video "chết").
@@ -705,10 +703,10 @@ Mỗi giai đoạn có spec → plan → triển khai riêng.
 
 ### Giai đoạn 1 — MVP (làm trước, kiểm chứng rủi ro)
 Chạy trọn **1 video** từ đầu đến cuối bằng **script CLI**, chưa có web UI/Content Agent:
-tải → tùy chọn xóa hard-sub (mặc định skip) + bóc lời từ raw (**so sánh OCR vs
-ASR**) → dịch → lồng **1 giọng** → **Demucs giữ nhạc nền** → render video lồng
+tải → tùy chọn xóa hard-sub (mặc định skip) + bóc lời từ raw bằng
+**faster-whisper** → dịch → lồng **1 giọng** → **Demucs giữ nhạc nền** → render video lồng
 tiếng 16:9 không burn-in phụ đề + xuất file SRT rời cùng tên.
-**Mục tiêu:** đo (a) độ tự nhiên giọng lồng, (b) OCR hay ASR chính xác hơn,
+**Mục tiêu:** đo (a) độ tự nhiên giọng lồng, (b) độ chính xác của ASR,
 (c) chi phí GPU thật/video; chất lượng xóa hard-sub chỉ đo khi bật feature. Nếu
 đạt, phần còn lại chỉ là mở rộng; nếu không, biết sớm mà không tốn công xây cả
 hệ thống.
@@ -822,6 +820,6 @@ TypeScript/React chỉ xuất hiện ở GĐ2 khi dựng giao diện.
 - Metadata (title/mô tả/hashtag/thumbnail): **LLM tự sinh + duyệt trong Studio**.
 - Đăng bài: **không Postiz, không uploader tự động**; Content Agent chuẩn bị gói
   nội dung, người dùng copy/upload thủ công, app lưu checklist + URL/post ID.
-- Bóc lời: OCR hard-sub làm chính, ASR đối chiếu — MVP so sánh rồi chốt.
+- Bóc lời: faster-whisper ASR là nguồn transcript duy nhất của MVP.
 - Đầu ra: **video đã lồng tiếng Việt, không burn-in phụ đề** + file `.srt` tiếng
   Việt rời cùng basename cho từng tỷ lệ khung hình.

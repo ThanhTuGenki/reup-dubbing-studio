@@ -11,10 +11,9 @@ import pytest
 from reup_worker.adapters.base import LocalInput
 from reup_worker.adapters.render import FfmpegRenderAdapter
 from reup_worker.adapters.separation import DemucsAdapter
-from reup_worker.adapters.transcription import AsrAdapter, OcrAdapter
+from reup_worker.adapters.transcription import AsrAdapter
 from reup_worker.main import batch_adapters
 from reup_worker.process import IsolatedProcessRunner, ProcessResult
-from reup_worker.tools.ocr import paddle_language
 from reup_worker_contract.models.claimed_task import ClaimedTask
 from reup_worker_contract.models.task_input_asset import TaskInputAsset
 
@@ -30,7 +29,7 @@ class FakeRunner:
         assert attempt_id == ATTEMPT
         value = list(command)
         self.commands.append(value)
-        if self.behavior in {"asr", "ocr"}:
+        if self.behavior == "asr":
             target = Path(value[value.index("--output") + 1])
             source = self.behavior.upper()
             target.write_text(
@@ -60,24 +59,18 @@ async def progress(value: int, detail: str | None) -> None:
     assert detail
 
 
-@pytest.mark.parametrize(
-    ("task_type", "behavior", "output_kind"),
-    [("TRANSCRIBE_ASR", "asr", "ASR_JSON"), ("TRANSCRIBE_OCR", "ocr", "OCR_JSON")],
-)
-async def test_transcription_adapters_write_normalized_timestamps(
-    tmp_path: Path, task_type: str, behavior: str, output_kind: str
-) -> None:
+async def test_asr_adapter_writes_normalized_timestamps(tmp_path: Path) -> None:
     workspace = create_workspace(tmp_path)
     source = workspace / "inputs" / "source.mp4"
     source.write_bytes(b"video")
-    runner = FakeRunner(behavior)
-    task = media_task(task_type)
-    adapter = AsrAdapter(runner) if behavior == "asr" else OcrAdapter(runner)
+    runner = FakeRunner("asr")
+    task = media_task("TRANSCRIBE_ASR")
+    adapter = AsrAdapter(runner)
 
     outputs = await adapter.run(task, [LocalInput(input_asset("RAW"), source)], workspace, progress, asyncio.Event())
 
     assert outputs[0].slot == "transcript"
-    assert task.outputs[0].kind == output_kind
+    assert task.outputs[0].kind == "ASR_JSON"
     assert json.loads(outputs[0].path.read_text())["segments"][0]["startMs"] == 0
 
 
@@ -189,7 +182,6 @@ def input_asset(kind: str, metadata: dict[str, object] | None = None) -> TaskInp
 def media_task(task_type: str) -> ClaimedTask:
     configurations = {
         "TRANSCRIBE_ASR": {"kind": "TRANSCRIBE_ASR", "language": "zh", "modelSize": "small"},
-        "TRANSCRIBE_OCR": {"kind": "TRANSCRIBE_OCR", "language": "ch", "frameIntervalMs": 500},
         "SEPARATE_AUDIO": {"kind": "SEPARATE_AUDIO", "modelName": "htdemucs"},
         "RENDER": {
             "kind": "RENDER",
@@ -199,13 +191,11 @@ def media_task(task_type: str) -> ClaimedTask:
     }
     output_kinds = {
         "TRANSCRIBE_ASR": "ASR_JSON",
-        "TRANSCRIBE_OCR": "OCR_JSON",
         "SEPARATE_AUDIO": "BACKGROUND_AUDIO",
         "RENDER": "OUTPUT_VIDEO",
     }
     content_types = {
         "TRANSCRIBE_ASR": "application/json",
-        "TRANSCRIBE_OCR": "application/json",
         "SEPARATE_AUDIO": "audio/wav",
         "RENDER": "video/mp4",
     }
@@ -241,9 +231,8 @@ def run_ffmpeg(arguments: list[str]) -> None:
     subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", *arguments], check=True)  # noqa: S603,S607
 
 
-def test_batch_capabilities_skip_desub_and_map_ocr_language(tmp_path: Path) -> None:
+def test_batch_capabilities_only_include_supported_media_adapters(tmp_path: Path) -> None:
     adapters = batch_adapters(IsolatedProcessRunner(tmp_path, 10))
 
     assert "DESUB" not in adapters
-    assert set(adapters) == {"TRANSCRIBE_ASR", "TRANSCRIBE_OCR", "SEPARATE_AUDIO", "RENDER"}
-    assert paddle_language("zh-CN") == "ch"
+    assert set(adapters) == {"TRANSCRIBE_ASR", "SEPARATE_AUDIO", "RENDER"}

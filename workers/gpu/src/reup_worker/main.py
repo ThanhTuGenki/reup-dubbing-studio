@@ -8,7 +8,7 @@ from reup_worker_contract.models.claimed_task import ClaimedTask
 from .adapters.base import MediaAdapter
 from .adapters.render import FfmpegRenderAdapter
 from .adapters.separation import DemucsAdapter
-from .adapters.transcription import AsrAdapter, OcrAdapter
+from .adapters.transcription import AsrAdapter
 from .agent import WorkerAgent
 from .assets import AssetTransfer
 from .batch_executor import BatchMediaExecutor, InteractiveTtsExecutor
@@ -112,7 +112,6 @@ def build_executor(
 def batch_adapters(runner: IsolatedProcessRunner, settings: WorkerSettings | None = None) -> dict[str, MediaAdapter]:
     return {
         "TRANSCRIBE_ASR": AsrAdapter(runner, settings.asr_python if settings else "python"),
-        "TRANSCRIBE_OCR": OcrAdapter(runner, settings.ocr_python if settings else "python"),
         "SEPARATE_AUDIO": DemucsAdapter(runner, settings.demucs_python if settings else "python"),
         "RENDER": FfmpegRenderAdapter(runner),
     }

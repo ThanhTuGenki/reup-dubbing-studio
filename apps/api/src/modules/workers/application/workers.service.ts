@@ -28,7 +28,7 @@ function hash(value: unknown) { return createHash('sha256').update(JSON.stringif
 function secretToken(prefix: string) { return `${prefix}_${randomBytes(32).toString('base64url')}`; }
 const CAPABILITY = /^[a-z][a-z0-9]*(?:\.[a-z0-9]+)+\.v[1-9][0-9]*$/u;
 const ROLE_CAPABILITIES: Record<CreateImageInput['role'], Set<string>> = {
-  BATCH_MEDIA: new Set(['media.desub.v1', 'transcript.ocr.v1', 'transcript.asr.v1', 'audio.separate.demucs.v1', 'media.render.ffmpeg.v1']),
+  BATCH_MEDIA: new Set(['media.desub.v1', 'transcript.asr.v1', 'audio.separate.demucs.v1', 'media.render.ffmpeg.v1']),
   INTERACTIVE_TTS: new Set(['tts.omnivoice.v1']),
 };
 function validateImage(input: CreateImageInput) { const unique = new Set(input.capabilities); if (!/^sha256:[a-f0-9]{64}$/u.test(input.imageDigest) || !/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u.test(input.semanticVersion) || input.contractVersion < 1 || !input.capabilities.length || unique.size !== input.capabilities.length || input.capabilities.some((item) => !CAPABILITY.test(item) || !ROLE_CAPABILITIES[input.role].has(item))) throw new WorkerError('WORKER_VALIDATION_FAILED', 'Worker image metadata is invalid'); }

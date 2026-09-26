@@ -1445,6 +1445,32 @@ export type IngestCreateEnvelope = {
     meta: SuccessMeta;
 };
 
+export type LocalVideoUploadRequest = {
+    channelProfileId: UuidV7;
+    seriesProfileId?: UuidV7 | null;
+    title: string;
+    sourceLanguage: string;
+    fileName: string;
+    contentType: 'video/mp4';
+    byteSize: number;
+    checksumSha256: string;
+    durationMs: number;
+    width: number;
+    height: number;
+};
+
+export type LocalVideoImportResult = {
+    videoId: UuidV7;
+    jobId: UuidV7;
+    rawAssetId: UuidV7;
+    status: 'WAITING_FOR_GPU';
+};
+
+export type LocalVideoImportEnvelope = {
+    data: LocalVideoImportResult;
+    meta: SuccessMeta;
+};
+
 export type QueueJobStatus = 'QUEUED' | 'RUNNING' | 'WAITING_FOR_GPU' | 'WAITING_FOR_REVIEW' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
 
 export type QueueTask = {
@@ -3680,6 +3706,103 @@ export type CreateIngestJobsResponses = {
 };
 
 export type CreateIngestJobsResponse = CreateIngestJobsResponses[keyof CreateIngestJobsResponses];
+
+export type RequestLocalVideoUploadData = {
+    body: LocalVideoUploadRequest;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/local-imports/uploads';
+};
+
+export type RequestLocalVideoUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestLocalVideoUploadError = RequestLocalVideoUploadErrors[keyof RequestLocalVideoUploadErrors];
+
+export type RequestLocalVideoUploadResponses = {
+    /**
+     * Presigned PUT grant cho MP4 local.
+     */
+    201: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RequestLocalVideoUploadResponse = RequestLocalVideoUploadResponses[keyof RequestLocalVideoUploadResponses];
+
+export type RefreshLocalVideoUploadData = {
+    body?: never;
+    path: {
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/local-imports/uploads/{assetId}/grant';
+};
+
+export type RefreshLocalVideoUploadErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshLocalVideoUploadError = RefreshLocalVideoUploadErrors[keyof RefreshLocalVideoUploadErrors];
+
+export type RefreshLocalVideoUploadResponses = {
+    /**
+     * Upload grant mới cho cùng object pending.
+     */
+    200: UploadGrantEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type RefreshLocalVideoUploadResponse = RefreshLocalVideoUploadResponses[keyof RefreshLocalVideoUploadResponses];
+
+export type CommitLocalVideoImportData = {
+    body?: never;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path: {
+        assetId: UuidV7;
+    };
+    query?: never;
+    url: '/local-imports/uploads/{assetId}/commit';
+};
+
+export type CommitLocalVideoImportErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitLocalVideoImportError = CommitLocalVideoImportErrors[keyof CommitLocalVideoImportErrors];
+
+export type CommitLocalVideoImportResponses = {
+    /**
+     * Video, RAW asset và full pipeline job đã được tạo.
+     */
+    201: LocalVideoImportEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type CommitLocalVideoImportResponse = CommitLocalVideoImportResponses[keyof CommitLocalVideoImportResponses];
 
 export type ListQueueJobsData = {
     body?: never;

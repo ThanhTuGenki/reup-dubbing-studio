@@ -57,6 +57,9 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Normalize registry owner
+        id: registry
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
       - name: Build linux/amd64 image
         uses: docker/build-push-action@v6
         id: build
@@ -71,7 +74,7 @@ jobs:
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
-            CONTRACT_VERSION=1
+            CONTRACT_VERSION=2
           cache-from: type=gha,scope=${{ matrix.target }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target }}
       - name: Smoke test image without model inference
@@ -114,12 +117,12 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.repository }}:0.1.0
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.repository }}:sha-${{ github.sha }}
+            ghcr.io/${{ steps.registry.outputs.owner }}/${{ matrix.repository }}:0.1.0
+            ghcr.io/${{ steps.registry.outputs.owner }}/${{ matrix.repository }}:sha-${{ github.sha }}
           build-args: |
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
-            CONTRACT_VERSION=1
+            CONTRACT_VERSION=2
           cache-from: type=gha,scope=${{ matrix.target }}
           provenance: mode=max
           sbom: true
@@ -127,7 +130,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           test -n '${{ steps.push.outputs.digest }}'
-          printf '%s@%s\n' 'ghcr.io/${{ github.repository_owner }}/${{ matrix.repository }}' '${{ steps.push.outputs.digest }}' > ${{ matrix.repository }}.digest.txt
+          printf '%s@%s\n' 'ghcr.io/${{ steps.registry.outputs.owner }}/${{ matrix.repository }}' '${{ steps.push.outputs.digest }}' > ${{ matrix.repository }}.digest.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:

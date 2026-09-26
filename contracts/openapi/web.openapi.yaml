@@ -938,6 +938,41 @@ paths:
           description: Ít nhất một Ingest Job được tạo.
           content: { application/json: { schema: { $ref: '#/components/schemas/IngestCreateEnvelope' } } }
         default: { $ref: '#/components/responses/Problem' }
+  /local-imports/uploads:
+    post:
+      summary: Xin presigned upload cho video local
+      operationId: requestLocalVideoUpload
+      parameters: [{ $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/LocalVideoUploadRequest' } } }
+      responses:
+        '201':
+          description: Presigned PUT grant cho MP4 local.
+          content: { application/json: { schema: { $ref: '#/components/schemas/UploadGrantEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /local-imports/uploads/{assetId}/grant:
+    post:
+      summary: Cấp lại presigned upload cho video local đang pending
+      operationId: refreshLocalVideoUpload
+      parameters: [{ $ref: '#/components/parameters/AssetId' }]
+      responses:
+        '200':
+          description: Upload grant mới cho cùng object pending.
+          content: { application/json: { schema: { $ref: '#/components/schemas/UploadGrantEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
+  /local-imports/uploads/{assetId}/commit:
+    post:
+      summary: Xác minh video local và tạo full pipeline job
+      operationId: commitLocalVideoImport
+      parameters:
+        - { $ref: '#/components/parameters/AssetId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      responses:
+        '201':
+          description: Video, RAW asset và full pipeline job đã được tạo.
+          content: { application/json: { schema: { $ref: '#/components/schemas/LocalVideoImportEnvelope' } } }
+        default: { $ref: '#/components/responses/Problem' }
   /queue/jobs:
     get:
       summary: Liệt kê Job trong Queue
@@ -3228,6 +3263,39 @@ components:
       required: [data, meta]
       properties:
         data: { $ref: '#/components/schemas/IngestCreateResult' }
+        meta: { $ref: '#/components/schemas/SuccessMeta' }
+    LocalVideoUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [channelProfileId, title, sourceLanguage, fileName, contentType, byteSize, checksumSha256, durationMs, width, height]
+      properties:
+        channelProfileId: { $ref: '#/components/schemas/UuidV7' }
+        seriesProfileId:
+          oneOf: [{ $ref: '#/components/schemas/UuidV7' }, { type: 'null' }]
+        title: { type: string, minLength: 1, maxLength: 200 }
+        sourceLanguage: { type: string, minLength: 2, maxLength: 35 }
+        fileName: { type: string, minLength: 1, maxLength: 255 }
+        contentType: { type: string, const: video/mp4 }
+        byteSize: { type: integer, format: int64, minimum: 1, maximum: 10737418240 }
+        checksumSha256: { type: string, pattern: '^[0-9a-f]{64}$' }
+        durationMs: { type: integer, minimum: 1, maximum: 86400000 }
+        width: { type: integer, minimum: 1, maximum: 16384 }
+        height: { type: integer, minimum: 1, maximum: 16384 }
+    LocalVideoImportResult:
+      type: object
+      additionalProperties: false
+      required: [videoId, jobId, rawAssetId, status]
+      properties:
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        jobId: { $ref: '#/components/schemas/UuidV7' }
+        rawAssetId: { $ref: '#/components/schemas/UuidV7' }
+        status: { type: string, const: WAITING_FOR_GPU }
+    LocalVideoImportEnvelope:
+      type: object
+      additionalProperties: false
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/LocalVideoImportResult' }
         meta: { $ref: '#/components/schemas/SuccessMeta' }
     QueueJobStatus: { type: string, enum: [QUEUED, RUNNING, WAITING_FOR_GPU, WAITING_FOR_REVIEW, SUCCEEDED, FAILED, CANCELLED] }
     QueueTask:

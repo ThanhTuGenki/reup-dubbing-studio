@@ -81,7 +81,7 @@ Kiến trúc phải đáp ứng các đặc điểm chính của Reup Dubbing St
 │ Python GPU Worker Agent                                                 │
 │                                                                         │
 │ Batch Media Worker              Interactive TTS Worker                  │
-│ VSR · OCR/ASR · Demucs          OmniVoice warm model                    │
+│ VSR · ASR · Demucs              OmniVoice warm model                    │
 │ FFmpeg/render                   preview · initial dub · re-gen segment  │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -113,7 +113,7 @@ dubbing-studio/
 │   └── gpu/
 │       ├── src/reup_worker/
 │       │   ├── common/              # Agent, lease, R2, telemetry, subprocess
-│       │   ├── batch_media/         # VSR, OCR/ASR, Demucs, render
+│       │   ├── batch_media/         # VSR, ASR, Demucs, render
 │       │   └── interactive_tts/     # OmniVoice, cache, preview, batching
 │       ├── tests/
 │       ├── pyproject.toml
@@ -690,7 +690,7 @@ Mỗi worker image có một agent chịu trách nhiệm:
 Chứa các task media nặng:
 
 - video-subtitle-remover;
-- OCR/ASR;
+- faster-whisper ASR;
 - Demucs;
 - ffmpeg/ffprobe;
 - final render và export.
@@ -735,7 +735,7 @@ Các guardrail đi kèm:
 | Download/upload R2 | 2–4 task/worker |
 | Metadata/ffprobe/preprocess CPU | 2–4 task/worker, tùy CPU/RAM |
 | VSR/inpainting | 1 task/GPU |
-| OCR/ASR GPU | 1 task/GPU |
+| ASR GPU | 1 task/GPU |
 | Demucs GPU | 1 task/GPU |
 | GPU render nếu có | 1 task/GPU |
 | Interactive preview | batch 1, priority cao |
