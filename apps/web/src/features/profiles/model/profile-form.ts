@@ -118,6 +118,7 @@ export function validateSeriesDraft(draft: SeriesDraft): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!draft.name.trim()) errors.name = 'Nhập tên Series Profile.';
   if (!uuid(draft.channelProfileId)) errors.channelProfileId = 'Chọn Channel Profile cha.';
+  if (draft.overridden.has('defaultVoiceProfileId') && !draft.defaultVoiceProfileId.trim()) errors.defaultVoiceProfileId = 'Chọn giọng để ghi đè hoặc tắt ghi đè.';
   if (draft.overridden.has('subtitleFilenameRule') && !draft.subtitleFilenameRule.trim()) errors.subtitleFilenameRule = 'Nhập quy tắc tên file subtitle.';
   if (draft.overridden.has('subtitleMaxLineLength')) {
     const maxLine = Number(draft.subtitleMaxLineLength);

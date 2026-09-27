@@ -1,10 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
+import type { VoiceProfile } from '@reup-dubbing-studio/api-client';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { languageLabel } from '@/shared/lib/languages';
 import { fetchVoices } from '../api/voices-api';
 
 /** Voices usable as a default: the ones the library considers activated and ready to speak. */
 const USABLE_STATUS = 'READY';
+/** Safe stop so a misbehaving API (e.g. a cursor that never exhausts) can't loop forever. */
+const MAX_USABLE_VOICES = 1_000;
+
+async function fetchAllUsableVoices(signal: AbortSignal | undefined): Promise<VoiceProfile[]> {
+  const items: VoiceProfile[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await fetchVoices({ status: USABLE_STATUS, limit: 100, ...(cursor ? { cursor } : {}) }, signal);
+    items.push(...page.items);
+    cursor = page.nextCursor ?? undefined;
+  } while (cursor && items.length < MAX_USABLE_VOICES);
+  return items;
+}
 
 export function VoiceProfileSelect({
   id, value, onChange, disabled, 'aria-invalid': ariaInvalid,
@@ -16,8 +30,8 @@ export function VoiceProfileSelect({
   'aria-invalid'?: boolean;
 }) {
   const voices = useQuery({
-    queryKey: ['voices', 'usable'],
-    queryFn: ({ signal }) => fetchVoices({ status: USABLE_STATUS, limit: 100 }, signal),
+    queryKey: ['voices', 'usable-select', 'all'],
+    queryFn: ({ signal }) => fetchAllUsableVoices(signal),
   });
   if (voices.isPending) {
     return (
@@ -26,7 +40,7 @@ export function VoiceProfileSelect({
       </NativeSelect>
     );
   }
-  const items = voices.data?.items ?? [];
+  const items = voices.data ?? [];
   const known = new Set(items.map((voice) => voice.id));
   const showUnknown = Boolean(value) && !known.has(value);
   return (

@@ -69,4 +69,13 @@ describe('VoiceDialog', () => {
     expect(await screen.findByText('Sample cần transcript và thời lượng từ 3–10 giây.')).toBeInTheDocument();
     expect(uploadVoiceSample).not.toHaveBeenCalled();
   });
+
+  it('shows a failure message, not a stuck loading message, when duration detection fails', async () => {
+    readAudioDurationMs.mockReset().mockRejectedValue(new Error('File audio không đọc được hoặc đã hỏng.'));
+    const user = userEvent.setup();
+    renderApp(<VoiceDialog open snapshot={{ profile: voiceProfile, etag: '"3"' }} onOpenChange={vi.fn()} />);
+    await user.upload(screen.getByLabelText('File audio'), new File(['x'], 'sample.wav', { type: 'audio/wav' }));
+    expect(await screen.findByText('Không đọc được thời lượng')).toBeInTheDocument();
+    expect(screen.queryByText('Đang đọc thời lượng…')).not.toBeInTheDocument();
+  });
 });

@@ -18,4 +18,14 @@ describe('profile form model', () => {
     const draft = { ...emptySeriesDraft('0191f3d2-7f5b-7abc-8b2e-123456789ac0'), name: 'Series', overridden: new Set(['ttsSpeed', 'removeHardSubEnabled', 'output9x16Enabled'] as const), ttsSpeed: '1.15', removeHardSubEnabled: true, output9x16Enabled: true };
     expect(buildSeriesUpdate(draft).overrides).toMatchObject({ targetLanguage: null, ttsSpeed: 1.15, removeHardSubEnabled: true, output9x16Enabled: true });
   });
+
+  it('rejects an overridden default voice left blank, since blank and not-overridden both send null', () => {
+    const draft = { ...emptySeriesDraft('0191f3d2-7f5b-7abc-8b2e-123456789ac0'), name: 'Series', overridden: new Set(['defaultVoiceProfileId'] as const), defaultVoiceProfileId: '' };
+    expect(validateSeriesDraft(draft).defaultVoiceProfileId).toBe('Chọn giọng để ghi đè hoặc tắt ghi đè.');
+  });
+
+  it('allows an overridden default voice once a voice is picked', () => {
+    const draft = { ...emptySeriesDraft('0191f3d2-7f5b-7abc-8b2e-123456789ac0'), name: 'Series', overridden: new Set(['defaultVoiceProfileId'] as const), defaultVoiceProfileId: '0191f3d2-7f5b-7abc-8b2e-123456789ae0' };
+    expect(validateSeriesDraft(draft).defaultVoiceProfileId).toBeUndefined();
+  });
 });

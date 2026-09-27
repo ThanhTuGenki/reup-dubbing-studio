@@ -40,4 +40,19 @@ describe('VoiceProfileSelect', () => {
     await user.selectOptions(screen.getByRole('combobox'), 'Giọng kể ấm · Tiếng Việt');
     expect(onChange).toHaveBeenCalledWith(voiceProfile.id);
   });
+
+  it('follows nextCursor to load every usable voice, labelling one only on page 2 by name', async () => {
+    const page2Voice = { ...voiceProfile, id: '0191f3d2-7f5b-7abc-8b2e-123456789ae9', name: 'Giọng trang 2' };
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/voice-profiles`, ({ request }) => {
+      const cursor = new URL(request.url).searchParams.get('cursor');
+      if (!cursor) return HttpResponse.json({ data: { items: [voiceProfile], nextCursor: 'page-2' }, meta: { requestId: READY_REQUEST_ID } });
+      return HttpResponse.json({ data: { items: [page2Voice], nextCursor: null }, meta: { requestId: READY_REQUEST_ID } });
+    }));
+    renderApp(<VoiceProfileSelect id="voice" value={page2Voice.id} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    expect(screen.getByRole('combobox')).toHaveDisplayValue(`${page2Voice.name} · Tiếng Việt`);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'Chưa chọn giọng', 'Giọng kể ấm · Tiếng Việt', 'Giọng trang 2 · Tiếng Việt',
+    ]);
+  });
 });

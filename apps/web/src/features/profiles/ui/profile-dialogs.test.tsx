@@ -69,4 +69,16 @@ describe('SeriesProfileDialog', () => {
     await waitFor(() => expect(saveSeriesProfile).toHaveBeenCalledTimes(1));
     expect(saveSeriesProfile.mock.calls[0]?.[2]).toMatchObject({ overrides: expect.objectContaining({ defaultVoiceProfileId: voiceProfile.id }) });
   });
+
+  it('blocks submitting an overridden default voice left blank instead of silently inheriting', async () => {
+    const user = userEvent.setup();
+    renderApp(<SeriesProfileDialog open snapshot={{ profile: seriesProfile, etag: '"2:2"' }} channels={[channelProfile]} onOpenChange={vi.fn()} />);
+    await user.click(screen.getByRole('switch', { name: 'Ghi đè Giọng mặc định' }));
+    const select = screen.getByLabelText('Giọng mặc định');
+    await waitFor(() => expect(select).toBeEnabled());
+    await user.selectOptions(select, 'Chưa chọn giọng');
+    await user.click(screen.getByRole('button', { name: 'Lưu series' }));
+    expect(await screen.findByText('Chọn giọng để ghi đè hoặc tắt ghi đè.')).toBeInTheDocument();
+    expect(saveSeriesProfile).not.toHaveBeenCalled();
+  });
 });

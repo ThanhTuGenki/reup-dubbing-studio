@@ -62,18 +62,27 @@ export async function uploadVoiceSample(input: { voiceId: string; etag: string; 
 export async function fetchSamplePreview(voiceId: string, sampleId: string) {
   return parse(await previewVoiceSample({ client: client(), path: { voiceProfileId: voiceId, sampleId } }), previewEnvelope, 'Không thể tải sample.').data;
 }
+const READ_AUDIO_DURATION_TIMEOUT_MS = 15_000;
+
 export function readAudioDurationMs(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file); const audio = document.createElement('audio');
+    let settled = false;
     const done = () => { audio.removeAttribute('src'); audio.load(); URL.revokeObjectURL(url); };
+    const settle = (run: () => void) => {
+      if (settled) return;
+      settled = true; clearTimeout(timer); done(); run();
+    };
+    const timer = setTimeout(() => settle(() => reject(new VoicesApiError('Không đọc được thời lượng file audio.'))), READ_AUDIO_DURATION_TIMEOUT_MS);
     audio.preload = 'metadata';
     audio.onloadedmetadata = () => {
       const value = Math.round(audio.duration * 1_000);
-      done();
-      if (!Number.isSafeInteger(value) || value < 1) reject(new VoicesApiError('Không đọc được thời lượng audio.'));
-      else resolve(value);
+      settle(() => {
+        if (!Number.isSafeInteger(value) || value < 1) reject(new VoicesApiError('Không đọc được thời lượng audio.'));
+        else resolve(value);
+      });
     };
-    audio.onerror = () => { done(); reject(new VoicesApiError('File audio không đọc được hoặc đã hỏng.')); };
+    audio.onerror = () => settle(() => reject(new VoicesApiError('File audio không đọc được hoặc đã hỏng.')));
     audio.src = url;
   });
 }

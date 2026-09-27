@@ -165,7 +165,7 @@ function Check({ label, checked, onChange }: { label: string; checked: boolean; 
 }
 function OverrideField({ label, field, draft, error, id, onToggle, children }: { label: string; field: SeriesField; draft: SeriesDraft; error?: string | undefined; id?: string | undefined; onToggle: (field: SeriesField, checked: boolean) => void; children: ReactNode }) {
   const active = draft.overridden.has(field);
-  return <Field data-invalid={Boolean(error)} className="override-field"><div className="override-field-heading"><FieldLabel {...(id ? { htmlFor: id } : {})}>{label}</FieldLabel><label><span>{active ? 'Ghi đè' : 'Kế thừa'}</span><Switch checked={active} onCheckedChange={(checked) => onToggle(field, checked)} /></label></div>{children}<FieldError>{error}</FieldError></Field>;
+  return <Field data-invalid={Boolean(error)} className="override-field"><div className="override-field-heading"><FieldLabel {...(id ? { htmlFor: id } : {})}>{label}</FieldLabel><label><span>{active ? 'Ghi đè' : 'Kế thừa'}</span><Switch aria-label={`Ghi đè ${label}`} checked={active} onCheckedChange={(checked) => onToggle(field, checked)} /></label></div>{children}<FieldError>{error}</FieldError></Field>;
 }
 function message(error: unknown, fallback: string) { return error instanceof ProfilesApiError ? error.message : fallback; }
 async function imageDimensions(file: File): Promise<{ width: number; height: number }> {
