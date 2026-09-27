@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../../src/application';
 import type { AppConfig } from '../../src/platform/config/config';
+import { ControlPlaneRunner } from '../../src/modules/workers/application/control-plane-runner';
+import { PipelineOrchestrator } from '../../src/modules/workers/infrastructure/pipeline-orchestrator';
 import { VideoDeletionRunner } from '../../src/modules/video-deletion/application/video-deletion-runner';
 import { VideoDeletionError } from '../../src/modules/video-deletion/domain/video-deletion-errors';
 import { PrismaVideoDeletionRepository } from '../../src/modules/video-deletion/infrastructure/prisma-video-deletion-repository';
@@ -58,7 +60,9 @@ describeWithDatabase('Video deletion with PostgreSQL', () => {
       expect(failedItem.capabilities).toMatchObject({ canDelete: true, deleteBlockedReason: null });
       const detail = await app.inject({ method: 'GET', url: `/v1/videos/${deleting.ids.video}` });
       expect(detail.statusCode).toBe(200);
-      expect(detail.json().data.capabilities).toMatchObject({ canDelete: false, deleteBlockedReason: 'DELETING' });
+      expect(detail.json().data.capabilities).toMatchObject({ canDelete: false, deleteBlockedReason: 'DELETING', canOpenStudio: false });
+      const failedDetail = await app.inject({ method: 'GET', url: `/v1/videos/${failed.ids.video}` });
+      expect(failedDetail.json().data.capabilities).toMatchObject({ canOpenStudio: true });
     });
 
     it('blocks deletion of a published video and refuses grants while deleting', async () => {
@@ -151,6 +155,59 @@ describeWithDatabase('Video deletion with PostgreSQL', () => {
       expect((await prisma.video.findUniqueOrThrow({ where: { id: stale.ids.video } })).status).toBe('READY_TO_PUBLISH');
       const tooMany = await app.inject({ method: 'POST', url: '/v1/videos/deletions', headers: { 'idempotency-key': randomUUID() }, payload: { items: [] } });
       expect(tooMany.statusCode).toBe(400);
+    });
+
+  });
+
+  describe('other modules on a deleting video', () => {
+    const del = (videoId: string, version: number) => app.inject({ method: 'DELETE', url: `/v1/videos/${videoId}`, headers: { 'if-match': `"${version}"`, 'idempotency-key': randomUUID() } });
+
+    it('refuses a queue retry of a failed job and keeps the video DELETING', async () => {
+      const video = await seed({ jobStatus: 'FAILED' });
+      await prisma.pipelineJob.update({ where: { id: video.ids.job }, data: { failureCode: 'WORKER_LOST' } });
+      await prisma.pipelineTask.update({ where: { id: video.ids.task }, data: { status: 'FAILED' } });
+      expect((await del(video.ids.video, 1)).statusCode).toBe(202);
+      const job = await prisma.pipelineJob.findUniqueOrThrow({ where: { id: video.ids.job } });
+      const retry = await app.inject({ method: 'POST', url: `/v1/queue/jobs/${video.ids.job}/retry`, headers: { 'if-match': `"${job.version}"`, 'idempotency-key': `retry-deleting-${randomUUID()}` }, payload: {} });
+      expect(retry.statusCode).toBe(409);
+      expect(retry.json().code).toBe('VIDEO_DELETING');
+      expect((await prisma.pipelineJob.findUniqueOrThrow({ where: { id: video.ids.job } })).status).toBe('FAILED');
+      expect((await prisma.video.findUniqueOrThrow({ where: { id: video.ids.video } })).status).toBe('DELETING');
+    });
+
+    it('refuses studio edit, review, render and regenerate on DELETING and DELETE_FAILED videos', async () => {
+      const deleting = await seed(); const failed = await seed();
+      expect((await del(deleting.ids.video, 1)).statusCode).toBe(202);
+      await prisma.video.update({ where: { id: failed.ids.video }, data: { status: 'DELETE_FAILED', deletionRequestedAt: new Date(), deletionErrorCode: 'STORAGE_DELETE_FAILED' } });
+      for (const video of [deleting, failed]) {
+        const { version } = await prisma.video.findUniqueOrThrow({ where: { id: video.ids.video } });
+        const headers = { 'if-match': `"${version}"`, 'idempotency-key': `studio-deleting-${randomUUID()}` };
+        const responses = [
+          await app.inject({ method: 'PATCH', url: `/v1/videos/${video.ids.video}/segments/${video.ids.segment}`, headers, payload: { translatedText: 'Không được sửa' } }),
+          await app.inject({ method: 'POST', url: `/v1/videos/${video.ids.video}/review-decisions`, headers, payload: { scope: 'SCRIPT', subjectVersion: String(version), decision: 'CHANGES_REQUESTED' } }),
+          await app.inject({ method: 'POST', url: `/v1/videos/${video.ids.video}/render-requests`, headers: { ...headers, 'idempotency-key': `studio-render-${randomUUID()}` } }),
+          await app.inject({ method: 'POST', url: `/v1/videos/${video.ids.video}/segments/${video.ids.segment}/regenerate`, headers: { ...headers, 'idempotency-key': `studio-regen-${randomUUID()}` } }),
+        ];
+        expect(responses.map((response) => [response.statusCode, response.json().code])).toEqual(Array(4).fill([409, 'VIDEO_DELETING']));
+        const row = await prisma.video.findUniqueOrThrow({ where: { id: video.ids.video } });
+        expect(row).toMatchObject({ version, status: video === deleting ? 'DELETING' : 'DELETE_FAILED' });
+        expect(await prisma.pipelineJob.count({ where: { videoId: video.ids.video } })).toBe(1);
+      }
+    });
+
+    it('does not let a finishing job overwrite the status of a video being deleted', async () => {
+      const orchestrator = new PipelineOrchestrator(prisma);
+      const done = await seed(); const failing = await seed({ jobStatus: 'RUNNING' });
+      await prisma.video.update({ where: { id: done.ids.video }, data: { status: 'DELETING' } });
+      await prisma.$transaction((tx) => orchestrator.refreshAggregateStatus(tx, done.ids.job));
+      expect((await prisma.video.findUniqueOrThrow({ where: { id: done.ids.video } })).status).toBe('DELETING');
+
+      await prisma.video.update({ where: { id: failing.ids.video }, data: { status: 'DELETE_FAILED' } });
+      const task = await prisma.pipelineTask.update({ where: { id: failing.ids.task }, data: { attemptCount: 1, maxAttempts: 1 } });
+      const runner = new ControlPlaneRunner(prisma, {} as never, {} as never, orchestrator, false);
+      await (runner as unknown as { fail: (task: unknown, attemptId: string, detail: string) => Promise<void> }).fail(task, failing.ids.attempt, 'boom');
+      expect((await prisma.pipelineJob.findUniqueOrThrow({ where: { id: failing.ids.job } })).status).toBe('FAILED');
+      expect((await prisma.video.findUniqueOrThrow({ where: { id: failing.ids.video } })).status).toBe('DELETE_FAILED');
     });
   });
 
