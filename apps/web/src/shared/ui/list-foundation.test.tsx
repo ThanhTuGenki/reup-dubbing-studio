@@ -57,7 +57,8 @@ describe('shared list UI', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Trang sau' }));
     expect(onChange).toHaveBeenLastCalledWith({ page: 3, pageSize: 20 });
 
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Số hàng mỗi trang' }), '50');
+    await userEvent.click(screen.getByRole('combobox', { name: 'Số hàng mỗi trang' }));
+    await userEvent.click(screen.getByRole('option', { name: '50' }));
     expect(onChange).toHaveBeenLastCalledWith({ page: 1, pageSize: 50 });
   });
 });

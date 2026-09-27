@@ -24,11 +24,12 @@ describe('LocalImportDialog', () => {
     expect(screen.queryByText(/faster-whisper|R2/u)).not.toBeInTheDocument();
   });
 
-  it('picks the source language by name, defaulting to Chinese', () => {
+  it('picks the source language by name, defaulting to Chinese', async () => {
+    const user = userEvent.setup();
     renderApp(<LocalImportDialog open onOpenChange={vi.fn()} />);
     const language = screen.getByLabelText('Ngôn ngữ nguồn');
-    expect(language.tagName).toBe('SELECT');
-    expect(language).toHaveDisplayValue('Tiếng Trung');
+    expect(language).toHaveTextContent('Tiếng Trung');
+    await user.click(language);
     expect(screen.getAllByRole('option', { name: /^Tiếng / }).map((option) => option.textContent)).toEqual(['Tiếng Trung', 'Tiếng Anh', 'Tiếng Nhật', 'Tiếng Hàn', 'Tiếng Thái']);
     expect(screen.getByText('Ngôn ngữ đang nói trong video. Video sẽ được lồng tiếng sang tiếng Việt.')).toBeInTheDocument();
   });
@@ -37,10 +38,12 @@ describe('LocalImportDialog', () => {
     const user = userEvent.setup();
     renderApp(<LocalImportDialog open onOpenChange={vi.fn()} />);
     await user.upload(screen.getByLabelText('File video'), new File(['x'], 'clip.mp4', { type: 'video/mp4' }));
-    await user.selectOptions(screen.getByLabelText('Ngôn ngữ nguồn'), 'Tiếng Anh');
+    await user.click(screen.getByLabelText('Ngôn ngữ nguồn'));
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
     const channel = screen.getByLabelText('Hồ sơ kênh');
     await waitFor(() => expect(channel).toBeEnabled());
-    await user.selectOptions(channel, channelProfile.name);
+    await user.click(channel);
+    await user.click(screen.getByRole('option', { name: channelProfile.name }));
     await user.click(screen.getByRole('button', { name: 'Upload và tạo job' }));
     await waitFor(() => expect(importLocalVideo).toHaveBeenCalledTimes(1));
     expect(importLocalVideo.mock.calls[0]?.[0]).toMatchObject({ sourceLanguage: 'en', title: 'clip', channelProfileId: channelProfile.id });

@@ -34,7 +34,8 @@ describe('WorkersPage', () => {
     await user.click(screen.getByRole('button', { name: 'Thêm GPU Worker' }));
     await user.type(screen.getByLabelText('Tên hiển thị'), 'batch-l40-02');
     await user.type(screen.getByLabelText('Mã rental/container'), 'ctr-new');
-    await user.selectOptions(screen.getByLabelText('Approved image'), '0191f3d2-7f5b-7abc-8b2e-123456789b01');
+    await user.click(screen.getByLabelText('Approved image'));
+    await user.click(screen.getByRole('option', { name: 'ghcr.io/reup/media-worker@sha256:aaaa · 1.8.2' }));
     await user.type(screen.getByLabelText('Đơn giá (CP/giờ)'), '7000');
     await user.click(screen.getByRole('button', { name: 'Tạo worker và token' }));
     expect(await screen.findByText('Lưu enrollment token ngay')).toBeInTheDocument();
