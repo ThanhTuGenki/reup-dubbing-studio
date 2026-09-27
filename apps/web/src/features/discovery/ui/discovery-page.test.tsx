@@ -96,7 +96,10 @@ describe('DiscoveryPage', () => {
     const partialRun = { id: '0191f3d2-7f5b-7abc-8b2e-123456789af3', sourceAccountId: sourceAccount.id, mode: 'JINGXUAN', status: 'PARTIAL', input: null, query: null, categoryId: null, watchlistId: null, requestedLimit: 50, pageCount: 1, itemCount: 1, skippedCounts: {}, errorCode: 'DISCOVERY_RATE_LIMITED', errorDetail: 'Provider rate limit; retry after cooldown.', version: 3, startedAt: '2026-09-20T08:29:00.000Z', finishedAt: '2026-09-20T08:30:00.000Z', createdAt: '2026-09-20T08:29:00.000Z', updatedAt: '2026-09-20T08:30:00.000Z' };
     server.use(http.post(`${CONTROL_PLANE_BASE_URL}/discovery/runs`, () => HttpResponse.json({ data: { ...partialRun, status: 'QUEUED', version: 1, pageCount: 0, itemCount: 0, errorCode: null, errorDetail: null, startedAt: null, finishedAt: null }, meta: { requestId: READY_REQUEST_ID } }, { status: 202 })), http.get(`${CONTROL_PLANE_BASE_URL}/discovery/runs/:runId`, () => HttpResponse.json({ data: partialRun, meta: { requestId: READY_REQUEST_ID } })));
     const user = userEvent.setup(); renderApp(<DiscoveryPage />);
-    await user.click(await screen.findByRole('button', { name: 'Bắt đầu quét' }));
+    // The button renders disabled until source accounts load; clicking it earlier is a silent no-op under load.
+    const start = await screen.findByRole('button', { name: 'Bắt đầu quét' });
+    await waitFor(() => expect(start).toBeEnabled());
+    await user.click(start);
     expect(await screen.findByText('PARTIAL', {}, { timeout: 3_000 })).toBeInTheDocument();
     expect(screen.getByText(/retry after cooldown/u)).toBeInTheDocument();
     expect(screen.getByText('Mẹo học tiếng Trung')).toBeInTheDocument();

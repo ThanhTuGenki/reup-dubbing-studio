@@ -1963,6 +1963,28 @@ components:
       type: object
       required: [data]
       properties: { data: { $ref: '#/components/schemas/Video' } }
+    VideoOutputPart:
+      description: Asset metadata of one render output part. Fetch the file itself with grantVideoOutput.
+      type: object
+      additionalProperties: false
+      required: [assetId, status, contentType, fileName]
+      properties:
+        assetId: { $ref: '#/components/schemas/UuidV7' }
+        status: { type: string }
+        contentType: { type: [string, 'null'] }
+        fileName: { type: [string, 'null'] }
+    VideoOutput:
+      type: object
+      additionalProperties: false
+      required: [id, variant, revision, status, video, subtitle, thumbnail]
+      properties:
+        id: { $ref: '#/components/schemas/UuidV7' }
+        variant: { type: string }
+        revision: { type: integer }
+        status: { type: string }
+        video: { oneOf: [{ $ref: '#/components/schemas/VideoOutputPart' }, { type: 'null' }] }
+        subtitle: { oneOf: [{ $ref: '#/components/schemas/VideoOutputPart' }, { type: 'null' }] }
+        thumbnail: { oneOf: [{ $ref: '#/components/schemas/VideoOutputPart' }, { type: 'null' }] }
     Video:
       type: object
       required: [id, version, displayTitle, status, sourceLanguage, targetLanguage, source, profile, latestJob, reviewStatus, outputSummary, thumbnail, outputs, assets, createdAt, updatedAt, ingestedAt, archivedAt, capabilities]
@@ -1990,7 +2012,7 @@ components:
         reviewStatus: { type: string, enum: [NOT_REQUIRED, PENDING, CHANGES_REQUESTED, APPROVED] }
         outputSummary: { type: object, required: [readiness, requiredVariants, availableVariants, warnings], properties: { readiness: { $ref: '#/components/schemas/VideoOutputReadiness' }, requiredVariants: { type: array, items: { type: string } }, availableVariants: { type: array, items: { type: string } }, warnings: { type: array, items: { type: string } } } }
         thumbnail: { type: [object, 'null'], additionalProperties: true }
-        outputs: { type: array, items: { type: object, additionalProperties: true } }
+        outputs: { type: array, items: { $ref: '#/components/schemas/VideoOutput' } }
         assets: { type: array, items: { type: object, additionalProperties: true } }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
