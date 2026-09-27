@@ -14,6 +14,18 @@ export interface AppConfig {
   trustProxy: false | string[];
   databaseUrl: string;
   settingsEncryptionKey: string;
+  /** Omitted means the official provider APIs. */
+  contentAgentBaseUrls?: ContentAgentBaseUrls;
+}
+
+/** Provider API roots; overridable so a compatible proxy (e.g. a local CLI proxy) can serve them. */
+export interface ContentAgentBaseUrls { anthropic: string; openai: string }
+export const DEFAULT_CONTENT_AGENT_BASE_URLS: ContentAgentBaseUrls = {
+  anthropic: 'https://api.anthropic.com', openai: 'https://api.openai.com',
+};
+
+export function contentAgentEndpoint(provider: 'ANTHROPIC' | 'OPENAI', baseUrls: ContentAgentBaseUrls): string {
+  return provider === 'ANTHROPIC' ? `${baseUrls.anthropic}/v1/messages` : `${baseUrls.openai}/v1/responses`;
 }
 
 const required = ['NODE_ENV', 'PORT', 'LOG_LEVEL', 'CORS_ORIGINS', 'RATE_LIMIT_MAX',
@@ -45,7 +57,22 @@ export function parseConfig(environment: NodeJS.ProcessEnv): AppConfig {
     healthRateLimitMax, trustProxy: parseTrustProxy(environment.TRUST_PROXY),
     databaseUrl: environment.DATABASE_URL!,
     settingsEncryptionKey: environment.SETTINGS_ENCRYPTION_KEY!,
+    contentAgentBaseUrls: {
+      anthropic: parseBaseUrl(environment.CONTENT_AGENT_ANTHROPIC_BASE_URL, DEFAULT_CONTENT_AGENT_BASE_URLS.anthropic, 'CONTENT_AGENT_ANTHROPIC_BASE_URL'),
+      openai: parseBaseUrl(environment.CONTENT_AGENT_OPENAI_BASE_URL, DEFAULT_CONTENT_AGENT_BASE_URLS.openai, 'CONTENT_AGENT_OPENAI_BASE_URL'),
+    },
   };
+}
+
+function parseBaseUrl(value: string | undefined, fallback: string, field: string): string {
+  if (!value?.trim()) return fallback;
+  try {
+    const url = new URL(value.trim());
+    if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.username || url.password || url.search || url.hash) throw new Error();
+    return url.toString().replace(/\/+$/u, '');
+  } catch {
+    throw new Error(`Invalid runtime configuration: ${field}`);
+  }
 }
 
 function validateDatabaseUrl(value: string | undefined): void {

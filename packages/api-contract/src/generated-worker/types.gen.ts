@@ -12,13 +12,13 @@ export type WorkerRole = 'BATCH_MEDIA' | 'INTERACTIVE_TTS';
 
 export type WorkerDesiredStatus = 'ACTIVE' | 'DRAINING' | 'REVOKED';
 
-export type WorkerTaskType = 'DESUB' | 'TRANSCRIBE_OCR' | 'TRANSCRIBE_ASR' | 'GENERATE_INITIAL_TTS' | 'REGENERATE_SEGMENT' | 'SEPARATE_AUDIO' | 'RENDER';
+export type WorkerTaskType = 'DESUB' | 'TRANSCRIBE_ASR' | 'GENERATE_INITIAL_TTS' | 'REGENERATE_SEGMENT' | 'SEPARATE_AUDIO' | 'RENDER';
 
 export type WorkerResourceClass = 'GPU_BATCH' | 'GPU_TTS_INTERACTIVE';
 
 export type WorkerTaskStatus = 'LEASED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
 
-export type AssetKind = 'RAW' | 'DESUBBED' | 'OCR_JSON' | 'ASR_JSON' | 'BACKGROUND_AUDIO' | 'DUB_AUDIO' | 'VOICE_SAMPLE' | 'VOICE_PROMPT' | 'INTRO' | 'OUTRO' | 'LOGO' | 'WATERMARK' | 'OUTPUT_VIDEO';
+export type AssetKind = 'RAW' | 'DESUBBED' | 'ASR_JSON' | 'BACKGROUND_AUDIO' | 'DUB_AUDIO' | 'VOICE_SAMPLE' | 'VOICE_PROMPT' | 'INTRO' | 'OUTRO' | 'LOGO' | 'WATERMARK' | 'OUTPUT_VIDEO';
 
 export type RenderOutputVariant = 'FULL_16X9' | 'HIGHLIGHT_9X16';
 
@@ -136,12 +136,6 @@ export type DesubTaskConfiguration = {
     modelProfile: string;
 };
 
-export type OcrTaskConfiguration = {
-    kind: 'TRANSCRIBE_OCR';
-    language: string;
-    frameIntervalMs: number;
-};
-
 export type AsrTaskConfiguration = {
     kind: 'TRANSCRIBE_ASR';
     language: string;
@@ -189,7 +183,7 @@ export type RenderTaskConfiguration = {
     variants: Array<RenderVariant>;
 };
 
-export type TaskConfiguration = DesubTaskConfiguration | OcrTaskConfiguration | AsrTaskConfiguration | InitialTtsTaskConfiguration | RegenerateTtsTaskConfiguration | SeparateAudioTaskConfiguration | RenderTaskConfiguration;
+export type TaskConfiguration = DesubTaskConfiguration | AsrTaskConfiguration | InitialTtsTaskConfiguration | RegenerateTtsTaskConfiguration | SeparateAudioTaskConfiguration | RenderTaskConfiguration;
 
 export type ClaimedTask = {
     taskId: UuidV7;

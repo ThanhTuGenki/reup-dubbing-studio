@@ -1,0 +1,91 @@
+# Control Plane stack: PostgreSQL + API + Web (nginx, same-origin proxy to API).
+# Setup and the GPU Worker connection flow: docs/operations/control-plane-compose.md
+#
+#   cp compose.env.example .env   # fill PUBLIC_HOST, POSTGRES_PASSWORD, SETTINGS_ENCRYPTION_KEY
+#   docker compose up -d --build
+#   tailscale serve --bg --https=443 http://127.0.0.1:8080
+
+name: reup-dubbing-studio
+
+x-api-image: &api-image
+  image: reup-dubbing-studio/api:local
+  build:
+    context: .
+    dockerfile: apps/api/Dockerfile
+
+x-database-url: &database-url postgresql://${POSTGRES_USER:-reup}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-reup_dubbing_studio}?schema=public
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-reup_dubbing_studio}
+      POSTGRES_USER: ${POSTGRES_USER:-reup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *api-image
+    command: ["node_modules/.bin/prisma", "migrate", "deploy"]
+    restart: "no"
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    <<: *api-image
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      CORS_ORIGINS: https://${PUBLIC_HOST:?set PUBLIC_HOST in .env}
+      # Only the nginx container (on the fixed subnet below) may set X-Forwarded-For.
+      TRUST_PROXY: 172.31.250.0/24
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-600}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-60000}
+      HEALTH_RATE_LIMIT_MAX: ${HEALTH_RATE_LIMIT_MAX:-120}
+      DATABASE_URL: *database-url
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:?set SETTINGS_ENCRYPTION_KEY in .env}
+      # Empty = official provider APIs. Point at a compatible proxy, e.g. a CLI proxy on the
+      # host: http://host.docker.internal:8317
+      CONTENT_AGENT_ANTHROPIC_BASE_URL: ${CONTENT_AGENT_ANTHROPIC_BASE_URL:-}
+      CONTENT_AGENT_OPENAI_BASE_URL: ${CONTENT_AGENT_OPENAI_BASE_URL:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    image: reup-dubbing-studio/web:local
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_CONTROL_PLANE_URL: https://${PUBLIC_HOST:?set PUBLIC_HOST in .env}/v1
+    restart: unless-stopped
+    ports:
+      # Loopback only: `tailscale serve` is the single public entrypoint.
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.31.250.0/24
+
+volumes:
+  postgres-data:

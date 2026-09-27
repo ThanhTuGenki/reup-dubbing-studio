@@ -1,13 +1,7 @@
 from typing import Literal, cast
 
 WorkerTaskType = Literal[
-    "DESUB",
-    "GENERATE_INITIAL_TTS",
-    "REGENERATE_SEGMENT",
-    "RENDER",
-    "SEPARATE_AUDIO",
-    "TRANSCRIBE_ASR",
-    "TRANSCRIBE_OCR",
+    "DESUB", "GENERATE_INITIAL_TTS", "REGENERATE_SEGMENT", "RENDER", "SEPARATE_AUDIO", "TRANSCRIBE_ASR"
 ]
 
 WORKER_TASK_TYPE_VALUES: set[WorkerTaskType] = {
@@ -17,7 +11,6 @@ WORKER_TASK_TYPE_VALUES: set[WorkerTaskType] = {
     "RENDER",
     "SEPARATE_AUDIO",
     "TRANSCRIBE_ASR",
-    "TRANSCRIBE_OCR",
 }
 
 

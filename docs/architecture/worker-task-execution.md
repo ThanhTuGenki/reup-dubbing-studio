@@ -20,7 +20,7 @@
 2. GPU Worker chỉ được claim `GPU_BATCH` hoặc `GPU_TTS_INTERACTIVE`. Task `IO`,
    `CPU`, `CONTROL_PLANE` và `HUMAN_REVIEW` do runner/use case phía VPS sở hữu.
 3. Có hai role/image độc lập. `BATCH_MEDIA` không chạy OmniVoice;
-   `INTERACTIVE_TTS` không chạy OCR, ASR, DESUB, Demucs hoặc render.
+   `INTERACTIVE_TTS` không chạy ASR, DESUB, Demucs hoặc render.
 4. Eligibility cần đồng thời khớp resource class, Worker role, capability version,
    contract version, session hiện hành, trạng thái worker và capacity còn trống.
 5. Mỗi claim tạo attempt và lease mới trong cùng transaction. Fencing token là
@@ -29,8 +29,8 @@
    HEAD/checksum verify và commit thành asset `AVAILABLE` trước khi task complete.
 7. `removeHardSubEnabled=false` không tạo task `DESUB`, không yêu cầu mask và
    không tạo artifact `DESUBBED`. Đây là flow mặc định của MVP.
-8. OCR và ASR luôn đọc `RAW`: OCR cần nhìn hard-sub gốc, ASR cần audio gốc. Khi
-   bật DESUB, chỉ bước render đổi visual input từ `RAW` sang `DESUBBED`.
+8. ASR luôn đọc audio của `RAW`. Khi bật DESUB, chỉ bước render đổi visual input
+   từ `RAW` sang `DESUBBED`.
 
 ## 2. Ownership của từng task type
 
@@ -38,9 +38,8 @@
 | --- | --- | --- | --- | --- |
 | `DOWNLOAD` | `IO` | Control Plane runner | — | yt-dlp và source credential ở VPS |
 | `DESUB` | `GPU_BATCH` | `BATCH_MEDIA` | `media.desub.v1` | Chỉ tạo khi effective flag bật |
-| `TRANSCRIBE_OCR` | `GPU_BATCH` | `BATCH_MEDIA` | `transcript.ocr.v1` | Đọc `RAW`, chưa chốt làm nguồn chính sau benchmark |
-| `TRANSCRIBE_ASR` | `GPU_BATCH` | `BATCH_MEDIA` | `transcript.asr.v1` | Đọc `RAW`, chạy cùng OCR trong MVP để so sánh |
-| `MERGE_TRANSCRIPT` | `CPU` | Control Plane runner | — | Chọn/hợp nhất transcript, không cần GPU |
+| `TRANSCRIBE_ASR` | `GPU_BATCH` | `BATCH_MEDIA` | `transcript.asr.v1` | Nguồn transcript duy nhất; đọc audio của `RAW` |
+| `MERGE_TRANSCRIPT` | `CPU` | Control Plane runner | — | Chuẩn hóa ASR thành transcript canonical; tên task được giữ để tương thích database |
 | `TRANSLATE` | `CONTROL_PLANE` | Control Plane use case | — | LLM secret chỉ ở VPS |
 | `ASSIGN_CAST` | `CONTROL_PLANE` | Control Plane use case | — | LLM/domain mutation ở VPS |
 | `GENERATE_INITIAL_TTS` | `GPU_TTS_INTERACTIVE` | `INTERACTIVE_TTS` | `tts.omnivoice.v1` | Batch nhỏ, output vẫn tách từng segment |
@@ -60,8 +59,7 @@ enum value bằng migration riêng nếu không còn dữ liệu lịch sử ph�
 
 ```text
 DOWNLOAD
-  ├── TRANSCRIBE_OCR ─┐
-  ├── TRANSCRIBE_ASR ─┴─> MERGE_TRANSCRIPT -> TRANSLATE -> ASSIGN_CAST
+  ├── TRANSCRIBE_ASR -> MERGE_TRANSCRIPT -> TRANSLATE -> ASSIGN_CAST
   │                                                       |
   │                                  GENERATE_INITIAL_TTS <-+
   │                                           |
@@ -76,7 +74,7 @@ DOWNLOAD
 
 Các dependency thực tế phải bảo đảm:
 
-- `TRANSCRIBE_OCR`, `TRANSCRIBE_ASR` và `DESUB` đều nhận `RAW`; chúng có thể chạy
+- `TRANSCRIBE_ASR` và `DESUB` đều nhận `RAW`; chúng có thể chạy
   độc lập sau `DOWNLOAD` nếu có capacity.
 - `DESUB` không nằm trên đường tới transcript. Khi bật, `RENDER` mới phụ thuộc
   `DESUB`; khi tắt, dependency và task đó không tồn tại.
@@ -212,7 +210,6 @@ mutable profile object đầy đủ cho Worker.
 | Task | Input bắt buộc | Output bắt buộc |
 | --- | --- | --- |
 | `DESUB` | `RAW`, normalized mask, model/config snapshot | một `DESUBBED` video |
-| `TRANSCRIBE_OCR` | `RAW`, OCR language/config | một `OCR_JSON` |
 | `TRANSCRIBE_ASR` | `RAW`, ASR language/config | một `ASR_JSON` |
 | `GENERATE_INITIAL_TTS` | immutable segment revisions, voice sample/prompt asset và timing config | một `DUB_AUDIO` cho mỗi segment input |
 | `REGENERATE_SEGMENT` | đúng một immutable segment revision, voice sample/prompt asset và timing config | đúng một `DUB_AUDIO` revision |
@@ -239,8 +236,8 @@ ghi log.
 
 ### 6.2 Chuẩn adapter Batch Media v1
 
-`ASR_JSON` và `OCR_JSON` dùng cùng envelope chuẩn hóa để Control Plane có thể so
-sánh/hợp nhất mà không phụ thuộc output riêng của model:
+`ASR_JSON` dùng envelope chuẩn hóa để Control Plane không phụ thuộc output riêng
+của faster-whisper:
 
 ```json
 {
@@ -253,10 +250,9 @@ sánh/hợp nhất mà không phụ thuộc output riêng của model:
 }
 ```
 
-Timestamp phải tăng đơn điệu, dùng millisecond và segment không rỗng. OCR vẫn
-đọc `RAW`; ASR dùng faster-whisper và OCR dùng PaddleOCR trong subprocess để lỗi
-model không làm chết Agent. Dependency model/CUDA được pin ở image Batch Media,
-không đưa vào môi trường local nền tảng.
+Timestamp phải tăng đơn điệu, dùng millisecond và segment không rỗng. ASR dùng
+faster-whisper trong subprocess để lỗi model không làm chết Agent. Dependency
+model/CUDA được pin ở image Batch Media, không đưa vào môi trường local nền tảng.
 
 `SEPARATE_AUDIO` chạy Demucs `htdemucs --two-stems vocals`; output chuẩn của task
 là `BACKGROUND_AUDIO` WAV. Vocal stem chỉ là diagnostic cục bộ và không upload
@@ -282,7 +278,7 @@ artifact `DESUBBED`.
 
 - DAG không có `DESUB` và không có dependency ảo thay thế.
 - Profile/job creation không yêu cầu series mask hoặc mask reference frame.
-- OCR/ASR nhận `RAW`; `RENDER` cũng nhận `RAW` làm visual input.
+- ASR nhận `RAW`; `RENDER` cũng nhận `RAW` làm visual input.
 - Không load/download model DESUB, không cấp output slot `DESUBBED` và không xem
   thiếu asset đó là lỗi readiness.
 
@@ -291,7 +287,7 @@ artifact `DESUBBED`.
 - Effective profile snapshot phải có normalized mask hợp lệ trước khi tạo job;
   thiếu mask làm request bị từ chối, không tạo job nửa vời.
 - DAG tạo `DESUB` sau `DOWNLOAD`; `RENDER` có success dependency tới `DESUB`.
-- OCR vẫn đọc `RAW`, tuyệt đối không OCR file đã xóa chữ.
+- ASR vẫn đọc audio của `RAW`.
 - `DESUBBED` chỉ trở thành visual input cho render sau khi output đã commit.
 - DESUB failure tuân theo retry budget; không âm thầm fallback về `RAW` vì sẽ
   làm output khác cấu hình người dùng đã chọn.
@@ -305,7 +301,7 @@ artifact `DESUBBED`.
 - [x] Output chỉ được complete sau upload, checksum verification và asset commit.
 - [x] GPU task có input/output slot tối thiểu để thiết kế contract tiếp theo.
 - [x] `removeHardSubEnabled=false` loại bỏ hoàn toàn DESUB khỏi DAG/readiness.
-- [x] OCR luôn đọc RAW; render chỉ dùng DESUBBED khi feature được bật.
+- [x] ASR luôn đọc RAW; render chỉ dùng DESUBBED khi feature được bật.
 - [x] GPU model thuê chưa bị khóa trước giai đoạn acceptance.
 
 ## 9. Contract task đã chốt và policy còn JIT

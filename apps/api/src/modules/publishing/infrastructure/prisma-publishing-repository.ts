@@ -80,7 +80,7 @@ export class PrismaPublishingRepository {
       const id = uuidV7();
       const row = await tx.publishPackage.create({ data: {
         id, videoId, channelProfileId: video.channelProfileId, revision: revision + 1, rulesVersion: RULES_VERSION, createdBy: OWNER_ID,
-        contextSnapshot: { schemaVersion: 1, source: { externalId: video.sourceContent.externalId, title: video.displayTitle }, reviewPolicy: policy, rulesVersion: RULES_VERSION },
+        contextSnapshot: { schemaVersion: 1, source: { externalId: video.sourceContent?.externalId ?? video.id, title: video.displayTitle }, reviewPolicy: policy, rulesVersion: RULES_VERSION },
         tasks: { create: input.tasks.map((item) => {
           const destination = destinations.find((x) => x.id === item.destinationId)!; return {
             id: uuidV7(), destinationId: item.destinationId, renderOutputId: item.renderOutputId, assignedTo: OWNER_ID, isRequired: destination.isRequired,

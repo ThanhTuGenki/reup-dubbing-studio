@@ -36,7 +36,6 @@ describe('generated Worker task contract', () => {
     expectTypeOf<ClaimedTask['fencingToken']>().toEqualTypeOf<string>();
     expectTypeOf<TaskConfiguration['kind']>().toEqualTypeOf<
       | 'DESUB'
-      | 'TRANSCRIBE_OCR'
       | 'TRANSCRIBE_ASR'
       | 'GENERATE_INITIAL_TTS'
       | 'REGENERATE_SEGMENT'

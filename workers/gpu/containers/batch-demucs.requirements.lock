@@ -1,3 +1,4 @@
 torch==2.8.0+cu128
 torchaudio==2.8.0+cu128
 demucs==4.1.0
+numpy==1.26.4

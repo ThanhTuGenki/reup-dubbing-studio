@@ -41,7 +41,7 @@ mọi mutation. Credential sau enroll được ghi atomically với permission `
 `.state/`, `.work/`, `.env` và virtual environment đều không được commit.
 
 `TaskExecutor` là boundary cho adapter. Foundation hiện cố ý không chứa model
-ASR/OCR/Demucs/FFmpeg/OmniVoice. Fake executor có thể chạy toàn bộ lifecycle mà
+ASR/Demucs/FFmpeg/OmniVoice. Fake executor có thể chạy toàn bộ lifecycle mà
 không cần GPU và được bật bằng `REUP_WORKER_EXECUTOR=fake`. Có thể đặt
 `REUP_WORKER_FAKE_BEHAVIOR` thành `success`, `fail`, `timeout` hoặc
 `wait-for-cancel` để kiểm thử Control Plane; adapter thật được thêm ở các
@@ -81,25 +81,22 @@ MinIO tạm ở `127.0.0.1:59000` và đặt các biến
 
 Đặt `REUP_WORKER_EXECUTOR=batch` cho image `BATCH_MEDIA`. Executor tải input qua
 `AssetTransfer`, dispatch theo `taskType`, sau đó upload và commit đúng output
-slot. Bốn adapter MVP được đăng ký:
+slot. Ba adapter MVP được đăng ký:
 
 - `TRANSCRIBE_ASR`: faster-whisper, output transcript JSON v1;
-- `TRANSCRIBE_OCR`: PaddleOCR/OpenCV, output cùng transcript JSON v1;
 - `SEPARATE_AUDIO`: Demucs `htdemucs`, output background WAV;
 - `RENDER`: FFmpeg H.264/AAC 16:9 hoặc 9:16, delay/mix dub theo metadata và
   tuyệt đối không burn-in subtitle.
 
-Local foundation không cài model nặng. ASR/OCR/Demucs được import/chạy trong
+Local foundation không cài model nặng. ASR/Demucs được import/chạy trong
 subprocess và sẽ được pin trong Batch Media container; local test dùng fake
 process, riêng FFmpeg chạy một fixture media ngắn thật. `DESUB` không được đăng
 ký và image MVP không quảng bá `media.desub.v1`, nên hard-sub mặc định tắt không
 load model hay tạo artifact. SRT rời thuộc task CPU `EXPORT_SRT` ở Control Plane.
 
-Image Batch giữ ASR, OCR/Paddle và Demucs/PyTorch trong ba Python environment
-nội bộ tách biệt. Paddle GPU và PyTorch CUDA khóa các phiên bản thư viện NVIDIA
-Python không tương thích, nên không được gộp hoặc ép resolver; Agent chọn đúng
-interpreter qua `REUP_WORKER_ASR_PYTHON`, `REUP_WORKER_OCR_PYTHON` và
-`REUP_WORKER_DEMUCS_PYTHON`.
+Image Batch giữ ASR và Demucs/PyTorch trong các Python environment phù hợp.
+Agent chọn đúng interpreter qua `REUP_WORKER_ASR_PYTHON` và
+`REUP_WORKER_DEMUCS_PYTHON`. MVP không cài PaddleOCR và không đăng ký task OCR.
 
 ## Interactive TTS executor
 

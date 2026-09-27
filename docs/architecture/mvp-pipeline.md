@@ -10,6 +10,11 @@
 > `removeHardSubEnabled`, mặc định `false`; chỉ profile có giá trị hiệu lực `true`
 > mới yêu cầu mask/reference và mới được Worker tương lai lập lịch `DESUB`.
 
+> **Current transcription decision, 2026-09-25:** MVP chỉ dùng faster-whisper
+> ASR. Các task, dependency, snippet và tiêu chí so sánh OCR/PaddleOCR trong kế
+> hoạch lịch sử bên dưới đã bị thay thế; xem `docs/product/design.md` và
+> `docs/architecture/worker-task-execution.md` cho flow hiện hành.
+
 
 > **Design change, 2026-08-31 (documentation only; code not updated yet):**
 > output must be a Vietnamese-dubbed video with no Vietnamese subtitles burned

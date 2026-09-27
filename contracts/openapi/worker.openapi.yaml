@@ -361,7 +361,7 @@ components:
       enum: [ACTIVE, DRAINING, REVOKED]
     WorkerTaskType:
       type: string
-      enum: [DESUB, TRANSCRIBE_OCR, TRANSCRIBE_ASR, GENERATE_INITIAL_TTS, REGENERATE_SEGMENT, SEPARATE_AUDIO, RENDER]
+      enum: [DESUB, TRANSCRIBE_ASR, GENERATE_INITIAL_TTS, REGENERATE_SEGMENT, SEPARATE_AUDIO, RENDER]
     WorkerResourceClass:
       type: string
       enum: [GPU_BATCH, GPU_TTS_INTERACTIVE]
@@ -370,7 +370,7 @@ components:
       enum: [LEASED, RUNNING, SUCCEEDED, FAILED, CANCELLED]
     AssetKind:
       type: string
-      enum: [RAW, DESUBBED, OCR_JSON, ASR_JSON, BACKGROUND_AUDIO, DUB_AUDIO, VOICE_SAMPLE, VOICE_PROMPT, INTRO, OUTRO, LOGO, WATERMARK, OUTPUT_VIDEO]
+      enum: [RAW, DESUBBED, ASR_JSON, BACKGROUND_AUDIO, DUB_AUDIO, VOICE_SAMPLE, VOICE_PROMPT, INTRO, OUTRO, LOGO, WATERMARK, OUTPUT_VIDEO]
     RenderOutputVariant:
       type: string
       enum: [FULL_16X9, HIGHLIGHT_9X16]
@@ -664,22 +664,6 @@ components:
           type: string
           minLength: 1
           maxLength: 64
-    OcrTaskConfiguration:
-      type: object
-      additionalProperties: false
-      required: [kind, language, frameIntervalMs]
-      properties:
-        kind:
-          type: string
-          const: TRANSCRIBE_OCR
-        language:
-          type: string
-          minLength: 2
-          maxLength: 35
-        frameIntervalMs:
-          type: integer
-          minimum: 100
-          maximum: 10000
     AsrTaskConfiguration:
       type: object
       additionalProperties: false
@@ -805,7 +789,6 @@ components:
     TaskConfiguration:
       oneOf:
         - $ref: '#/components/schemas/DesubTaskConfiguration'
-        - $ref: '#/components/schemas/OcrTaskConfiguration'
         - $ref: '#/components/schemas/AsrTaskConfiguration'
         - $ref: '#/components/schemas/InitialTtsTaskConfiguration'
         - $ref: '#/components/schemas/RegenerateTtsTaskConfiguration'

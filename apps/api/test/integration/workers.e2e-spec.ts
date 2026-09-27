@@ -250,7 +250,7 @@ describeWithDatabase('GPU Worker Control Plane with PostgreSQL', () => {
     await prisma.pipelineTask.deleteMany({ where: { pipelineJobId: { in: jobIds } } });
     await prisma.pipelineJob.deleteMany({ where: { id: { in: jobIds } } });
     await prisma.video.deleteMany({ where: { id: { in: videoIds } } });
-    await prisma.sourceContent.deleteMany({ where: { id: { in: jobs.map((row) => row.video.sourceContentId) } } });
+    await prisma.sourceContent.deleteMany({ where: { id: { in: jobs.map((row) => row.video.sourceContentId).filter((id): id is string => id !== null) } } });
     await prisma.channelProfile.deleteMany({ where: { id: { in: jobs.map((row) => row.video.channelProfileId) } } });
     await prisma.user.deleteMany({ where: { id: { in: jobs.map((row) => row.video.createdById) } } });
     await prisma.workerSession.deleteMany();

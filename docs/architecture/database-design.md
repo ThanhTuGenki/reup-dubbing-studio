@@ -521,7 +521,7 @@ video_assets
   id                  uuid v7 PK
   video_id            uuid FK
   asset_id            uuid FK
-  kind                RAW | DESUBBED | OCR_JSON | ASR_JSON | TRANSCRIPT_JSON |
+  kind                RAW | DESUBBED | OCR_JSON (legacy) | ASR_JSON | TRANSCRIPT_JSON |
                       BACKGROUND_AUDIO | VOCALS | PREVIEW | OUTPUT_VIDEO |
                       OUTPUT_SUBTITLE | THUMBNAIL | LOG | OTHER
   variant_key         text             -- source, 16x9, 9x16, segment:42...
@@ -674,7 +674,7 @@ profile mutable để quyết định retry của job cũ.
 ```text
 id                    uuid v7 PK
 pipeline_job_id       uuid FK
-task_type             DOWNLOAD | DESUB | TRANSCRIBE_OCR | TRANSCRIBE_ASR |
+task_type             DOWNLOAD | DESUB | TRANSCRIBE_OCR (legacy) | TRANSCRIBE_ASR |
                       MERGE_TRANSCRIPT | TRANSLATE | ASSIGN_CAST |
                       GENERATE_INITIAL_TTS | WAIT_FOR_REVIEW |
                       REGENERATE_SEGMENT | SEPARATE_AUDIO | RENDER |

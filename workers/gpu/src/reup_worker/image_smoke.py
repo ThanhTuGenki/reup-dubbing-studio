@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import importlib.metadata
 import os
 import shutil
@@ -24,6 +25,7 @@ def main() -> None:
             importlib.metadata.version(package)
     if not shutil.which("ffmpeg"):
         raise RuntimeError("Worker image requires FFmpeg")
+    importlib.import_module("reup_worker.acceptance")
     print(f"{arguments.role} image smoke check passed")
 
 
@@ -31,12 +33,15 @@ def check_batch_environments() -> None:
     import subprocess
 
     environments = {
-        "/opt/reup-worker/bin/python": ("reup-dubbing-gpu-worker", "faster-whisper"),
-        "/opt/reup-demucs/bin/python": ("reup-dubbing-gpu-worker", "demucs", "torch", "torchaudio"),
-        "/opt/reup-ocr/bin/python": ("reup-dubbing-gpu-worker", "paddleocr", "paddlepaddle-gpu"),
+        "/opt/reup-worker/bin/python": (("reup-dubbing-gpu-worker", "faster-whisper"), "faster_whisper"),
+        "/opt/reup-demucs/bin/python": (
+            ("reup-dubbing-gpu-worker", "demucs", "torch", "torchaudio"),
+            "demucs.separate",
+        ),
     }
-    for executable, packages in environments.items():
+    for executable, (packages, module) in environments.items():
         command = "import importlib.metadata as m;" + ";".join(f"m.version({item!r})" for item in packages)
+        command += f";__import__({module!r})"
         subprocess.run([executable, "-c", command], check=True)  # noqa: S603
 
 

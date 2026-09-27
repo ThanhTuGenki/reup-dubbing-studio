@@ -53,6 +53,30 @@ describe('runtime configuration', () => {
     expect(() => parseConfig(validEnvironment(override))).toThrow();
   });
 
+  it('defaults Content Agent endpoints to the official provider APIs', () => {
+    expect(parseConfig(validEnvironment()).contentAgentBaseUrls).toEqual({
+      anthropic: 'https://api.anthropic.com', openai: 'https://api.openai.com',
+    });
+  });
+
+  it('accepts Content Agent base URL overrides such as a local proxy', () => {
+    expect(parseConfig(validEnvironment({
+      CONTENT_AGENT_ANTHROPIC_BASE_URL: 'http://host.docker.internal:8317/',
+      CONTENT_AGENT_OPENAI_BASE_URL: 'https://proxy.example.test/openai',
+    })).contentAgentBaseUrls).toEqual({
+      anthropic: 'http://host.docker.internal:8317', openai: 'https://proxy.example.test/openai',
+    });
+  });
+
+  it.each([
+    { CONTENT_AGENT_ANTHROPIC_BASE_URL: 'ftp://proxy.example.test' },
+    { CONTENT_AGENT_OPENAI_BASE_URL: 'https://user:pass@proxy.example.test' },
+    { CONTENT_AGENT_OPENAI_BASE_URL: 'https://proxy.example.test/?key=1' },
+    { CONTENT_AGENT_ANTHROPIC_BASE_URL: 'not a url' },
+  ])('rejects an unsafe Content Agent base URL %p', (override) => {
+    expect(() => parseConfig(validEnvironment(override))).toThrow('CONTENT_AGENT');
+  });
+
   it('only permits the Vite origin in local development', () => {
     expect(() => parseConfig(validEnvironment({ CORS_ORIGINS: 'http://example.test' }))).toThrow();
     expect(parseConfig(validEnvironment({ CORS_ORIGINS: 'http://localhost:5173' }))).toMatchObject({

@@ -276,6 +276,11 @@ enum VideoStatus {
   ARCHIVED
 }
 
+enum VideoSourceKind {
+  DISCOVERED
+  LOCAL_UPLOAD
+}
+
 enum PipelineJobKind {
   INGEST
   FULL_PIPELINE
@@ -329,6 +334,10 @@ enum PipelineTaskStatus {
   SUCCEEDED
   FAILED
   CANCELLED
+}
+
+enum TaskDependencyKind {
+  SUCCESS
 }
 
 enum TaskExecutorKind {
@@ -824,22 +833,24 @@ model User {
 }
 
 model Video {
-  id               String      @id @db.Uuid
-  sourceContentId  String      @map("source_content_id") @db.Uuid
-  channelProfileId String      @map("channel_profile_id") @db.Uuid
-  seriesProfileId  String?     @map("series_profile_id") @db.Uuid
-  status           VideoStatus @default(INGEST_QUEUED)
-  sourceLanguage   String      @map("source_language")
-  targetLanguage   String      @map("target_language")
-  displayTitle     String?     @map("display_title")
-  ingestedAt       DateTime?   @map("ingested_at") @db.Timestamptz(6)
-  archivedAt       DateTime?   @map("archived_at") @db.Timestamptz(6)
-  createdById      String      @map("created_by") @db.Uuid
-  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
-  version          Int         @default(1)
+  id                  String          @id @db.Uuid
+  sourceContentId     String?         @map("source_content_id") @db.Uuid
+  sourceKind          VideoSourceKind @default(DISCOVERED) @map("source_kind")
+  localSourceMetadata Json?           @map("local_source_metadata")
+  channelProfileId    String          @map("channel_profile_id") @db.Uuid
+  seriesProfileId     String?         @map("series_profile_id") @db.Uuid
+  status              VideoStatus     @default(INGEST_QUEUED)
+  sourceLanguage      String          @map("source_language")
+  targetLanguage      String          @map("target_language")
+  displayTitle        String?         @map("display_title")
+  ingestedAt          DateTime?       @map("ingested_at") @db.Timestamptz(6)
+  archivedAt          DateTime?       @map("archived_at") @db.Timestamptz(6)
+  createdById         String          @map("created_by") @db.Uuid
+  createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  version             Int             @default(1)
 
-  sourceContent   SourceContent    @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
+  sourceContent   SourceContent?   @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
   channelProfile  ChannelProfile   @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
   seriesProfile   SeriesProfile?   @relation(fields: [seriesProfileId], references: [id], onDelete: Restrict)
   createdBy       User             @relation(fields: [createdById], references: [id], onDelete: Restrict)
@@ -1265,14 +1276,30 @@ model PipelineTask {
   progressBps            Int                @default(0) @map("progress_bps")
   progressDetailSafe     String?            @map("progress_detail_safe")
 
-  pipelineJob    PipelineJob     @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
+  pipelineJob    PipelineJob              @relation(fields: [pipelineJobId], references: [id], onDelete: Restrict)
   attempts       TaskAttempt[]
   leases         TaskLease[]
   workflowEvents WorkflowEvent[]
+  dependencies   PipelineTaskDependency[] @relation("TaskDependencies")
+  dependents     PipelineTaskDependency[] @relation("TaskDependents")
 
   @@index([status, resourceClass, priority, readyAt, id])
   @@index([pipelineJobId, status])
   @@map("pipeline_tasks")
+}
+
+model PipelineTaskDependency {
+  taskId          String             @map("task_id") @db.Uuid
+  dependsOnTaskId String             @map("depends_on_task_id") @db.Uuid
+  kind            TaskDependencyKind @default(SUCCESS)
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  task      PipelineTask @relation("TaskDependencies", fields: [taskId], references: [id], onDelete: Restrict)
+  dependsOn PipelineTask @relation("TaskDependents", fields: [dependsOnTaskId], references: [id], onDelete: Restrict)
+
+  @@id([taskId, dependsOnTaskId])
+  @@index([dependsOnTaskId, taskId])
+  @@map("pipeline_task_dependencies")
 }
 
 model ApprovedWorkerImage {

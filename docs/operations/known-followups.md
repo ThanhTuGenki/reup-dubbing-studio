@@ -7,6 +7,33 @@
 > Giữ hai nơi song song sẽ drift.
 
 
+## Phát hiện từ lần chạy GPU đầu tiên end-to-end — 2026-09-26
+
+Chạy trên EzyCloudX RTX 3090 bằng `workers/gpu/rental/` (image digest `c383da61…` và
+`36349d87…`). Pipeline 9 bước đã `SUCCEEDED`. Các mục dưới đây đều đã có cách xử lý tạm
+nhưng cần sửa tận gốc.
+
+- **UI Chi tiết video không có output.** `apps/web/src/routes/library/detail-page.tsx`
+  chỉ hiện badge và nút "Mở Studio". Chưa có player, cũng chưa có nút tải MP4/SRT, dù
+  API đã có `POST /v1/videos/{id}/assets/{assetId}/grant`. Hiện phải gọi grant bằng tay
+  mới lấy được file.
+- **`REUP_WORKER_CAPABILITIES` dạng phân tách bằng dấu phẩy làm agent crash.**
+  pydantic-settings parse JSON cho field kiểu tuple trước khi validator
+  `parse_capabilities` kịp chạy, nên chính `ENV` trong Dockerfile làm agent chết lúc
+  khởi động. Sửa: `Annotated[tuple[str, ...], NoDecode]`. Tạm thời truyền dạng JSON.
+- **Tên capability trong image lệch với API.** Dockerfile dùng
+  `media.asr.faster-whisper.v1` và `media.separate.demucs.v1`. API (`ROLE_CAPABILITIES`)
+  và pipeline DAG dùng `transcript.asr.v1` và `audio.separate.demucs.v1`. Tạm thời
+  override khi chạy worker.
+- **Agent thoát khi Control Plane trả response không phải JSON.** Ví dụ nginx trả trang
+  502 lúc API restart. `claim` hoặc `enroll` ném `JSONDecodeError` rồi process thoát.
+  Tạm thời `start-workers.sh` có supervisor tự khởi động lại.
+- **Image `348a334c` mặc định `contract_version=1`**, trong khi label là 2. Cần đặt env
+  `REUP_WORKER_CONTRACT_VERSION=2`.
+- **Probe Content Agent nuốt lỗi.** Mọi lỗi (429 quota, 401, mạng) đều thành
+  `CONNECTION_TEST_FAILED`. Nên trả mã HTTP của provider một cách an toàn để dễ chẩn đoán.
+- **`image_smoke` của image cũ** từ chối chạy bằng root và vẫn kiểm tra venv OCR đã bị bỏ.
+
 Những mục dưới đây được **phát hiện, xác minh và cố ý để lại** trong quá trình review.
 Không mục nào làm sai output đã render. Ghi lại ở đây để Giai đoạn 2 không phải tìm lại.
 

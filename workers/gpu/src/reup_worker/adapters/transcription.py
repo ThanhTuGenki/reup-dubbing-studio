@@ -6,7 +6,6 @@ from pathlib import Path
 from reup_worker.ports import ProgressReporter
 from reup_worker_contract.models.asr_task_configuration import AsrTaskConfiguration
 from reup_worker_contract.models.claimed_task import ClaimedTask
-from reup_worker_contract.models.ocr_task_configuration import OcrTaskConfiguration
 
 from .base import LocalInput, LocalOutput, one_input, output_path
 from .command import CommandRunner, require_success
@@ -51,47 +50,6 @@ class AsrAdapter:
         validate_transcript(target, "ASR")
         await report_progress(8500, "ASR transcript ready")
         return [LocalOutput(output_slot(task, "ASR_JSON"), target, "application/json", {"schemaVersion": 1})]
-
-
-class OcrAdapter:
-    def __init__(self, runner: CommandRunner, python_executable: str = sys.executable) -> None:
-        self._runner = runner
-        self._python = python_executable
-
-    async def run(
-        self,
-        task: ClaimedTask,
-        inputs: list[LocalInput],
-        workspace: Path,
-        report_progress: ProgressReporter,
-        cancel_requested: asyncio.Event,
-    ) -> list[LocalOutput]:
-        del cancel_requested
-        if not isinstance(task.configuration, OcrTaskConfiguration):
-            raise ValueError("OCR task configuration is invalid")
-        source = one_input(inputs, "RAW")
-        target = output_path(workspace, "ocr.json")
-        await report_progress(3000, "extracting subtitle frames")
-        result = await self._runner.run(
-            str(task.attempt_id),
-            [
-                self._python,
-                "-m",
-                "reup_worker.tools.ocr",
-                "--input",
-                str(source.path),
-                "--output",
-                str(target),
-                "--language",
-                task.configuration.language,
-                "--frame-interval-ms",
-                str(task.configuration.frame_interval_ms),
-            ],
-        )
-        require_success(result, "OCR")
-        validate_transcript(target, "OCR")
-        await report_progress(8500, "OCR transcript ready")
-        return [LocalOutput(output_slot(task, "OCR_JSON"), target, "application/json", {"schemaVersion": 1})]
 
 
 def validate_transcript(path: Path, source: str) -> None:
