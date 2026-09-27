@@ -1,10 +1,13 @@
-import type { PipelineTask, Prisma, PrismaClient } from '@prisma/client';
+import type { PipelineTask, Prisma, PrismaClient, VideoStatus } from '@prisma/client';
 
 import { uuidV7 } from '../../../platform/ids/uuid-v7';
 import type { ProfileJobSnapshot } from '../../profiles';
 import { WorkerError } from '../domain/worker-errors';
 
 type OutputReference = { slot: string; assetId: string };
+
+/** A video in these statuses belongs to the deletion runner; job completion must not move it out. */
+export const DELETION_STATUSES: VideoStatus[] = ['DELETING', 'DELETE_FAILED'];
 
 /**
  * Applies the durable side effects of a completed task and advances its DAG.
@@ -109,7 +112,7 @@ export class PipelineOrchestrator {
         ...prepared, version: { increment: 1 },
       } });
       if (task.taskType === 'WAIT_FOR_REVIEW') {
-        await tx.video.update({ where: { id: task.pipelineJob.videoId }, data: { status: 'AWAITING_REVIEW', version: { increment: 1 } } });
+        await tx.video.updateMany({ where: { id: task.pipelineJob.videoId, status: { notIn: DELETION_STATUSES } }, data: { status: 'AWAITING_REVIEW', version: { increment: 1 } } });
       }
     }
   }
@@ -119,13 +122,13 @@ export class PipelineOrchestrator {
     const now = new Date();
     if (job.tasks.every((task) => task.status === 'SUCCEEDED')) {
       await tx.pipelineJob.update({ where: { id: jobId }, data: { status: 'SUCCEEDED', finishedAt: now, version: { increment: 1 } } });
-      await tx.video.update({ where: { id: job.videoId }, data: { status: 'READY_TO_PUBLISH', version: { increment: 1 } } });
+      await tx.video.updateMany({ where: { id: job.videoId, status: { notIn: DELETION_STATUSES } }, data: { status: 'READY_TO_PUBLISH', version: { increment: 1 } } });
       return;
     }
     const failed = job.tasks.find((task) => task.status === 'FAILED');
     if (failed) {
       await tx.pipelineJob.update({ where: { id: jobId }, data: { status: 'FAILED', finishedAt: now, version: { increment: 1 } } });
-      await tx.video.update({ where: { id: job.videoId }, data: { status: 'FAILED', version: { increment: 1 } } });
+      await tx.video.updateMany({ where: { id: job.videoId, status: { notIn: DELETION_STATUSES } }, data: { status: 'FAILED', version: { increment: 1 } } });
       return;
     }
     const waitingReview = job.tasks.some((task) => task.taskType === 'WAIT_FOR_REVIEW' && task.status === 'WAITING');

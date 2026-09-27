@@ -7,7 +7,7 @@ import {
 import { uuidV7 } from '../../../platform/ids/uuid-v7';
 import type { ProfileJobSnapshot } from '../../profiles';
 import type { AesGcmCredentialCipher } from '../../settings';
-import type { PipelineOrchestrator } from '../infrastructure/pipeline-orchestrator';
+import { DELETION_STATUSES, type PipelineOrchestrator } from '../infrastructure/pipeline-orchestrator';
 import type { R2WorkerObjectStore } from '../infrastructure/r2-worker-object-store';
 
 const INSTANCE = `control-plane:${process.pid}`;
@@ -204,7 +204,7 @@ export class ControlPlaneRunner implements OnModuleInit, OnModuleDestroy {
           status: 'FAILED', finishedAt, failureCode: 'CONTROL_PLANE_EXECUTION_FAILED', failureDetailSafe: detail, version: { increment: 1 },
         } });
         const job = await tx.pipelineJob.findUniqueOrThrow({ where: { id: task.pipelineJobId } });
-        await tx.video.update({ where: { id: job.videoId }, data: { status: 'FAILED', version: { increment: 1 } } });
+        await tx.video.updateMany({ where: { id: job.videoId, status: { notIn: DELETION_STATUSES } }, data: { status: 'FAILED', version: { increment: 1 } } });
       }
       await controlEvent(tx, failed, attemptId, retry ? 'TASK_RETRY_SCHEDULED' : 'TASK_FAILED', 'RUNNING', retry ? 'READY' : 'FAILED');
     });

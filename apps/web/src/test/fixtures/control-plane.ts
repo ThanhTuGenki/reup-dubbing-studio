@@ -227,6 +227,6 @@ export const libraryVideo = {
     subtitle: { assetId: '0191f3d2-7f5b-7abc-8b2e-123456789d05', status: 'AVAILABLE', contentType: 'application/x-subrip', fileName: 'video-vi-16x9.srt' },
     thumbnail: null,
   }],
-  assets: [], createdAt: '2026-09-26T08:00:00.000Z', updatedAt: '2026-09-26T09:00:00.000Z', ingestedAt: '2026-09-26T08:01:00.000Z', archivedAt: null,
-  capabilities: { canOpenStudio: true, canOpenPublishing: false, canArchive: false },
+  assets: [], createdAt: '2026-09-26T08:00:00.000Z', updatedAt: '2026-09-26T09:00:00.000Z', ingestedAt: '2026-09-26T08:01:00.000Z', archivedAt: null, deletion: null,
+  capabilities: { canOpenStudio: true, canOpenPublishing: false, canArchive: false, canDelete: true, deleteBlockedReason: null },
 } satisfies Video;

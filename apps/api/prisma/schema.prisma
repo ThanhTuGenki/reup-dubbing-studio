@@ -274,6 +274,8 @@ enum VideoStatus {
   PUBLISHED
   FAILED
   ARCHIVED
+  DELETING
+  DELETE_FAILED
 }
 
 enum VideoSourceKind {
@@ -849,6 +851,11 @@ model Video {
   createdAt           DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt           DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
   version             Int             @default(1)
+  deletionRequestedAt   DateTime?       @map("deletion_requested_at") @db.Timestamptz(6)
+  deletionAttempts      Int             @default(0) @map("deletion_attempts")
+  deletionNextAttemptAt DateTime?       @map("deletion_next_attempt_at") @db.Timestamptz(6)
+  deletionErrorCode     String?         @map("deletion_error_code")
+  deletionGraceUntil    DateTime?       @map("deletion_grace_until") @db.Timestamptz(6)
 
   sourceContent   SourceContent?   @relation(fields: [sourceContentId], references: [id], onDelete: Restrict)
   channelProfile  ChannelProfile   @relation(fields: [channelProfileId], references: [id], onDelete: Restrict)
@@ -865,6 +872,7 @@ model Video {
 
   @@unique([sourceContentId, channelProfileId])
   @@index([status, updatedAt, id])
+  @@index([status, deletionNextAttemptAt])
   @@map("videos")
 }
 

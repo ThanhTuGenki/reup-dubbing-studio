@@ -249,6 +249,7 @@
 .queue-summary button strong { grid-column: 1 / -1; color: var(--fg); font: var(--weight-strong) 24px / 1 var(--font-display); font-variant-numeric: tabular-nums; }
 .queue-summary-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .queue-filters { display: grid; grid-template-columns: repeat(4, minmax(130px, .7fr)) minmax(220px, 1.4fr) auto; align-items: end; gap: var(--space-3); padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--card-shadow); }
+.library-bulk-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3, 12px); }
 .queue-filters label { min-width: 0; display: grid; gap: var(--space-1); color: var(--muted-fg); font-size: var(--text-xs); font-weight: var(--weight-ui); }
 .queue-search { position: relative; }
 .queue-search > svg { position: absolute; z-index: 1; bottom: 13px; left: var(--space-3); width: 17px; height: 17px; color: var(--meta); }

@@ -565,17 +565,23 @@ channel_profile_id    uuid FK
 series_profile_id     uuid nullable FK
 status                INGEST_QUEUED | INGESTING | INGESTED | PROCESSING |
                       AWAITING_REVIEW | READY_TO_PUBLISH | PUBLISHED |
-                      FAILED | ARCHIVED
+                      FAILED | ARCHIVED | DELETING | DELETE_FAILED
 source_language       text
 target_language       text
 display_title         text nullable
 ingested_at           timestamptz nullable
 archived_at           timestamptz nullable
+deletion_requested_at timestamptz nullable
+deletion_attempts     integer          -- mặc định 0; lần thứ 6 thì DELETE_FAILED
+deletion_next_attempt_at timestamptz nullable
+deletion_error_code   text nullable     -- mã lỗi an toàn của lần xóa gần nhất
+deletion_grace_until  timestamptz nullable
 created_by            uuid FK users
 created_at            timestamptz
 updated_at            timestamptz
 version               integer
 UNIQUE(source_content_id, channel_profile_id)
+INDEX(status, deletion_next_attempt_at)
 ```
 
 Cùng nguồn có thể được dùng cho nhiều channel profile, nhưng trong một channel chỉ

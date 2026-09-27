@@ -321,6 +321,42 @@ export type VideoEnvelope = {
     data: Video;
 };
 
+export type VideoDeletion = {
+    requestedAt: string;
+    errorCode: string | null;
+};
+
+export type VideoDeletionResult = {
+    videoId: UuidV7;
+    status: 'DELETING' | 'DELETE_FAILED';
+    cancelledJobIds: Array<UuidV7>;
+};
+
+export type VideoDeletionEnvelope = {
+    data: VideoDeletionResult;
+};
+
+export type VideoBulkDeletionRequest = {
+    items: Array<{
+        videoId: UuidV7;
+        version: number;
+    }>;
+};
+
+export type VideoBulkDeletionItemResult = {
+    videoId: UuidV7;
+    result: 'ACCEPTED' | 'ALREADY_DELETING' | 'HAS_PUBLICATION_HISTORY' | 'VERSION_CONFLICT' | 'NOT_FOUND';
+    cancelledJobIds: Array<UuidV7>;
+};
+
+export type VideoBulkDeletionResult = {
+    items: Array<VideoBulkDeletionItemResult>;
+};
+
+export type VideoBulkDeletionEnvelope = {
+    data: VideoBulkDeletionResult;
+};
+
 /**
  * Asset metadata of one render output part. Fetch the file itself with grantVideoOutput.
  */
@@ -391,10 +427,13 @@ export type Video = {
     updatedAt: string;
     ingestedAt: string | null;
     archivedAt: string | null;
+    deletion: VideoDeletion | null;
     capabilities: {
         canOpenStudio: boolean;
         canOpenPublishing: boolean;
         canArchive: boolean;
+        canDelete: boolean;
+        deleteBlockedReason: 'PUBLICATION_HISTORY' | 'DELETING' | null;
     };
 };
 
@@ -1600,7 +1639,7 @@ export type ProblemDetails = {
     status: number;
     detail?: string;
     instance: string;
-    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED' | 'PUBLISH_PACKAGE_NOT_FOUND' | 'PUBLICATION_TASK_NOT_FOUND' | 'PUBLICATION_VERSION_CONFLICT' | 'PUBLICATION_INVALID_TRANSITION' | 'PUBLICATION_CONTENT_INCOMPLETE' | 'PUBLICATION_CONTENT_APPROVAL_REQUIRED' | 'PUBLICATION_CHECKLIST_INCOMPLETE' | 'PUBLICATION_PROOF_REQUIRED' | 'PUBLICATION_ASSET_UNAVAILABLE' | 'PUBLICATION_DESTINATION_INACTIVE' | 'PUBLICATION_FIELD_LOCKED' | 'PUBLICATION_CONTENT_AGENT_UNAVAILABLE';
+    code: 'VALIDATION_ERROR' | 'ROUTE_NOT_FOUND' | 'RATE_LIMITED' | 'INTERNAL_ERROR' | 'SETTINGS_NOT_CONFIGURED' | 'SETTINGS_VALIDATION_FAILED' | 'CONNECTION_TEST_FAILED' | 'VERSION_CONFLICT' | 'PROFILE_NAME_CONFLICT' | 'PROFILE_NOT_FOUND' | 'PROFILE_ARCHIVED' | 'PROFILE_NOT_READY' | 'PROFILE_HAS_ACTIVE_SERIES' | 'PROFILE_PARENT_ARCHIVED' | 'PROFILE_VERSION_CONFLICT' | 'PROFILE_ASSET_NOT_AVAILABLE' | 'PROFILE_ASSET_ROLE_INVALID' | 'PROFILE_MASK_INVALID' | 'PROFILE_VOICE_NOT_READY' | 'PROFILE_VALIDATION_FAILED' | 'VOICE_NOT_FOUND' | 'VOICE_NAME_CONFLICT' | 'VOICE_VERSION_CONFLICT' | 'VOICE_VALIDATION_FAILED' | 'VOICE_NOT_READY' | 'VOICE_ARCHIVED' | 'VOICE_IN_USE' | 'VOICE_SAMPLE_NOT_AVAILABLE' | 'SOURCE_ACCOUNT_NOT_FOUND' | 'SOURCE_ACCOUNT_VERSION_CONFLICT' | 'SOURCE_ACCOUNT_CREDENTIAL_REQUIRED' | 'DISCOVERY_RUN_NOT_FOUND' | 'DISCOVERY_MODE_DISABLED' | 'DISCOVERY_RUN_CONFLICT' | 'WATCHLIST_NOT_FOUND' | 'WATCHLIST_VERSION_CONFLICT' | 'WATCHLIST_DUPLICATE' | 'WATCHLIST_RUN_ACTIVE' | 'DISCOVERY_VALIDATION_FAILED' | 'DISCOVERY_CURSOR_INVALID' | 'DISCOVERY_PROVIDER_UNAVAILABLE' | 'INGEST_VALIDATION_FAILED' | 'INGEST_NO_CREATABLE_ITEMS' | 'QUEUE_VALIDATION_FAILED' | 'QUEUE_JOB_NOT_FOUND' | 'QUEUE_CURSOR_INVALID' | 'JOB_NOT_CANCELLABLE' | 'JOB_NOT_RETRYABLE' | 'JOB_RETRY_CONFLICT' | 'IDEMPOTENCY_KEY_REUSED' | 'WORKER_VALIDATION_FAILED' | 'WORKER_NOT_FOUND' | 'WORKER_NOT_ACTIVE' | 'WORKER_NOT_DRAINABLE' | 'WORKER_NOT_SAFE_TO_TERMINATE' | 'WORKER_SESSION_CONFLICT' | 'WORKER_VERSION_MISMATCH' | 'WORKER_IMAGE_NOT_APPROVED' | 'WORKER_HARDWARE_MISMATCH' | 'ENROLLMENT_TOKEN_INVALID' | 'ENROLLMENT_TOKEN_EXPIRED' | 'ENROLLMENT_TOKEN_CONSUMED' | 'WORKER_CREDENTIAL_REVOKED' | 'PUBLISH_PACKAGE_NOT_FOUND' | 'PUBLICATION_TASK_NOT_FOUND' | 'PUBLICATION_VERSION_CONFLICT' | 'PUBLICATION_INVALID_TRANSITION' | 'PUBLICATION_CONTENT_INCOMPLETE' | 'PUBLICATION_CONTENT_APPROVAL_REQUIRED' | 'PUBLICATION_CHECKLIST_INCOMPLETE' | 'PUBLICATION_PROOF_REQUIRED' | 'PUBLICATION_ASSET_UNAVAILABLE' | 'PUBLICATION_DESTINATION_INACTIVE' | 'PUBLICATION_FIELD_LOCKED' | 'PUBLICATION_CONTENT_AGENT_UNAVAILABLE' | 'VIDEO_NOT_FOUND' | 'VIDEO_VERSION_CONFLICT' | 'VIDEO_HAS_PUBLICATION_HISTORY' | 'VIDEO_DELETING' | 'VIDEO_DELETION_VALIDATION_FAILED';
     requestId: RequestId;
 };
 
@@ -1673,6 +1712,11 @@ export type IdempotencyKey = string;
 export type IngestIdempotencyKey = string;
 
 export type QueueIfMatch = string;
+
+/**
+ * Strong ETag nhận từ lần đọc video gần nhất.
+ */
+export type VideoIfMatch = string;
 
 export type WorkerIfMatch = string;
 
@@ -4372,6 +4416,76 @@ export type ListVideosResponses = {
 };
 
 export type ListVideosResponse = ListVideosResponses[keyof ListVideosResponses];
+
+export type DeleteVideosData = {
+    body: VideoBulkDeletionRequest;
+    headers: {
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/videos/deletions';
+};
+
+export type DeleteVideosErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteVideosError = DeleteVideosErrors[keyof DeleteVideosErrors];
+
+export type DeleteVideosResponses = {
+    /**
+     * Kết quả theo từng video, đúng thứ tự request
+     */
+    200: VideoBulkDeletionEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteVideosResponse = DeleteVideosResponses[keyof DeleteVideosResponses];
+
+export type DeleteVideoData = {
+    body?: never;
+    headers: {
+        /**
+         * Strong ETag nhận từ lần đọc video gần nhất.
+         */
+        'If-Match': string;
+        'Idempotency-Key': string;
+    };
+    path: {
+        videoId: UuidV7;
+    };
+    query?: never;
+    url: '/videos/{videoId}';
+};
+
+export type DeleteVideoErrors = {
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteVideoError = DeleteVideoErrors[keyof DeleteVideoErrors];
+
+export type DeleteVideoResponses = {
+    /**
+     * Video đang được xóa ở nền
+     */
+    202: VideoDeletionEnvelope;
+    /**
+     * Lỗi HTTP chuẩn RFC 9457; không dùng success envelope.
+     */
+    default: ProblemDetails;
+};
+
+export type DeleteVideoResponse = DeleteVideoResponses[keyof DeleteVideoResponses];
 
 export type GetVideoData = {
     body?: never;

@@ -1143,6 +1143,15 @@ paths:
       responses:
         '200': { description: Video list, content: { application/json: { schema: { $ref: '#/components/schemas/VideoListEnvelope' } } } }
         default: { $ref: '#/components/responses/Problem' }
+  /videos/deletions:
+    post:
+      summary: Yêu cầu xóa vĩnh viễn nhiều video
+      operationId: deleteVideos
+      parameters: [{ $ref: '#/components/parameters/IngestIdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VideoBulkDeletionRequest' } } } }
+      responses:
+        '200': { description: 'Kết quả theo từng video, đúng thứ tự request', content: { application/json: { schema: { $ref: '#/components/schemas/VideoBulkDeletionEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
   /videos/{videoId}:
     get:
       summary: Đọc Video Library
@@ -1150,6 +1159,16 @@ paths:
       parameters: [{ $ref: '#/components/parameters/VideoId' }]
       responses:
         '200': { description: Video detail, headers: { ETag: { $ref: '#/components/headers/VersionEtag' } }, content: { application/json: { schema: { $ref: '#/components/schemas/VideoEnvelope' } } } }
+        default: { $ref: '#/components/responses/Problem' }
+    delete:
+      summary: Yêu cầu xóa vĩnh viễn video; object và dữ liệu được dọn ở nền
+      operationId: deleteVideo
+      parameters:
+        - { $ref: '#/components/parameters/VideoId' }
+        - { $ref: '#/components/parameters/VideoIfMatch' }
+        - { $ref: '#/components/parameters/IngestIdempotencyKey' }
+      responses:
+        '202': { description: Video đang được xóa ở nền, content: { application/json: { schema: { $ref: '#/components/schemas/VideoDeletionEnvelope' } } } }
         default: { $ref: '#/components/responses/Problem' }
   /videos/{videoId}/assets/{videoAssetId}/grant:
     post:
@@ -1514,6 +1533,12 @@ components:
       name: If-Match
       in: header
       required: true
+      schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
+    VideoIfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Strong ETag nhận từ lần đọc video gần nhất.
       schema: { type: string, pattern: '^"[1-9][0-9]*"$' }
     WorkerIfMatch:
       name: If-Match
@@ -1963,6 +1988,58 @@ components:
       type: object
       required: [data]
       properties: { data: { $ref: '#/components/schemas/Video' } }
+    VideoDeletion:
+      type: object
+      additionalProperties: false
+      required: [requestedAt, errorCode]
+      properties:
+        requestedAt: { type: string, format: date-time }
+        errorCode: { type: [string, 'null'] }
+    VideoDeletionResult:
+      type: object
+      additionalProperties: false
+      required: [videoId, status, cancelledJobIds]
+      properties:
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        status: { type: string, enum: [DELETING, DELETE_FAILED] }
+        cancelledJobIds: { type: array, items: { $ref: '#/components/schemas/UuidV7' } }
+    VideoDeletionEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/VideoDeletionResult' } }
+    VideoBulkDeletionRequest:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [videoId, version]
+            properties:
+              videoId: { $ref: '#/components/schemas/UuidV7' }
+              version: { type: integer, minimum: 1 }
+    VideoBulkDeletionItemResult:
+      type: object
+      additionalProperties: false
+      required: [videoId, result, cancelledJobIds]
+      properties:
+        videoId: { $ref: '#/components/schemas/UuidV7' }
+        result: { type: string, enum: [ACCEPTED, ALREADY_DELETING, HAS_PUBLICATION_HISTORY, VERSION_CONFLICT, NOT_FOUND] }
+        cancelledJobIds: { type: array, items: { $ref: '#/components/schemas/UuidV7' } }
+    VideoBulkDeletionResult:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties: { items: { type: array, items: { $ref: '#/components/schemas/VideoBulkDeletionItemResult' } } }
+    VideoBulkDeletionEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/VideoBulkDeletionResult' } }
     VideoOutputPart:
       description: Asset metadata of one render output part. Fetch the file itself with grantVideoOutput.
       type: object
@@ -1987,7 +2064,7 @@ components:
         thumbnail: { oneOf: [{ $ref: '#/components/schemas/VideoOutputPart' }, { type: 'null' }] }
     Video:
       type: object
-      required: [id, version, displayTitle, status, sourceLanguage, targetLanguage, source, profile, latestJob, reviewStatus, outputSummary, thumbnail, outputs, assets, createdAt, updatedAt, ingestedAt, archivedAt, capabilities]
+      required: [id, version, displayTitle, status, sourceLanguage, targetLanguage, source, profile, latestJob, reviewStatus, outputSummary, thumbnail, outputs, assets, createdAt, updatedAt, ingestedAt, archivedAt, deletion, capabilities]
       properties:
         id: { $ref: '#/components/schemas/UuidV7' }
         version: { type: integer }
@@ -2018,7 +2095,16 @@ components:
         updatedAt: { type: string, format: date-time }
         ingestedAt: { type: [string, 'null'], format: date-time }
         archivedAt: { type: [string, 'null'], format: date-time }
-        capabilities: { type: object, required: [canOpenStudio, canOpenPublishing, canArchive], properties: { canOpenStudio: { type: boolean }, canOpenPublishing: { type: boolean }, canArchive: { type: boolean } } }
+        deletion: { oneOf: [{ $ref: '#/components/schemas/VideoDeletion' }, { type: 'null' }] }
+        capabilities:
+          type: object
+          required: [canOpenStudio, canOpenPublishing, canArchive, canDelete, deleteBlockedReason]
+          properties:
+            canOpenStudio: { type: boolean }
+            canOpenPublishing: { type: boolean }
+            canArchive: { type: boolean }
+            canDelete: { type: boolean }
+            deleteBlockedReason: { type: [string, 'null'], enum: [PUBLICATION_HISTORY, DELETING, null] }
     StudioSegmentPatch:
       type: object
       minProperties: 1
@@ -3546,6 +3632,11 @@ components:
             - PUBLICATION_DESTINATION_INACTIVE
             - PUBLICATION_FIELD_LOCKED
             - PUBLICATION_CONTENT_AGENT_UNAVAILABLE
+            - VIDEO_NOT_FOUND
+            - VIDEO_VERSION_CONFLICT
+            - VIDEO_HAS_PUBLICATION_HISTORY
+            - VIDEO_DELETING
+            - VIDEO_DELETION_VALIDATION_FAILED
         requestId:
           $ref: '#/components/schemas/RequestId'
   responses:

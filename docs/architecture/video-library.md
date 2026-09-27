@@ -275,3 +275,28 @@ chỉ browse/detail/download và điều hướng.
 - asset ownership, unavailable asset và grant hết hạn;
 - không có object key/signed URL trong list/detail/log;
 - mobile 375px không tràn ngang và accessibility không có lỗi serious/critical.
+
+## Xóa video
+
+- Xóa hẳn video chạy hai pha: API nhận `DELETE /v1/videos/{id}` (hoặc bulk
+  `POST /v1/videos/deletions`), chuyển `video.status = DELETING` rồi trả `202`
+  ngay; `VideoDeletionRunner` poll mỗi 2 giây trong process API mới thật sự xóa
+  object R2 rồi xóa dòng DB.
+- `GET /v1/videos` mặc định loại video `DELETING` như `ARCHIVED`; video
+  `DELETE_FAILED` (hết 6 lần thử) vẫn hiện trong Thư viện kèm badge để thử xóa
+  lại.
+- Video có ít nhất một `PublicationProof` thì không xóa được: API trả
+  `409 VIDEO_HAS_PUBLICATION_HISTORY`.
+- Tập asset bị xóa do `collectVideoAssetIds` quyết định — nguồn duy nhất cho cả
+  API lẫn runner; asset còn được `VoiceProfileSample`, `ChannelProfileAsset`,
+  `SeriesProfileAsset` hoặc một video khác tham chiếu thì luôn được giữ, cả
+  object lẫn dòng.
+- Job active bị hủy hoặc còn asset từng `PENDING` (upload đến muộn) thì runner
+  chờ grace 15 phút trước khi xóa dòng, tránh object mồ côi.
+- Runner lỗi thì backoff 1/5/15/60 phút; tới lần thử thứ 6 thì video chuyển
+  `DELETE_FAILED` và dừng tự thử lại.
+- `capabilities.canDelete` kèm `deleteBlockedReason`
+  (`PUBLICATION_HISTORY` | `DELETING`) để Web phân biệt ẩn nút và khóa nút kèm
+  tooltip.
+- Chi tiết đầy đủ (schema, thứ tự xóa theo khóa ngoại, API, mã lỗi, kiểm thử):
+  [`docs/superpowers/specs/2026-09-27-video-deletion-design.md`](../superpowers/specs/2026-09-27-video-deletion-design.md).
