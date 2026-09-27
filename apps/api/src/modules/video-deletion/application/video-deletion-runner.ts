@@ -44,6 +44,9 @@ export class VideoDeletionRunner implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`Video deletion attempt failed videoId=${claimed.id} code=${code}`);
         await this.repository.recordFailure(claimed.id, claimed.attempts, code, this.clock());
       }
+    } catch {
+      // A later poll retries database-level failures; the soft lease makes this safe.
+      this.logger.warn('Video deletion tick failed');
     } finally { this.active = false; }
   }
 
