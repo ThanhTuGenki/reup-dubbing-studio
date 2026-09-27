@@ -14,12 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { LanguageSelect } from '@/shared/ui/language-select';
 import {
   addChannelProfile, addSeriesProfile, fetchMaskPreview, ProfilesApiError,
   saveChannelProfile, saveSeriesProfile, uploadMaskReference,
   type ChannelSnapshot, type SeriesSnapshot,
 } from '../api/profiles-api';
 import { profileKeys } from '../api/profiles-query';
+import { VoiceProfileSelect } from '@/features/voices/ui/voice-profile-select';
 import {
   buildChannelCreate, buildChannelUpdate, buildSeriesCreate, buildSeriesUpdate,
   channelDraft, emptyChannelDraft, emptySeriesDraft, seriesDraft,
@@ -57,11 +59,11 @@ export function ChannelProfileDialog({ open, snapshot, onOpenChange }: {
     <div className="profile-form-grid"><TextField id="channel-name" label="Tên hồ sơ" value={draft.name} error={errors.name} onChange={(value) => update('name', value)} /><SelectField label="Trạng thái" value={draft.status} onChange={(value) => update('status', value as ChannelDraft['status'])} disabled={!snapshot}><SelectItem value="DRAFT">Bản nháp</SelectItem><SelectItem value="ACTIVE">Hoạt động</SelectItem></SelectField></div>
     <Accordion type="multiple" defaultValue={['pipeline', 'content']}>
       <AccordionItem value="pipeline"><AccordionTrigger>Cấu hình pipeline và subtitle</AccordionTrigger><AccordionContent className="profile-form-grid">
-        <TextField id="channel-target-language" label="Ngôn ngữ đích" value={draft.targetLanguage} error={errors.targetLanguage} onChange={(value) => update('targetLanguage', value)} />
-        <TextField id="channel-subtitle-language" label="Ngôn ngữ subtitle" value={draft.subtitleLanguage} error={errors.subtitleLanguage} onChange={(value) => update('subtitleLanguage', value)} />
+        <LanguageField id="channel-target-language" label="Ngôn ngữ đích" value={draft.targetLanguage} error={errors.targetLanguage} onChange={(value) => update('targetLanguage', value)} />
+        <LanguageField id="channel-subtitle-language" label="Ngôn ngữ subtitle" value={draft.subtitleLanguage} error={errors.subtitleLanguage} onChange={(value) => update('subtitleLanguage', value)} />
         <TextField id="channel-filename-rule" label="Quy tắc tên SRT" value={draft.subtitleFilenameRule} error={errors.subtitleFilenameRule} onChange={(value) => update('subtitleFilenameRule', value)} />
         <TextField id="channel-line-length" label="Ký tự tối đa mỗi dòng" inputMode="numeric" value={draft.subtitleMaxLineLength} error={errors.subtitleMaxLineLength} onChange={(value) => update('subtitleMaxLineLength', value)} />
-        <TextField id="channel-voice-id" label="Default Voice Profile ID" value={draft.defaultVoiceProfileId} error={errors.defaultVoiceProfileId} onChange={(value) => update('defaultVoiceProfileId', value)} description="Có thể để trống cho tới khi Thư viện giọng được cấu hình." />
+        <Field data-invalid={Boolean(errors.defaultVoiceProfileId)}><FieldLabel htmlFor="channel-voice-id">Giọng mặc định</FieldLabel><VoiceProfileSelect id="channel-voice-id" value={draft.defaultVoiceProfileId} aria-invalid={Boolean(errors.defaultVoiceProfileId)} onChange={(value) => update('defaultVoiceProfileId', value)} /><FieldDescription>Có thể để trống cho tới khi Thư viện giọng được cấu hình.</FieldDescription><FieldError>{errors.defaultVoiceProfileId}</FieldError></Field>
         <SelectField label="Voice mode" value={draft.voiceMode} onChange={(value) => update('voiceMode', value as ChannelDraft['voiceMode'])}><SelectItem value="SINGLE">Một giọng</SelectItem><SelectItem value="DUAL">Hai giọng</SelectItem><SelectItem value="MULTI_AUTO">Tự động nhiều giọng</SelectItem></SelectField>
         <TextField id="channel-tts-speed" label="Tốc độ TTS" inputMode="decimal" value={draft.ttsSpeed} error={errors.ttsSpeed} onChange={(value) => update('ttsSpeed', value)} />
         <SelectField label="Timing policy" value={draft.timingPolicy} onChange={(value) => update('timingPolicy', value as ChannelDraft['timingPolicy'])}><SelectItem value="PRESERVE_SEGMENT">Giữ segment</SelectItem><SelectItem value="FIT_SEGMENT">Fit segment</SelectItem><SelectItem value="ALLOW_DRIFT">Cho phép lệch</SelectItem></SelectField>
@@ -131,10 +133,10 @@ export function SeriesProfileDialog({ open, snapshot, channels, initialChannelId
     <div className="profile-form-grid"><TextField id="series-name" label="Tên series" value={draft.name} error={errors.name} onChange={(name) => update({ name })} /><SelectField label="Channel cha" value={draft.channelProfileId} onChange={(channelProfileId) => update({ channelProfileId })} disabled={Boolean(snapshot)} error={errors.channelProfileId}>{channels.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectField><SelectField label="Trạng thái" value={draft.status} onChange={(status) => update({ status: status as SeriesDraft['status'] })} disabled={!snapshot}><SelectItem value="DRAFT">Bản nháp</SelectItem><SelectItem value="ACTIVE">Hoạt động</SelectItem></SelectField></div>
     <Accordion type="multiple" defaultValue={['overrides', 'mask']}>
       <AccordionItem value="overrides"><AccordionTrigger>Cấu hình kế thừa và ghi đè</AccordionTrigger><AccordionContent className="series-override-grid">
-        <OverrideField label="Ngôn ngữ đích" field="targetLanguage" draft={draft} onToggle={toggleOverride}><Input value={draft.targetLanguage} disabled={!draft.overridden.has('targetLanguage')} onChange={(event) => update({ targetLanguage: event.target.value })} /></OverrideField>
-        <OverrideField label="Default Voice ID" field="defaultVoiceProfileId" draft={draft} onToggle={toggleOverride} error={errors.defaultVoiceProfileId}><Input value={draft.defaultVoiceProfileId} disabled={!draft.overridden.has('defaultVoiceProfileId')} onChange={(event) => update({ defaultVoiceProfileId: event.target.value })} /></OverrideField>
+        <OverrideField label="Ngôn ngữ đích" field="targetLanguage" id="series-target-language" draft={draft} onToggle={toggleOverride}><LanguageSelect id="series-target-language" value={draft.targetLanguage} disabled={!draft.overridden.has('targetLanguage')} onChange={(targetLanguage) => update({ targetLanguage })} /></OverrideField>
+        <OverrideField label="Giọng mặc định" field="defaultVoiceProfileId" id="series-default-voice" draft={draft} onToggle={toggleOverride} error={errors.defaultVoiceProfileId}><VoiceProfileSelect id="series-default-voice" value={draft.defaultVoiceProfileId} disabled={!draft.overridden.has('defaultVoiceProfileId')} onChange={(defaultVoiceProfileId) => update({ defaultVoiceProfileId })} /></OverrideField>
         <OverrideField label="Voice mode" field="voiceMode" draft={draft} onToggle={toggleOverride}><Select value={draft.voiceMode} disabled={!draft.overridden.has('voiceMode')} onValueChange={(voiceMode) => update({ voiceMode: voiceMode as SeriesDraft['voiceMode'] })}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="SINGLE">Một giọng</SelectItem><SelectItem value="DUAL">Hai giọng</SelectItem><SelectItem value="MULTI_AUTO">Tự động nhiều giọng</SelectItem></SelectContent></Select></OverrideField>
-        <OverrideField label="Ngôn ngữ subtitle" field="subtitleLanguage" draft={draft} onToggle={toggleOverride} error={errors.subtitleLanguage}><Input value={draft.subtitleLanguage} disabled={!draft.overridden.has('subtitleLanguage')} onChange={(event) => update({ subtitleLanguage: event.target.value })} /></OverrideField>
+        <OverrideField label="Ngôn ngữ subtitle" field="subtitleLanguage" id="series-subtitle-language" draft={draft} onToggle={toggleOverride} error={errors.subtitleLanguage}><LanguageSelect id="series-subtitle-language" value={draft.subtitleLanguage} disabled={!draft.overridden.has('subtitleLanguage')} onChange={(subtitleLanguage) => update({ subtitleLanguage })} /></OverrideField>
         <OverrideField label="Quy tắc tên SRT" field="subtitleFilenameRule" draft={draft} onToggle={toggleOverride} error={errors.subtitleFilenameRule}><Input value={draft.subtitleFilenameRule} disabled={!draft.overridden.has('subtitleFilenameRule')} onChange={(event) => update({ subtitleFilenameRule: event.target.value })} /></OverrideField>
         <OverrideField label="Ký tự tối đa mỗi dòng" field="subtitleMaxLineLength" draft={draft} onToggle={toggleOverride} error={errors.subtitleMaxLineLength}><Input inputMode="numeric" value={draft.subtitleMaxLineLength} disabled={!draft.overridden.has('subtitleMaxLineLength')} onChange={(event) => update({ subtitleMaxLineLength: event.target.value })} /></OverrideField>
         <OverrideField label="Tốc độ TTS" field="ttsSpeed" draft={draft} onToggle={toggleOverride} error={errors.ttsSpeed}><Input value={draft.ttsSpeed} disabled={!draft.overridden.has('ttsSpeed')} onChange={(event) => update({ ttsSpeed: event.target.value })} /></OverrideField>
@@ -152,15 +154,18 @@ export function SeriesProfileDialog({ open, snapshot, channels, initialChannelId
 function TextField({ id, label, value, error, description, inputMode, onChange }: { id: string; label: string; value: string; error?: string | undefined; description?: string | undefined; inputMode?: 'numeric' | 'decimal' | undefined; onChange: (value: string) => void }) {
   return <Field data-invalid={Boolean(error)}><FieldLabel htmlFor={id}>{label}</FieldLabel><Input id={id} value={value} {...(inputMode ? { inputMode } : {})} aria-invalid={Boolean(error)} onChange={(event) => onChange(event.target.value)} />{description && <FieldDescription>{description}</FieldDescription>}<FieldError>{error}</FieldError></Field>;
 }
+function LanguageField({ id, label, value, error, onChange }: { id: string; label: string; value: string; error?: string | undefined; onChange: (value: string) => void }) {
+  return <Field data-invalid={Boolean(error)}><FieldLabel htmlFor={id}>{label}</FieldLabel><LanguageSelect id={id} value={value} aria-invalid={Boolean(error)} onChange={onChange} /><FieldError>{error}</FieldError></Field>;
+}
 function SelectField({ label, value, disabled, error, onChange, children }: { label: string; value: string; disabled?: boolean | undefined; error?: string | undefined; onChange: (value: string) => void; children: ReactNode }) {
   return <Field data-invalid={Boolean(error)}><FieldLabel>{label}</FieldLabel><Select value={value} {...(disabled !== undefined ? { disabled } : {})} onValueChange={onChange}><SelectTrigger className="w-full" aria-invalid={Boolean(error)}><SelectValue placeholder="Chọn…" /></SelectTrigger><SelectContent>{children}</SelectContent></Select><FieldError>{error}</FieldError></Field>;
 }
 function Check({ label, checked, onChange }: { label: string; checked: boolean; onChange: (value: boolean) => void }) {
   return <label className="profile-check"><Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} /><span>{label}</span></label>;
 }
-function OverrideField({ label, field, draft, error, onToggle, children }: { label: string; field: SeriesField; draft: SeriesDraft; error?: string | undefined; onToggle: (field: SeriesField, checked: boolean) => void; children: ReactNode }) {
+function OverrideField({ label, field, draft, error, id, onToggle, children }: { label: string; field: SeriesField; draft: SeriesDraft; error?: string | undefined; id?: string | undefined; onToggle: (field: SeriesField, checked: boolean) => void; children: ReactNode }) {
   const active = draft.overridden.has(field);
-  return <Field data-invalid={Boolean(error)} className="override-field"><div className="override-field-heading"><FieldLabel>{label}</FieldLabel><label><span>{active ? 'Ghi đè' : 'Kế thừa'}</span><Switch checked={active} onCheckedChange={(checked) => onToggle(field, checked)} /></label></div>{children}<FieldError>{error}</FieldError></Field>;
+  return <Field data-invalid={Boolean(error)} className="override-field"><div className="override-field-heading"><FieldLabel {...(id ? { htmlFor: id } : {})}>{label}</FieldLabel><label><span>{active ? 'Ghi đè' : 'Kế thừa'}</span><Switch aria-label={`Ghi đè ${label}`} checked={active} onCheckedChange={(checked) => onToggle(field, checked)} /></label></div>{children}<FieldError>{error}</FieldError></Field>;
 }
 function message(error: unknown, fallback: string) { return error instanceof ProfilesApiError ? error.message : fallback; }
 async function imageDimensions(file: File): Promise<{ width: number; height: number }> {

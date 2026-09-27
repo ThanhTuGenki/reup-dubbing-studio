@@ -12,7 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { languageLabel } from '@/shared/lib/languages';
 import { ListState } from '@/shared/ui/list-state';
+import { voiceDetailQuery } from '@/features/voices/api/voices-query';
 import { changeChannelArchive, changeSeriesArchive, ProfilesApiError, type ChannelSnapshot, type SeriesSnapshot } from '../api/profiles-api';
 import { channelDetailQuery, channelsQuery, profileKeys, seriesDetailQuery, seriesListQuery, type ProfileFilters } from '../api/profiles-query';
 import { ChannelProfileDialog, SeriesProfileDialog } from './profile-dialogs';
@@ -96,10 +98,18 @@ function ProfileSheet({ selected, snapshot, loading, onOpenChange, onEdit, onArc
 function ProfileDetails({ snapshot }: { snapshot: ChannelSnapshot | SeriesSnapshot }) {
   const profile = snapshot.profile;
   const config = 'effectiveConfig' in profile ? profile.effectiveConfig : profile.pipeline;
+  const voiceId = config.defaultVoiceProfileId;
+  const voiceDetail = useQuery({ ...voiceDetailQuery(voiceId ?? EMPTY_PROFILE_ID), enabled: Boolean(voiceId) });
+  const voiceName = !voiceId ? 'Chưa chọn giọng' : voiceDetail.isPending ? 'Đang tải…' : voiceDetail.data ? voiceDetail.data.profile.name : 'Giọng không còn dùng được';
   const labels: Array<[keyof typeof config, string]> = [['targetLanguage', 'Ngôn ngữ đích'], ['defaultVoiceProfileId', 'Voice mặc định'], ['voiceMode', 'Voice mode'], ['subtitleLanguage', 'Ngôn ngữ subtitle'], ['subtitleFilenameRule', 'Tên file SRT'], ['subtitleMaxLineLength', 'Độ dài dòng'], ['ttsSpeed', 'Tốc độ TTS'], ['timingPolicy', 'Timing policy'], ['removeHardSubEnabled', 'Xóa hard-sub'], ['output16x9Enabled', 'Output 16:9'], ['output9x16Enabled', 'Output 9:16']];
-  return <div className="profile-details"><div className="profile-detail-summary"><StatusBadge status={profile.status} /><ReadinessBadge readiness={profile.readiness} /><span>Version {profile.version}</span></div><dl>{labels.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{formatValue(config[key])}{'inheritance' in profile && <Badge variant={profile.inheritance[key] === 'SERIES' ? 'default' : 'secondary'}>{profile.inheritance[key] === 'SERIES' ? 'Ghi đè' : 'Kế thừa'}</Badge>}</dd></div>)}</dl>{'mask' in profile && <section><h3>Mask subtitle</h3><p>{profile.mask ? `x ${profile.mask.x} · y ${profile.mask.y} · rộng ${profile.mask.width} · cao ${profile.mask.height}` : 'Không sử dụng mask.'}</p></section>}{profile.readinessIssues.length > 0 && <section><h3>Cần cấu hình</h3><ul>{profile.readinessIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul></section>}</div>;
+  return <div className="profile-details"><div className="profile-detail-summary"><StatusBadge status={profile.status} /><ReadinessBadge readiness={profile.readiness} /><span>Version {profile.version}</span></div><dl>{labels.map(([key, label]) => <div key={key}><dt>{label}</dt><dd>{formatConfigValue(key, config[key], voiceName)}{'inheritance' in profile && <Badge variant={profile.inheritance[key] === 'SERIES' ? 'default' : 'secondary'}>{profile.inheritance[key] === 'SERIES' ? 'Ghi đè' : 'Kế thừa'}</Badge>}</dd></div>)}</dl>{'mask' in profile && <section><h3>Mask subtitle</h3><p>{profile.mask ? `x ${profile.mask.x} · y ${profile.mask.y} · rộng ${profile.mask.width} · cao ${profile.mask.height}` : 'Không sử dụng mask.'}</p></section>}{profile.readinessIssues.length > 0 && <section><h3>Cần cấu hình</h3><ul>{profile.readinessIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul></section>}</div>;
 }
 
 function StatusBadge({ status }: { status: ProfileStatus }) { return <Badge variant="outline">{{ DRAFT: 'Bản nháp', ACTIVE: 'Hoạt động', ARCHIVED: 'Đã lưu trữ' }[status]}</Badge>; }
 function ReadinessBadge({ readiness }: { readiness: 'READY' | 'NEEDS_CONFIGURATION' }) { return <Badge variant={readiness === 'READY' ? 'default' : 'secondary'}>{readiness === 'READY' ? 'Sẵn sàng' : 'Cần cấu hình'}</Badge>; }
 function formatValue(value: unknown) { if (value === null || value === '') return 'Chưa đặt'; if (typeof value === 'boolean') return value ? 'Bật' : 'Tắt'; return String(value); }
+function formatConfigValue(key: string, value: unknown, voiceName: string) {
+  if (key === 'targetLanguage' || key === 'subtitleLanguage') return languageLabel(value as string | null);
+  if (key === 'defaultVoiceProfileId') return voiceName;
+  return formatValue(value);
+}

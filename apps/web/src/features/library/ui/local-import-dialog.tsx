@@ -11,14 +11,11 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Progress } from '@/components/ui/progress';
 import { fetchChannelProfiles, fetchSeriesProfiles } from '@/features/profiles/api/profiles-api';
+import { SOURCE_LANGUAGE_CODES } from '@/shared/lib/languages';
+import { LanguageSelect } from '@/shared/ui/language-select';
 import { importLocalVideo, LocalImportApiError, readVideoMetadata, type LocalImportProgress, type LocalVideoMetadata } from '../api/local-import-api';
 
 type Errors = Partial<Record<'file'|'title'|'channelProfileId', string>>;
-/** Spoken languages the pipeline dubs into Vietnamese; the API receives the code. */
-const SOURCE_LANGUAGES = [
-  { code: 'zh', label: 'Tiếng Trung' }, { code: 'en', label: 'Tiếng Anh' }, { code: 'ja', label: 'Tiếng Nhật' },
-  { code: 'ko', label: 'Tiếng Hàn' }, { code: 'th', label: 'Tiếng Thái' },
-] as const;
 
 export function LocalImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const navigate = useNavigate(); const queryClient = useQueryClient();
@@ -55,7 +52,7 @@ export function LocalImportDialog({ open, onOpenChange }: { open: boolean; onOpe
   const activeSeries = series.data?.items.filter((profile) => profile.readiness === 'READY') ?? [];
   return <Dialog open={open} onOpenChange={(next) => { if (!mutation.isPending) onOpenChange(next); }}><DialogContent className="local-import-dialog sm:max-w-2xl"><form onSubmit={submit} noValidate><DialogHeader><DialogTitle>Nhập video vào pipeline</DialogTitle><DialogDescription>Tải video lên và tạo job lồng tiếng. Job sẽ chờ GPU sau khi tải lên xong.</DialogDescription></DialogHeader><div className="local-import-body"><FieldGroup>
     <Field data-invalid={Boolean(errors.file)}><FieldLabel htmlFor="local-video"><FileVideoIcon />File video</FieldLabel><Input id="local-video" type="file" accept="video/mp4,.mp4" disabled={mutation.isPending} onChange={(event) => void chooseFile(event.target.files?.[0] ?? null)} /><FieldDescription>{metadata ? `${formatBytes(file!.size)} · ${metadata.width}×${metadata.height} · ${formatDuration(metadata.durationMs)}` : 'MP4, tối đa 10 GiB.'}</FieldDescription><FieldError>{errors.file}</FieldError></Field>
-    <div className="local-import-grid"><Text id="local-title" label="Tiêu đề" value={title} error={errors.title} disabled={mutation.isPending} onChange={setTitle} /><Field><FieldLabel htmlFor="local-language">Ngôn ngữ nguồn</FieldLabel><NativeSelect id="local-language" value={sourceLanguage} disabled={mutation.isPending} onChange={(event) => setSourceLanguage(event.target.value)}>{SOURCE_LANGUAGES.map((language) => <NativeSelectOption key={language.code} value={language.code}>{language.label}</NativeSelectOption>)}</NativeSelect><FieldDescription>Ngôn ngữ đang nói trong video. Video sẽ được lồng tiếng sang tiếng Việt.</FieldDescription></Field>
+    <div className="local-import-grid"><Text id="local-title" label="Tiêu đề" value={title} error={errors.title} disabled={mutation.isPending} onChange={setTitle} /><Field><FieldLabel htmlFor="local-language">Ngôn ngữ nguồn</FieldLabel><LanguageSelect id="local-language" value={sourceLanguage} codes={SOURCE_LANGUAGE_CODES} disabled={mutation.isPending} onChange={setSourceLanguage} /><FieldDescription>Ngôn ngữ đang nói trong video. Video sẽ được lồng tiếng sang tiếng Việt.</FieldDescription></Field>
       <Field data-invalid={Boolean(errors.channelProfileId)}><FieldLabel htmlFor="local-channel">Hồ sơ kênh</FieldLabel><NativeSelect id="local-channel" value={channelProfileId} disabled={mutation.isPending || channels.isPending} onChange={(event) => { setChannelProfileId(event.target.value); setSeriesProfileId(''); }}><NativeSelectOption value="">Chọn hồ sơ kênh</NativeSelectOption>{activeChannels.map((profile) => <NativeSelectOption key={profile.id} value={profile.id}>{profile.name}</NativeSelectOption>)}</NativeSelect><FieldError>{errors.channelProfileId}</FieldError></Field>
       <Field><FieldLabel htmlFor="local-series">Series (không bắt buộc)</FieldLabel><NativeSelect id="local-series" value={seriesProfileId} disabled={mutation.isPending || !channelProfileId || series.isPending} onChange={(event) => setSeriesProfileId(event.target.value)}><NativeSelectOption value="">Không dùng series</NativeSelectOption>{activeSeries.map((profile) => <NativeSelectOption key={profile.id} value={profile.id}>{profile.name}</NativeSelectOption>)}</NativeSelect></Field>
     </div>

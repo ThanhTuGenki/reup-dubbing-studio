@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { renderApp } from '@/test/test-utils';
 import { server } from '@/test/msw/server';
-import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, voiceProfile } from '@/test/fixtures/control-plane';
+import { CONTROL_PLANE_BASE_URL, READY_REQUEST_ID, voiceProfile, voiceProfilesEnvelope } from '@/test/fixtures/control-plane';
 import { VoicesPage } from './voices-page';
 describe('VoicesPage', () => {
   it('lists voices and opens sample details without fetching a signed URL eagerly', async () => {
@@ -26,6 +26,20 @@ describe('VoicesPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Nghe sample' }));
     expect(previewRequests).toBe(1);
     await waitFor(() => expect(document.querySelector('audio')?.src).toContain('signature=short-lived'));
+  });
+
+  it('filters by language picked by name, sending the language code and offering an all-languages option', async () => {
+    let lastLanguageQuery: string | null | undefined;
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/voice-profiles`, ({ request }) => {
+      lastLanguageQuery = new URL(request.url).searchParams.get('language');
+      return HttpResponse.json(voiceProfilesEnvelope, { headers: { 'X-Request-Id': READY_REQUEST_ID } });
+    }));
+    const user = userEvent.setup();
+    renderApp(<VoicesPage />);
+    await screen.findByText('Giọng kể ấm');
+    expect(screen.getByRole('option', { name: 'Tất cả ngôn ngữ' })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText('Lọc ngôn ngữ'), 'Tiếng Anh');
+    await waitFor(() => expect(lastLanguageQuery).toBe('en'));
   });
 
   it('shows the missing-sample state and readiness issue', async () => {

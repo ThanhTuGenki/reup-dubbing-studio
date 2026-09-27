@@ -59,10 +59,7 @@ export function channelDraft(profile: ChannelProfile): ChannelDraft {
 export function validateChannelDraft(draft: ChannelDraft): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!draft.name.trim()) errors.name = 'Nhập tên Channel Profile.';
-  if (!language(draft.targetLanguage)) errors.targetLanguage = 'Nhập mã ngôn ngữ BCP 47 hợp lệ.';
-  if (!language(draft.subtitleLanguage)) errors.subtitleLanguage = 'Nhập mã ngôn ngữ subtitle hợp lệ.';
   if (!draft.subtitleFilenameRule.trim()) errors.subtitleFilenameRule = 'Nhập quy tắc tên file subtitle.';
-  if (draft.defaultVoiceProfileId && !uuid(draft.defaultVoiceProfileId)) errors.defaultVoiceProfileId = 'Voice ID phải là UUID.';
   const maxLine = Number(draft.subtitleMaxLineLength);
   if (draft.subtitleMaxLineLength && (!Number.isInteger(maxLine) || maxLine < 1 || maxLine > 500)) errors.subtitleMaxLineLength = 'Giá trị từ 1 đến 500.';
   const speed = Number(draft.ttsSpeed);
@@ -121,9 +118,7 @@ export function validateSeriesDraft(draft: SeriesDraft): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!draft.name.trim()) errors.name = 'Nhập tên Series Profile.';
   if (!uuid(draft.channelProfileId)) errors.channelProfileId = 'Chọn Channel Profile cha.';
-  if (draft.overridden.has('targetLanguage') && !language(draft.targetLanguage)) errors.targetLanguage = 'Mã ngôn ngữ không hợp lệ.';
-  if (draft.overridden.has('defaultVoiceProfileId') && !uuid(draft.defaultVoiceProfileId)) errors.defaultVoiceProfileId = 'Nhập Voice ID dạng UUID để ghi đè.';
-  if (draft.overridden.has('subtitleLanguage') && !language(draft.subtitleLanguage)) errors.subtitleLanguage = 'Mã ngôn ngữ subtitle không hợp lệ.';
+  if (draft.overridden.has('defaultVoiceProfileId') && !draft.defaultVoiceProfileId.trim()) errors.defaultVoiceProfileId = 'Chọn giọng để ghi đè hoặc tắt ghi đè.';
   if (draft.overridden.has('subtitleFilenameRule') && !draft.subtitleFilenameRule.trim()) errors.subtitleFilenameRule = 'Nhập quy tắc tên file subtitle.';
   if (draft.overridden.has('subtitleMaxLineLength')) {
     const maxLine = Number(draft.subtitleMaxLineLength);
@@ -186,5 +181,4 @@ function validMask(draft: SeriesDraft) {
 }
 function keywords(value: string) { return [...new Set(value.split(',').map((item) => item.trim()).filter(Boolean))]; }
 function textOrNull(value: string) { return value.trim() || null; }
-function language(value: string) { return /^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/u.test(value); }
 function uuid(value: string) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(value); }
