@@ -191,7 +191,8 @@ repository, và là **nguồn duy nhất** của tập này cho cả API lẫn r
   8. `Video`.
 
   Thứ tự trên đã được sửa lại cho đúng khóa ngoại so với bản nháp đầu; xem mục
-  "Rulings" trong `.superpowers/sdd/2026-09-27-video-deletion/globals.md` (mục 1)
+  "Rulings (các chỗ plan chốt thay cho spec)", mục 1, trong
+  [`docs/superpowers/plans/2026-09-27-video-deletion.md`](../plans/2026-09-27-video-deletion.md)
   để biết lý do và thứ tự khóa ngoại thật sự.
 
   Sau đó ghi `AuditEvent` `VIDEO_DELETED`, kèm `metadataSafe` gồm tiêu đề, số object
