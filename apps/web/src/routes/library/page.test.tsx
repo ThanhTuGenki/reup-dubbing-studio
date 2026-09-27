@@ -12,6 +12,7 @@ vi.mock('sonner', () => ({ toast }));
 const meta = { requestId: READY_REQUEST_ID };
 const second = { ...libraryVideo, id: '0191f3d2-7f5b-7abc-8b2e-123456789e01', displayTitle: 'Video thứ hai', version: 2, latestJob: { id: '0191f3d2-7f5b-7abc-8b2e-123456789e02', kind: 'FULL_PIPELINE', status: 'RUNNING', progress: 10, currentTask: null, failure: null, updatedAt: libraryVideo.updatedAt } };
 const failed = { ...libraryVideo, id: '0191f3d2-7f5b-7abc-8b2e-123456789f01', displayTitle: 'Video xóa lỗi', status: 'DELETE_FAILED', deletion: { requestedAt: libraryVideo.updatedAt, errorCode: 'STORAGE_DELETE_FAILED' } };
+const blocked = { ...libraryVideo, id: '0191f3d2-7f5b-7abc-8b2e-123456789f02', displayTitle: 'Video đã đăng', capabilities: { ...libraryVideo.capabilities, canDelete: false, deleteBlockedReason: 'PUBLICATION_HISTORY' as const } };
 const list = (items: unknown[]) => http.get(`${CONTROL_PLANE_BASE_URL}/videos`, () => HttpResponse.json({ data: { items, nextCursor: null }, meta }));
 
 describe('LibraryPage deletion', () => {
@@ -47,5 +48,13 @@ describe('LibraryPage deletion', () => {
     await user.click(screen.getAllByRole('button', { name: 'Thử xóa lại' })[0]!);
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Đã yêu cầu xóa lại video.'));
     expect(ifMatch).toBe('"4"');
+  });
+
+  it('explains why a video with publication history cannot be selected', async () => {
+    server.use(list([blocked]));
+    renderApp(<LibraryPage />, { route: '/library' });
+    const checkbox = await screen.findByRole('checkbox', { name: `Chọn ${blocked.displayTitle}` });
+    expect(checkbox).toBeDisabled();
+    expect(checkbox).toHaveAttribute('title', 'Video đã có bằng chứng đăng bài nên không thể xóa.');
   });
 });
