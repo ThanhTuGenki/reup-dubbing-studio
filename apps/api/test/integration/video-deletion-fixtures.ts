@@ -40,7 +40,7 @@ export async function seedVideoTree(prisma: PrismaClient, options: Options = {})
   await prisma.publicationFieldRevision.create({ data: { id: ids.fieldRevision, publicationFieldId: ids.field, revision: 1, valueText: 'Tiêu đề', origin: 'GENERATED', createdBy: ids.user } });
   await prisma.publicationField.update({ where: { id: ids.field }, data: { currentRevisionId: ids.fieldRevision } });
   await prisma.publicationChecklistItem.create({ data: { id: uuidV7(), publicationTaskId: ids.pubTask, itemKey: 'title', labelSnapshot: 'Tiêu đề', isRequired: true, ordinal: 0 } });
-  if (options.withProof) await prisma.publicationProof.create({ data: { id: uuidV7(), publicationTaskId: ids.pubTask, attemptNumber: 1, contentSnapshot: {}, submittedBy: ids.user } });
+  if (options.withProof) await prisma.publicationProof.create({ data: { id: uuidV7(), publicationTaskId: ids.pubTask, attemptNumber: 1, publicUrl: 'https://example.test/proof', contentSnapshot: {}, submittedBy: ids.user } });
   return { ids, asset, videoAssetIds: [asset.raw, asset.transcript, asset.audio, asset.output, ...(options.pendingOutput ? [asset.pending] : [])] };
 }
 
