@@ -157,6 +157,22 @@ describeWithDatabase('Video deletion with PostgreSQL', () => {
       expect(tooMany.statusCode).toBe(400);
     });
 
+    it('replays a bulk request with the same key and rejects the key for another body', async () => {
+      const first = await seed(); const second = await seed(); const key = randomUUID();
+      const bulk = (items: Array<{ videoId: string; version: number }>) => app.inject({ method: 'POST', url: '/v1/videos/deletions', headers: { 'idempotency-key': key }, payload: { items } });
+      const items = [{ videoId: first.ids.video, version: 1 }, { videoId: second.ids.video, version: 1 }];
+      const original = await bulk(items);
+      const replay = await bulk(items);
+      expect(original.statusCode).toBe(200);
+      expect(replay.statusCode).toBe(200);
+      expect(replay.json().data).toEqual(original.json().data);
+      for (const video of [first, second]) {
+        expect(await prisma.auditEvent.count({ where: { entityId: video.ids.video, action: 'VIDEO_DELETION_REQUESTED' } })).toBe(1);
+      }
+      const reused = await bulk([{ videoId: first.ids.video, version: 1 }]);
+      expect(reused.statusCode).toBe(409);
+      expect(reused.json().code).toBe('IDEMPOTENCY_KEY_REUSED');
+    });
   });
 
   describe('other modules on a deleting video', () => {
