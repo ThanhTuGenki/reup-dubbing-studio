@@ -3,11 +3,23 @@ import { PrismaClient } from '@prisma/client';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { createApplication } from '../../src/application';
 import type { AppConfig } from '../../src/platform/config/config';
+import { VideoDeletionRunner } from '../../src/modules/video-deletion/application/video-deletion-runner';
+import { VideoDeletionError } from '../../src/modules/video-deletion/domain/video-deletion-errors';
+import { PrismaVideoDeletionRepository } from '../../src/modules/video-deletion/infrastructure/prisma-video-deletion-repository';
 import { collectVideoAssetIds } from '../../src/modules/video-deletion/infrastructure/video-asset-set';
 import { cleanupVideoTree, seedVideoTree, type SeededVideo } from './video-deletion-fixtures';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const describeWithDatabase = databaseUrl ? describe : describe.skip;
+
+class FakeObjectStore {
+  deleted: string[] = [];
+  failures = 0;
+  async deleteObject(_bucket: string | null, key: string) {
+    if (this.failures > 0) { this.failures -= 1; throw new VideoDeletionError('STORAGE_DELETE_FAILED', 'boom'); }
+    this.deleted.push(key);
+  }
+}
 
 describeWithDatabase('Video deletion with PostgreSQL', () => {
   let prisma: PrismaClient; let app: NestFastifyApplication; const seeded: SeededVideo[] = [];
@@ -139,6 +151,67 @@ describeWithDatabase('Video deletion with PostgreSQL', () => {
       expect((await prisma.video.findUniqueOrThrow({ where: { id: stale.ids.video } })).status).toBe('READY_TO_PUBLISH');
       const tooMany = await app.inject({ method: 'POST', url: '/v1/videos/deletions', headers: { 'idempotency-key': randomUUID() }, payload: { items: [] } });
       expect(tooMany.statusCode).toBe(400);
+    });
+  });
+
+  describe('runner', () => {
+    const del = (videoId: string) => app.inject({ method: 'DELETE', url: `/v1/videos/${videoId}`, headers: { 'if-match': '"1"', 'idempotency-key': randomUUID() } });
+    const runnerWith = (store: FakeObjectStore) => new VideoDeletionRunner(new PrismaVideoDeletionRepository(prisma), store, false);
+    const due = (videoId: string) => prisma.video.update({ where: { id: videoId }, data: { deletionNextAttemptAt: new Date(Date.now() - 1_000) } });
+    const tickUntilIdle = async (runner: VideoDeletionRunner) => { for (let i = 0; i < 10; i += 1) await runner.tick(); };
+
+    // The earlier 'deletion requests' describe leaves its own videos in DELETING (it never runs the
+    // runner), each immediately due. Drain that backlog first so these tests only observe the objects
+    // and rows they themselves create.
+    beforeAll(async () => { await tickUntilIdle(runnerWith(new FakeObjectStore())); });
+
+    it('deletes every object and every row of the video, and keeps profile assets', async () => {
+      const video = await seed({ sharedWithChannel: true }); const store = new FakeObjectStore();
+      await del(video.ids.video);
+      await tickUntilIdle(runnerWith(store));
+      expect(store.deleted.sort()).toEqual([video.asset.raw, video.asset.transcript, video.asset.audio].map((id) => `videos/${video.ids.video}/${id}`).sort());
+      expect(await prisma.video.findUnique({ where: { id: video.ids.video } })).toBeNull();
+      expect(await prisma.pipelineJob.count({ where: { videoId: video.ids.video } })).toBe(0);
+      expect(await prisma.taskAttempt.count({ where: { id: video.ids.attempt } })).toBe(0);
+      expect(await prisma.publishPackage.count({ where: { videoId: video.ids.video } })).toBe(0);
+      expect(await prisma.asset.count({ where: { id: { in: [video.asset.raw, video.asset.transcript, video.asset.audio] } } })).toBe(0);
+      const kept = await prisma.asset.findMany({ where: { id: { in: [video.asset.output, video.asset.voiceSample, video.asset.channelAsset] } } });
+      expect(kept.map((asset) => [asset.status, asset.createdByAttemptId])).toEqual([['AVAILABLE', null], ['AVAILABLE', null], ['AVAILABLE', null]]);
+      expect(await prisma.auditEvent.count({ where: { entityId: video.ids.video, action: 'VIDEO_DELETED' } })).toBe(1);
+      expect((await app.inject({ method: 'GET', url: `/v1/videos/${video.ids.video}` })).statusCode).toBe(404);
+    });
+
+    it('waits for the grace window before removing a video with late PENDING uploads', async () => {
+      const video = await seed({ jobStatus: 'RUNNING', pendingOutput: true }); const store = new FakeObjectStore(); const runner = runnerWith(store);
+      await del(video.ids.video);
+      await runner.tick();
+      expect(await prisma.video.findUnique({ where: { id: video.ids.video } })).not.toBeNull();
+      expect(store.deleted).not.toContain(`videos/${video.ids.video}/${video.asset.pending}`);
+      await prisma.video.update({ where: { id: video.ids.video }, data: { deletionGraceUntil: new Date(Date.now() - 1_000) } });
+      await due(video.ids.video);
+      await tickUntilIdle(runner);
+      expect(store.deleted).toContain(`videos/${video.ids.video}/${video.asset.pending}`);
+      expect(await prisma.video.findUnique({ where: { id: video.ids.video } })).toBeNull();
+    });
+
+    it('retries storage failures with backoff and fails for good after six attempts', async () => {
+      const flaky = await seed(); const store = new FakeObjectStore(); const runner = runnerWith(store);
+      await del(flaky.ids.video);
+      store.failures = 3;
+      for (let i = 0; i < 3; i += 1) { await runner.tick(); await due(flaky.ids.video); }
+      expect((await prisma.video.findUniqueOrThrow({ where: { id: flaky.ids.video } })).deletionAttempts).toBe(3);
+      await tickUntilIdle(runner);
+      expect(await prisma.video.findUnique({ where: { id: flaky.ids.video } })).toBeNull();
+
+      const broken = await seed(); store.failures = 6;
+      await del(broken.ids.video);
+      for (let i = 0; i < 6; i += 1) { await runner.tick(); await prisma.video.updateMany({ where: { id: broken.ids.video, status: 'DELETING' }, data: { deletionNextAttemptAt: new Date(Date.now() - 1_000) } }); }
+      const failed = await prisma.video.findUniqueOrThrow({ where: { id: broken.ids.video } });
+      expect(failed).toMatchObject({ status: 'DELETE_FAILED', deletionAttempts: 6, deletionErrorCode: 'STORAGE_DELETE_FAILED' });
+      const retry = await app.inject({ method: 'DELETE', url: `/v1/videos/${broken.ids.video}`, headers: { 'if-match': `"${failed.version}"`, 'idempotency-key': randomUUID() } });
+      expect(retry.statusCode).toBe(202);
+      await tickUntilIdle(runner);
+      expect(await prisma.video.findUnique({ where: { id: broken.ids.video } })).toBeNull();
     });
   });
 });
