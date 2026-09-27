@@ -2,8 +2,8 @@ import { useId } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select';
 import { Pagination, PaginationContent, PaginationItem } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PAGE_SIZE_OPTIONS, type PageSize } from '../lib/list-query';
 
 interface ListPaginationValue {
@@ -44,19 +44,22 @@ export function ListPagination({
       <PaginationContent className="flex-wrap gap-2">
         <PaginationItem className="flex items-center gap-2">
           <label htmlFor={pageSizeId}>Số hàng</label>
-          <NativeSelect
-            id={pageSizeId}
-            aria-label="Số hàng mỗi trang"
-            value={pageSize}
-            onChange={(event) => onChange({
+          <Select
+            value={String(pageSize)}
+            onValueChange={(next) => onChange({
               page: 1,
-              pageSize: Number(event.target.value) as PageSize,
+              pageSize: Number(next) as PageSize,
             })}
           >
-            {PAGE_SIZE_OPTIONS.map((option) => (
-              <NativeSelectOption key={option} value={option}>{option}</NativeSelectOption>
-            ))}
-          </NativeSelect>
+            <SelectTrigger id={pageSizeId} aria-label="Số hàng mỗi trang">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map((option) => (
+                <SelectItem key={option} value={String(option)}>{option}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </PaginationItem>
         <PaginationItem>
           <Button

@@ -37,8 +37,10 @@ describe('VoicesPage', () => {
     const user = userEvent.setup();
     renderApp(<VoicesPage />);
     await screen.findByText('Giọng kể ấm');
+    const language = screen.getByLabelText('Lọc ngôn ngữ');
+    await user.click(language);
     expect(screen.getByRole('option', { name: 'Tất cả ngôn ngữ' })).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Lọc ngôn ngữ'), 'Tiếng Anh');
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
     await waitFor(() => expect(lastLanguageQuery).toBe('en'));
   });
 

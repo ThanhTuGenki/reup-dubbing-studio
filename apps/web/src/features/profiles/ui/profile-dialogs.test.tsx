@@ -19,8 +19,10 @@ describe('ChannelProfileDialog', () => {
   it('picks the target and subtitle language by name and submits the codes', async () => {
     const user = userEvent.setup();
     renderApp(<ChannelProfileDialog open snapshot={{ profile: channelProfile, etag: '"3"' }} onOpenChange={vi.fn()} />);
-    await user.selectOptions(screen.getByLabelText('Ngôn ngữ đích'), 'Tiếng Anh');
-    await user.selectOptions(screen.getByLabelText('Ngôn ngữ subtitle'), 'Tiếng Nhật');
+    await user.click(screen.getByLabelText('Ngôn ngữ đích'));
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
+    await user.click(screen.getByLabelText('Ngôn ngữ subtitle'));
+    await user.click(screen.getByRole('option', { name: 'Tiếng Nhật' }));
     await user.click(screen.getByRole('button', { name: 'Lưu hồ sơ' }));
     await waitFor(() => expect(saveChannelProfile).toHaveBeenCalledTimes(1));
     expect(saveChannelProfile.mock.calls[0]?.[2]).toMatchObject({ pipeline: expect.objectContaining({ targetLanguage: 'en', subtitleLanguage: 'ja' }) });
@@ -30,7 +32,8 @@ describe('ChannelProfileDialog', () => {
     const user = userEvent.setup();
     renderApp(<ChannelProfileDialog open snapshot={{ profile: channelProfile, etag: '"3"' }} onOpenChange={vi.fn()} />);
     await waitFor(() => expect(screen.getByLabelText('Giọng mặc định')).toBeEnabled());
-    await user.selectOptions(screen.getByLabelText('Giọng mặc định'), `${voiceProfile.name} · Tiếng Việt`);
+    await user.click(screen.getByLabelText('Giọng mặc định'));
+    await user.click(screen.getByRole('option', { name: `${voiceProfile.name} · Tiếng Việt` }));
     await user.click(screen.getByRole('button', { name: 'Lưu hồ sơ' }));
     await waitFor(() => expect(saveChannelProfile).toHaveBeenCalledTimes(1));
     expect(saveChannelProfile.mock.calls[0]?.[2]).toMatchObject({ pipeline: expect.objectContaining({ defaultVoiceProfileId: voiceProfile.id }) });
@@ -52,7 +55,8 @@ describe('SeriesProfileDialog', () => {
     renderApp(<SeriesProfileDialog open snapshot={{ profile: overridden, etag: '"2:2"' }} channels={[channelProfile]} onOpenChange={vi.fn()} />);
     const select = screen.getByLabelText('Ngôn ngữ đích');
     expect(select).toBeEnabled();
-    await user.selectOptions(select, 'Tiếng Anh');
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
     await user.click(screen.getByRole('button', { name: 'Lưu series' }));
     await waitFor(() => expect(saveSeriesProfile).toHaveBeenCalledTimes(1));
     expect(saveSeriesProfile.mock.calls[0]?.[2]).toMatchObject({ overrides: expect.objectContaining({ targetLanguage: 'en' }) });
@@ -64,7 +68,8 @@ describe('SeriesProfileDialog', () => {
     renderApp(<SeriesProfileDialog open snapshot={{ profile: overridden, etag: '"2:2"' }} channels={[channelProfile]} onOpenChange={vi.fn()} />);
     const select = screen.getByLabelText('Giọng mặc định');
     await waitFor(() => expect(select).toBeEnabled());
-    await user.selectOptions(select, `${voiceProfile.name} · Tiếng Việt`);
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: `${voiceProfile.name} · Tiếng Việt` }));
     await user.click(screen.getByRole('button', { name: 'Lưu series' }));
     await waitFor(() => expect(saveSeriesProfile).toHaveBeenCalledTimes(1));
     expect(saveSeriesProfile.mock.calls[0]?.[2]).toMatchObject({ overrides: expect.objectContaining({ defaultVoiceProfileId: voiceProfile.id }) });
@@ -76,7 +81,8 @@ describe('SeriesProfileDialog', () => {
     await user.click(screen.getByRole('switch', { name: 'Ghi đè Giọng mặc định' }));
     const select = screen.getByLabelText('Giọng mặc định');
     await waitFor(() => expect(select).toBeEnabled());
-    await user.selectOptions(select, 'Chưa chọn giọng');
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: 'Chưa chọn giọng' }));
     await user.click(screen.getByRole('button', { name: 'Lưu series' }));
     expect(await screen.findByText('Chọn giọng để ghi đè hoặc tắt ghi đè.')).toBeInTheDocument();
     expect(saveSeriesProfile).not.toHaveBeenCalled();

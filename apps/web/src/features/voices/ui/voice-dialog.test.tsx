@@ -31,7 +31,8 @@ describe('VoiceDialog', () => {
     const user = userEvent.setup();
     renderApp(<VoiceDialog open snapshot={null} onOpenChange={vi.fn()} />);
     await user.type(screen.getByLabelText('Tên giọng'), 'Giọng mới');
-    await user.selectOptions(screen.getByLabelText('Ngôn ngữ chính'), 'Tiếng Anh');
+    await user.click(screen.getByLabelText('Ngôn ngữ chính'));
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
     await user.click(screen.getByRole('button', { name: 'Lưu Voice' }));
     await waitFor(() => expect(addVoice).toHaveBeenCalledTimes(1));
     expect(addVoice.mock.calls[0]?.[0]).toMatchObject({ primaryLanguage: 'en' });
@@ -41,7 +42,8 @@ describe('VoiceDialog', () => {
     const user = userEvent.setup();
     renderApp(<VoiceDialog open snapshot={{ profile: voiceProfile, etag: '"3"' }} onOpenChange={vi.fn()} />);
     await user.upload(screen.getByLabelText('File audio'), new File(['x'], 'sample.wav', { type: 'audio/wav' }));
-    await user.selectOptions(screen.getByLabelText('Ngôn ngữ sample'), 'Tiếng Anh');
+    await user.click(await screen.findByLabelText('Ngôn ngữ sample'));
+    await user.click(screen.getByRole('option', { name: 'Tiếng Anh' }));
     await user.type(screen.getByLabelText('Transcript'), 'Xin chào');
     await waitFor(() => expect(screen.getByText('Thời lượng: 7,4 giây')).toBeInTheDocument());
     await user.click(screen.getByRole('button', { name: 'Lưu Voice' }));
