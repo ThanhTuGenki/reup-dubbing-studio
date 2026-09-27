@@ -717,3 +717,20 @@
 .cn-toast-success [data-icon] { color: var(--success); }
 .cn-toast-warning [data-icon] { color: var(--warning); }
 .cn-toast-error [data-icon] { color: var(--danger); }
+
+/* Library detail: rendered outputs (OpenDesign library.html output list + video stage). */
+.video-outputs { display: grid; gap: var(--space-4); margin-top: var(--space-4); padding: var(--space-6); }
+.video-outputs-heading h2 { margin: 0; font-size: var(--text-lg, 1.125rem); font-weight: 590; }
+.video-outputs-empty { margin: 0; color: var(--muted); }
+.video-output { display: grid; gap: var(--space-3); }
+.output-stage { position: relative; width: 100%; max-width: 760px; aspect-ratio: 16 / 9; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-md); background: linear-gradient(135deg, #14331D, #0E2415 55%, #1E4A2A); }
+.output-stage video { width: 100%; height: 100%; object-fit: contain; background: #0E2415; }
+.output-list { display: grid; gap: var(--space-3); max-width: 760px; }
+.output-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--panel-subtle); }
+.output-icon { width: 40px; height: 40px; flex: 0 0 40px; display: grid; place-items: center; border-radius: var(--radius-sm); background: var(--brand-accent-soft); color: var(--brand-accent-strong); }
+.output-icon svg { width: 18px; height: 18px; }
+.output-info { min-width: 0; flex: 1; }
+.output-info strong { display: block; color: var(--fg); font-weight: 590; }
+.output-info span { display: block; overflow: hidden; color: var(--muted); font-size: var(--text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.output-error { margin: 0; color: var(--danger, #B42318); font-size: var(--text-xs); }
+@media (max-width: 640px) { .output-item { flex-wrap: wrap; } .output-item > button { width: 100%; } }

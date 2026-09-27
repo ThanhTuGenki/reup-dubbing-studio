@@ -22,6 +22,7 @@ import type {
   PublicationTask,
   PublicationTaskListEnvelope,
   DashboardEnvelope,
+  Video,
 } from '@reup-dubbing-studio/api-client';
 
 export const CONTROL_PLANE_BASE_URL = 'http://localhost:3000/v1';
@@ -211,3 +212,21 @@ export function createProblemDetails(
     ...overrides,
   };
 }
+
+export const libraryOutputId = '0191f3d2-7f5b-7abc-8b2e-123456789d02';
+export const libraryVideo = {
+  id: '0191f3d2-7f5b-7abc-8b2e-123456789d01', version: 4, displayTitle: 'Video mẫu (zh → vi)', status: 'READY_TO_PUBLISH', sourceLanguage: 'zh', targetLanguage: 'vi',
+  source: { platform: 'LOCAL', externalId: 'sample-checksum', canonicalUrl: null, durationMs: 119_633, creatorName: null },
+  profile: { channelProfileId: '0191f3d2-7f5b-7abc-8b2e-123456789d03', channelProfileName: 'Kênh mẫu 16:9', seriesProfileId: null, seriesProfileName: null },
+  latestJob: null, reviewStatus: 'APPROVED',
+  outputSummary: { readiness: 'READY', requiredVariants: ['FULL_16X9'], availableVariants: ['FULL_16X9'], warnings: [] },
+  thumbnail: null,
+  outputs: [{
+    id: libraryOutputId, variant: 'FULL_16X9', revision: 1, status: 'READY',
+    video: { assetId: '0191f3d2-7f5b-7abc-8b2e-123456789d04', status: 'AVAILABLE', contentType: 'video/mp4', fileName: 'video-vi-16x9.mp4' },
+    subtitle: { assetId: '0191f3d2-7f5b-7abc-8b2e-123456789d05', status: 'AVAILABLE', contentType: 'application/x-subrip', fileName: 'video-vi-16x9.srt' },
+    thumbnail: null,
+  }],
+  assets: [], createdAt: '2026-09-26T08:00:00.000Z', updatedAt: '2026-09-26T09:00:00.000Z', ingestedAt: '2026-09-26T08:01:00.000Z', archivedAt: null,
+  capabilities: { canOpenStudio: true, canOpenPublishing: false, canArchive: false },
+} satisfies Video;

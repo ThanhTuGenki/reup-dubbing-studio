@@ -240,6 +240,8 @@ export {
   type VideoEnvelope,
   type VideoListEnvelope,
   type VideoOutputReadiness,
+  type VideoOutput,
+  type VideoOutputPart,
   type DownloadGrantEnvelope,
   type StudioEnvelope,
   type StudioMutationEnvelope,

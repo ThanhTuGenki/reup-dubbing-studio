@@ -321,6 +321,26 @@ export type VideoEnvelope = {
     data: Video;
 };
 
+/**
+ * Asset metadata of one render output part. Fetch the file itself with grantVideoOutput.
+ */
+export type VideoOutputPart = {
+    assetId: UuidV7;
+    status: string;
+    contentType: string | null;
+    fileName: string | null;
+};
+
+export type VideoOutput = {
+    id: UuidV7;
+    variant: string;
+    revision: number;
+    status: string;
+    video: VideoOutputPart | null;
+    subtitle: VideoOutputPart | null;
+    thumbnail: VideoOutputPart | null;
+};
+
 export type Video = {
     id: UuidV7;
     version: number;
@@ -363,9 +383,7 @@ export type Video = {
     thumbnail: {
         [key: string]: unknown;
     } | null;
-    outputs: Array<{
-        [key: string]: unknown;
-    }>;
+    outputs: Array<VideoOutput>;
     assets: Array<{
         [key: string]: unknown;
     }>;
