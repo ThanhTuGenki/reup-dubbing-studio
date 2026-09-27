@@ -123,7 +123,8 @@ repository, và là **nguồn duy nhất** của tập này cho cả API lẫn r
     3. Có `PublicationProof` thì trả `409 VIDEO_HAS_PUBLICATION_HISTORY`.
     4. Hủy mọi `PipelineJob` active của video bằng hàm dùng chung
        `cancelJobInTransaction(tx, jobId, reason: 'VIDEO_DELETED')`. Hàm này được tách
-       từ `PrismaQueueRepository.cancel`; Queue dùng lại đúng hàm đó.
+       từ `PrismaQueueRepository.cancel`, export qua `modules/queue/index.ts` (không
+       import sâu vào infrastructure của Queue), và Queue dùng lại đúng hàm đó.
     5. Asset trong tập ở §3.2 đang `AVAILABLE`, `PENDING` hoặc `FAILED` chuyển sang
        `DELETING`. Metadata ghi lại trạng thái trước đó
        (`metadata.deletion.previousStatus`).
@@ -160,8 +161,9 @@ repository, và là **nguồn duy nhất** của tập này cho cả API lẫn r
 
 ### 3.4 `VideoDeletionRunner`
 
-- Nằm trong `LibraryModule` (hoặc một module `video-deletion` riêng cùng tầng) và
-  chạy cùng kiểu `ControlPlaneRunner`: `setInterval` 2 s, mỗi tick tối đa một video,
+- Nằm trong module mới `apps/api/src/modules/video-deletion` (controller cho hai
+  endpoint ở §3.3, repository, runner, object store), và chạy cùng kiểu
+  `ControlPlaneRunner`: `setInterval` 2 s, mỗi tick tối đa một video,
   không chạy khi `nodeEnv === 'test'`, test gọi `tick()` trực tiếp. `onModuleDestroy`
   chờ tick đang chạy xong.
 - **Claim:**
