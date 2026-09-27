@@ -1,6 +1,6 @@
 # Xóa video (hard delete hai pha)
 
-- **Trạng thái:** `DRAFT`, chờ duyệt.
+- **Trạng thái:** `IMPLEMENTED`.
 - **Ngày:** 2026-09-27.
 - **Liên quan:** [`docs/architecture/video-library.md`](../../architecture/video-library.md),
   [`database-design.md`](../../architecture/database-design.md) §4.4, §8.6, §15.6, §17;
@@ -189,6 +189,10 @@ repository, và là **nguồn duy nhất** của tập này cho cả API lẫn r
   6. `RenderOutput`, `VideoAsset`;
   7. các dòng `Asset` thuộc tập;
   8. `Video`.
+
+  Thứ tự trên đã được sửa lại cho đúng khóa ngoại so với bản nháp đầu; xem mục
+  "Rulings" trong `.superpowers/sdd/2026-09-27-video-deletion/globals.md` (mục 1)
+  để biết lý do và thứ tự khóa ngoại thật sự.
 
   Sau đó ghi `AuditEvent` `VIDEO_DELETED`, kèm `metadataSafe` gồm tiêu đề, số object
   đã xóa và tổng dung lượng.
