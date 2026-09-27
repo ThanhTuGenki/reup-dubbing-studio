@@ -23,18 +23,22 @@ describe('Voice sample asset flow', () => {
 });
 
 describe('readAudioDurationMs', () => {
-  afterEach(() => { vi.useRealTimers(); });
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined;
+  afterEach(() => {
+    vi.useRealTimers();
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = undefined;
+  });
 
   it('rejects with a Vietnamese message and revokes the object URL after 15s without a metadata event', async () => {
     vi.useFakeTimers();
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
     // jsdom does not implement HTMLMediaElement.load(); silence its expected "not implemented" console noise.
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const promise = readAudioDurationMs(new File(['x'], 'sample.wav', { type: 'audio/wav' }));
     const assertion = expect(promise).rejects.toThrow('Không đọc được thời lượng file audio.');
     await vi.advanceTimersByTimeAsync(15_000);
     await assertion;
     expect(revokeSpy).toHaveBeenCalled();
-    consoleErrorSpy.mockRestore();
   });
 });

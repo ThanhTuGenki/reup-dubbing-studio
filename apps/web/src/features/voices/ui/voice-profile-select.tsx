@@ -6,17 +6,20 @@ import { fetchVoices } from '../api/voices-api';
 
 /** Voices usable as a default: the ones the library considers activated and ready to speak. */
 const USABLE_STATUS = 'READY';
-/** Safe stop so a misbehaving API (e.g. a cursor that never exhausts) can't loop forever. */
+/** Safe stops so a misbehaving API (an ever-growing list, or a cursor/page that never advances) can't loop forever. */
 const MAX_USABLE_VOICES = 1_000;
+const MAX_USABLE_VOICE_PAGES = 20;
 
 async function fetchAllUsableVoices(signal: AbortSignal | undefined): Promise<VoiceProfile[]> {
   const items: VoiceProfile[] = [];
   let cursor: string | undefined;
-  do {
-    const page = await fetchVoices({ status: USABLE_STATUS, limit: 100, ...(cursor ? { cursor } : {}) }, signal);
-    items.push(...page.items);
-    cursor = page.nextCursor ?? undefined;
-  } while (cursor && items.length < MAX_USABLE_VOICES);
+  for (let page = 0; page < MAX_USABLE_VOICE_PAGES; page += 1) {
+    const result = await fetchVoices({ status: USABLE_STATUS, limit: 100, ...(cursor ? { cursor } : {}) }, signal);
+    items.push(...result.items);
+    const nextCursor = result.nextCursor ?? undefined;
+    if (!nextCursor || nextCursor === cursor || result.items.length === 0 || items.length >= MAX_USABLE_VOICES) break;
+    cursor = nextCursor;
+  }
   return items;
 }
 

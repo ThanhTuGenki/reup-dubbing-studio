@@ -55,4 +55,16 @@ describe('VoiceProfileSelect', () => {
       'Chưa chọn giọng', 'Giọng kể ấm · Tiếng Việt', 'Giọng trang 2 · Tiếng Việt',
     ]);
   });
+
+  it('stops paging when a buggy API returns an empty page with a cursor that never advances', async () => {
+    let calls = 0;
+    server.use(http.get(`${CONTROL_PLANE_BASE_URL}/voice-profiles`, () => {
+      calls += 1;
+      return HttpResponse.json({ data: { items: [], nextCursor: 'stuck' }, meta: { requestId: READY_REQUEST_ID } });
+    }));
+    renderApp(<VoiceProfileSelect id="voice" value="" onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByRole('combobox')).toBeEnabled());
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Chưa chọn giọng']);
+    expect(calls).toBeLessThanOrEqual(20);
+  }, 10_000);
 });
