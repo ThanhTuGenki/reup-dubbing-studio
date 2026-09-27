@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderApp } from '@/test/test-utils';
-import { channelProfile, seriesProfile } from '@/test/fixtures/control-plane';
+import { channelProfile, seriesProfile, voiceProfile } from '@/test/fixtures/control-plane';
 import type * as ProfilesApi from '../api/profiles-api';
 import { ChannelProfileDialog, SeriesProfileDialog } from './profile-dialogs';
 
@@ -25,14 +25,25 @@ describe('ChannelProfileDialog', () => {
     await waitFor(() => expect(saveChannelProfile).toHaveBeenCalledTimes(1));
     expect(saveChannelProfile.mock.calls[0]?.[2]).toMatchObject({ pipeline: expect.objectContaining({ targetLanguage: 'en', subtitleLanguage: 'ja' }) });
   });
+
+  it('picks the default voice from the voice library by name and submits its id', async () => {
+    const user = userEvent.setup();
+    renderApp(<ChannelProfileDialog open snapshot={{ profile: channelProfile, etag: '"3"' }} onOpenChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByLabelText('Giọng mặc định')).toBeEnabled());
+    await user.selectOptions(screen.getByLabelText('Giọng mặc định'), `${voiceProfile.name} · Tiếng Việt`);
+    await user.click(screen.getByRole('button', { name: 'Lưu hồ sơ' }));
+    await waitFor(() => expect(saveChannelProfile).toHaveBeenCalledTimes(1));
+    expect(saveChannelProfile.mock.calls[0]?.[2]).toMatchObject({ pipeline: expect.objectContaining({ defaultVoiceProfileId: voiceProfile.id }) });
+  });
 });
 
 describe('SeriesProfileDialog', () => {
   beforeEach(() => { saveSeriesProfile.mockReset().mockResolvedValue({ profile: seriesProfile, etag: '"2:2"' }); });
 
-  it('keeps the override language select disabled until overridden', () => {
+  it('keeps the override language and voice selects disabled until overridden', () => {
     renderApp(<SeriesProfileDialog open snapshot={{ profile: seriesProfile, etag: '"2:2"' }} channels={[channelProfile]} onOpenChange={vi.fn()} />);
     expect(screen.getByLabelText('Ngôn ngữ đích')).toBeDisabled();
+    expect(screen.getByLabelText('Giọng mặc định')).toBeDisabled();
   });
 
   it('submits the code of an overridden language picked by name', async () => {
@@ -45,5 +56,17 @@ describe('SeriesProfileDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Lưu series' }));
     await waitFor(() => expect(saveSeriesProfile).toHaveBeenCalledTimes(1));
     expect(saveSeriesProfile.mock.calls[0]?.[2]).toMatchObject({ overrides: expect.objectContaining({ targetLanguage: 'en' }) });
+  });
+
+  it('submits the id of an overridden default voice picked by name', async () => {
+    const user = userEvent.setup();
+    const overridden = { ...seriesProfile, inheritance: { ...seriesProfile.inheritance, defaultVoiceProfileId: 'SERIES' as const } };
+    renderApp(<SeriesProfileDialog open snapshot={{ profile: overridden, etag: '"2:2"' }} channels={[channelProfile]} onOpenChange={vi.fn()} />);
+    const select = screen.getByLabelText('Giọng mặc định');
+    await waitFor(() => expect(select).toBeEnabled());
+    await user.selectOptions(select, `${voiceProfile.name} · Tiếng Việt`);
+    await user.click(screen.getByRole('button', { name: 'Lưu series' }));
+    await waitFor(() => expect(saveSeriesProfile).toHaveBeenCalledTimes(1));
+    expect(saveSeriesProfile.mock.calls[0]?.[2]).toMatchObject({ overrides: expect.objectContaining({ defaultVoiceProfileId: voiceProfile.id }) });
   });
 });

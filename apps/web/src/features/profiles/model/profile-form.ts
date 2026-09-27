@@ -60,7 +60,6 @@ export function validateChannelDraft(draft: ChannelDraft): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!draft.name.trim()) errors.name = 'Nhập tên Channel Profile.';
   if (!draft.subtitleFilenameRule.trim()) errors.subtitleFilenameRule = 'Nhập quy tắc tên file subtitle.';
-  if (draft.defaultVoiceProfileId && !uuid(draft.defaultVoiceProfileId)) errors.defaultVoiceProfileId = 'Voice ID phải là UUID.';
   const maxLine = Number(draft.subtitleMaxLineLength);
   if (draft.subtitleMaxLineLength && (!Number.isInteger(maxLine) || maxLine < 1 || maxLine > 500)) errors.subtitleMaxLineLength = 'Giá trị từ 1 đến 500.';
   const speed = Number(draft.ttsSpeed);
@@ -119,7 +118,6 @@ export function validateSeriesDraft(draft: SeriesDraft): ProfileFormErrors {
   const errors: ProfileFormErrors = {};
   if (!draft.name.trim()) errors.name = 'Nhập tên Series Profile.';
   if (!uuid(draft.channelProfileId)) errors.channelProfileId = 'Chọn Channel Profile cha.';
-  if (draft.overridden.has('defaultVoiceProfileId') && !uuid(draft.defaultVoiceProfileId)) errors.defaultVoiceProfileId = 'Nhập Voice ID dạng UUID để ghi đè.';
   if (draft.overridden.has('subtitleFilenameRule') && !draft.subtitleFilenameRule.trim()) errors.subtitleFilenameRule = 'Nhập quy tắc tên file subtitle.';
   if (draft.overridden.has('subtitleMaxLineLength')) {
     const maxLine = Number(draft.subtitleMaxLineLength);
