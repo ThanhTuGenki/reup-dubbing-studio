@@ -51,13 +51,13 @@ describe('DeleteVideoButton', () => {
     expect(screen.queryByRole('button', { name: 'Xóa video' })).not.toBeInTheDocument();
   });
 
-  it('shows the server message and stays on the page when deletion is refused', async () => {
+  it('shows a Vietnamese message for the refusal code and stays on the page', async () => {
     const user = userEvent.setup();
-    server.use(http.delete(`${CONTROL_PLANE_BASE_URL}/videos/:videoId`, () => HttpResponse.json({ type: 'about:blank', title: 'Conflict', status: 409, detail: 'Video đã có bằng chứng đăng bài.', code: 'VIDEO_HAS_PUBLICATION_HISTORY', requestId: READY_REQUEST_ID }, { status: 409, headers: { 'Content-Type': 'application/problem+json' } })));
+    server.use(http.delete(`${CONTROL_PLANE_BASE_URL}/videos/:videoId`, () => HttpResponse.json({ type: 'about:blank', title: 'Conflict', status: 409, detail: 'Video has publication history and cannot be deleted', code: 'VIDEO_HAS_PUBLICATION_HISTORY', requestId: READY_REQUEST_ID }, { status: 409, headers: { 'Content-Type': 'application/problem+json' } })));
     renderAt();
     await user.click(screen.getByRole('button', { name: 'Xóa video' }));
     await user.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Video đã có bằng chứng đăng bài.'));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Video đã có bằng chứng đăng bài nên không thể xóa.'));
     expect(screen.queryByText('Trang thư viện')).not.toBeInTheDocument();
   });
 });

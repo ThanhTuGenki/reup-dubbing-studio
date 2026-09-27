@@ -4,9 +4,9 @@ import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import { deleteLibraryVideo, deleteLibraryVideos, LibraryApiError, type LibraryVideo } from '../api/library-api';
+import { deleteLibraryVideo, deleteLibraryVideos, type LibraryVideo } from '../api/library-api';
 import { libraryKeys } from '../api/library-query';
-import { hasActiveJob, summarizeBulkDeletion } from '../model/video-deletion';
+import { deletionErrorMessage, hasActiveJob, summarizeBulkDeletion } from '../model/video-deletion';
 
 export function LibraryBulkDelete({ videos, onDone }: { videos: LibraryVideo[]; onDone: () => void }) {
   const [open, setOpen] = useState(false); const keys = useRef(new Map<string, string>()); const client = useQueryClient();
@@ -15,7 +15,7 @@ export function LibraryBulkDelete({ videos, onDone }: { videos: LibraryVideo[]; 
   const remove = useMutation({
     mutationFn: () => { const mapKey = JSON.stringify(items); const key = keys.current.get(mapKey) ?? crypto.randomUUID(); keys.current.set(mapKey, key); return deleteLibraryVideos(items, key); },
     onSuccess: async (results) => { setOpen(false); onDone(); await client.invalidateQueries({ queryKey: libraryKeys.lists() }); const summary = summarizeBulkDeletion(results); if (summary.tone === 'success') toast.success(summary.message); else toast.warning(summary.message); },
-    onError: (error) => { toast.error(error instanceof LibraryApiError ? error.message : 'Không thể xóa các video đã chọn.'); },
+    onError: (error) => { toast.error(deletionErrorMessage(error, 'Không thể xóa các video đã chọn.')); },
   });
   if (!videos.length) return null;
   return <div className="library-bulk-bar" role="region" aria-label="Thao tác hàng loạt">
@@ -30,7 +30,7 @@ export function RetryDeleteButton({ video }: { video: LibraryVideo }) {
   const retry = useMutation({
     mutationFn: () => { key.current ??= crypto.randomUUID(); return deleteLibraryVideo(video, key.current); },
     onSuccess: async () => { key.current = null; await client.invalidateQueries({ queryKey: libraryKeys.lists() }); toast.success('Đã yêu cầu xóa lại video.'); },
-    onError: (error) => { key.current = null; toast.error(error instanceof LibraryApiError ? error.message : 'Không thể xóa video.'); },
+    onError: (error) => { key.current = null; toast.error(deletionErrorMessage(error, 'Không thể xóa video.')); },
   });
   return <Button size="sm" variant="outline" disabled={retry.isPending} onClick={() => retry.mutate()}>Thử xóa lại</Button>;
 }

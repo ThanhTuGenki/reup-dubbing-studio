@@ -57,4 +57,24 @@ describe('LibraryPage deletion', () => {
     expect(checkbox).toBeDisabled();
     expect(checkbox).toHaveAttribute('title', 'Video đã có bằng chứng đăng bài nên không thể xóa.');
   });
+
+  it('offers no retry for a failed deletion that publication history now blocks', async () => {
+    const lockedFailure = { ...failed, capabilities: { ...failed.capabilities, canDelete: false, deleteBlockedReason: 'PUBLICATION_HISTORY' as const } };
+    server.use(list([lockedFailure]));
+    renderApp(<LibraryPage />, { route: '/library' });
+    expect((await screen.findAllByText('Xóa thất bại')).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Thử xóa lại' })).not.toBeInTheDocument();
+  });
+
+  it('shows Vietnamese messages for refused retries and bulk requests', async () => {
+    const user = userEvent.setup(); const problem = (code: string) => HttpResponse.json({ type: 'about:blank', title: 'Conflict', status: 409, detail: 'English detail from the API', code, requestId: READY_REQUEST_ID }, { status: 409, headers: { 'Content-Type': 'application/problem+json' } });
+    server.use(list([failed, libraryVideo]), http.delete(`${CONTROL_PLANE_BASE_URL}/videos/:videoId`, () => problem('VIDEO_VERSION_CONFLICT')), http.post(`${CONTROL_PLANE_BASE_URL}/videos/deletions`, () => problem('IDEMPOTENCY_KEY_REUSED')));
+    renderApp(<LibraryPage />, { route: '/library' });
+    await user.click((await screen.findAllByRole('button', { name: 'Thử xóa lại' }))[0]!);
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Video vừa thay đổi. Tải lại rồi thử lại.'));
+    await user.click(screen.getByRole('checkbox', { name: `Chọn ${libraryVideo.displayTitle}` }));
+    await user.click(screen.getByRole('button', { name: 'Xóa 1 video' }));
+    await user.click(screen.getByRole('button', { name: 'Xóa vĩnh viễn' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Yêu cầu xóa bị trùng. Tải lại rồi thử lại.'));
+  });
 });
