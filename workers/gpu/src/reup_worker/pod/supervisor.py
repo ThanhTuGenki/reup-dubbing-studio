@@ -58,44 +58,43 @@ class Supervisor:
         self._grace_seconds = grace_seconds
         self._stopping = asyncio.Event()
         self._running: dict[str, ProcessHandle] = {}
+        self._deadline: float | None = None
+        self._tasks: list[asyncio.Task[None]] = []
 
     async def run_agents(self) -> None:
-        specs = self._config.roles
-        if len(specs) == 1:
-            # Avoid wrapping a single role in its own Task: that adds a scheduling tick before
-            # the agent actually starts, which matters when a caller stops the supervisor right
-            # after launching it (see test_kills_an_agent_that_ignores_terminate).
-            await self._supervise(specs[0])
-        else:
-            await asyncio.gather(*(self._supervise(spec) for spec in specs))
+        self._tasks = [asyncio.ensure_future(self._supervise(spec)) for spec in self._config.roles]
+        await asyncio.gather(*self._tasks)
 
     def stop(self) -> None:
+        if self._deadline is None:
+            self._deadline = self._clock() + self._grace_seconds
         self._stopping.set()
         for handle in list(self._running.values()):
             handle.terminate()
 
     async def shutdown(self) -> None:
-        handles = list(self._running.values())
+        """Stop every role and wait for its process to exit or be killed and reaped. Never returns early."""
         self.stop()
-        try:
-            await asyncio.wait_for(asyncio.gather(*(handle.wait() for handle in handles)), self._grace_seconds)
-        except TimeoutError:
-            for handle in handles:
-                handle.kill()
-            self._log("supervisor", "agents did not stop in time; killed")
+        await asyncio.gather(*self._tasks)
 
     async def _supervise(self, spec: RoleSpec) -> None:
         failures = 0
         while not self._stopping.is_set():
-            (self._config.state_root / spec.key).mkdir(mode=0o700, parents=True, exist_ok=True)
             started = self._clock()
-            handle = await self._launcher.start(
-                spec.key, [spec.python, "-m", "reup_worker.main"], agent_env(self._config, spec, self._base_env)
-            )
+            try:
+                (self._config.state_root / spec.key).mkdir(mode=0o700, parents=True, exist_ok=True)
+                handle = await self._launcher.start(
+                    spec.key, [spec.python, "-m", "reup_worker.main"], agent_env(self._config, spec, self._base_env)
+                )
+            except Exception as error:
+                self._log("supervisor", f"{spec.key} agent failed to start: {type(error).__name__}")
+                failures += 1
+                seconds = self._delay(failures)
+                with contextlib.suppress(TimeoutError):
+                    await asyncio.wait_for(self._stopping.wait(), seconds)
+                continue
             self._running[spec.key] = handle
-            if self._stopping.is_set():
-                handle.terminate()
-            code = await handle.wait()
+            code = await self._run_until_stopped(spec, handle)
             self._running.pop(spec.key, None)
             if self._stopping.is_set():
                 return
@@ -104,6 +103,34 @@ class Supervisor:
             self._log("supervisor", f"{spec.key} agent exited with {code}; restarting in {seconds:.0f}s")
             with contextlib.suppress(TimeoutError):
                 await asyncio.wait_for(self._stopping.wait(), seconds)
+
+    async def _run_until_stopped(self, spec: RoleSpec, handle: ProcessHandle) -> int:
+        """Wait for `handle` to exit on its own, or enforce shutdown (terminate, grace, kill) once requested.
+
+        Checks `_stopping` both before this call (a shutdown requested while `launcher.start` was still
+        running) and while waiting (a shutdown requested while the agent is running), so a role that
+        finishes launching after `stop()` has already run is still terminated and, if needed, killed.
+        """
+        wait_task: asyncio.Task[int] = asyncio.ensure_future(handle.wait())
+        if not self._stopping.is_set():
+            stop_task = asyncio.ensure_future(self._stopping.wait())
+            done, _ = await asyncio.wait({wait_task, stop_task}, return_when=asyncio.FIRST_COMPLETED)
+            if wait_task in done:
+                stop_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await stop_task
+                return wait_task.result()
+        handle.terminate()
+        deadline = self._deadline if self._deadline is not None else self._clock()
+        remaining = max(0.0, deadline - self._clock())
+        try:
+            return await asyncio.wait_for(wait_task, remaining)
+        except TimeoutError:
+            self._log("supervisor", f"{spec.key} agent did not stop in time; killed")
+            handle.kill()
+            # wait_for already cancelled wait_task on timeout, so it cannot be awaited again for a
+            # result; ProcessHandle.wait() is documented as callable multiple times, so call it fresh.
+            return await handle.wait()
 
 
 async def run_pod(

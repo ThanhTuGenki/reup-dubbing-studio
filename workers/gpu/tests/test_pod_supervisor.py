@@ -58,15 +58,80 @@ class FakeLauncher:
     def __init__(self, plan: dict[str, list[FakeHandle]]) -> None:
         self.plan = plan
         self.started: list[tuple[str, list[str], dict[str, str]]] = []
+        self.started_events: dict[str, asyncio.Event] = {name: asyncio.Event() for name in plan}
 
     async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
         self.started.append((name, list(argv), dict(env)))
         queue = self.plan[name]
-        return queue.pop(0) if len(queue) > 1 else queue[0]
+        handle = queue.pop(0) if len(queue) > 1 else queue[0]
+        self.started_events[name].set()
+        return handle
+
+
+class GatedLauncher:
+    """A launcher whose `start` blocks on a gate the test controls, to simulate a slow/in-flight launch."""
+
+    def __init__(self, handle: FakeHandle) -> None:
+        self._handle = handle
+        self.gate = asyncio.Event()
+        self.entered = asyncio.Event()
+        self.started: list[tuple[str, list[str], dict[str, str]]] = []
+
+    async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
+        self.entered.set()
+        await self.gate.wait()
+        self.started.append((name, list(argv), dict(env)))
+        return self._handle
+
+
+class RelaunchLauncher:
+    """A launcher whose first `start` returns immediately (a crash); its second blocks on a gate."""
+
+    def __init__(self, first: FakeHandle, second: FakeHandle) -> None:
+        self._first = first
+        self._second = second
+        self._calls = 0
+        self.gate = asyncio.Event()
+        self.entered_second = asyncio.Event()
+        self.started: list[tuple[str, list[str], dict[str, str]]] = []
+
+    async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
+        self.started.append((name, list(argv), dict(env)))
+        self._calls += 1
+        if self._calls == 1:
+            return self._first
+        self.entered_second.set()
+        await self.gate.wait()
+        return self._second
+
+
+class FlakyLauncher:
+    """A launcher whose first `start` raises; its second succeeds."""
+
+    def __init__(self, handle: FakeHandle) -> None:
+        self._handle = handle
+        self._calls = 0
+        self.started: list[tuple[str, list[str], dict[str, str]]] = []
+        self.succeeded = asyncio.Event()
+
+    async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
+        self._calls += 1
+        if self._calls == 1:
+            raise RuntimeError("boom")
+        self.started.append((name, list(argv), dict(env)))
+        self.succeeded.set()
+        return self._handle
 
 
 def silent(source: str, message: str) -> None:
     del source, message
+
+
+async def observe_starts(event: asyncio.Event, count: int = 1) -> None:
+    """Wait until `event` has been set (and re-armed) `count` times, deterministically."""
+    for _ in range(count):
+        await asyncio.wait_for(event.wait(), 1)
+        event.clear()
 
 
 def test_restart_delay_doubles_to_a_minute() -> None:
@@ -84,10 +149,10 @@ async def test_runs_both_agents_and_restarts_a_crashed_one(tmp_path: Path) -> No
 
     supervisor = Supervisor(config(tmp_path), launcher, {}, log=silent, delay=delay, clock=lambda: 0.0)
     agents = asyncio.create_task(supervisor.run_agents())
-    for _ in range(50):
-        await asyncio.sleep(0)
+    await observe_starts(launcher.started_events["batch"], 3)
+    await observe_starts(launcher.started_events["tts"], 1)
     await supervisor.shutdown()
-    await agents
+    await asyncio.wait_for(agents, 1)
     names = [name for name, _, _ in launcher.started]
     assert names.count("batch") == 3 and names.count("tts") == 1
     assert delays == [1, 2]
@@ -109,23 +174,73 @@ async def test_a_stable_run_resets_the_backoff(tmp_path: Path) -> None:
         config(tmp_path, "batch"), launcher, {}, log=silent, delay=delay, clock=lambda: next(times, 200.0)
     )
     agents = asyncio.create_task(supervisor.run_agents())
-    for _ in range(50):
-        await asyncio.sleep(0)
+    await observe_starts(launcher.started_events["batch"], 3)
     await supervisor.shutdown()
-    await agents
+    await asyncio.wait_for(agents, 1)
     assert delays == [1, 1]
 
 
 async def test_kills_an_agent_that_ignores_terminate(tmp_path: Path) -> None:
     stubborn = FakeHandle(None, ignores_terminate=True)
-    supervisor = Supervisor(
-        config(tmp_path, "tts"), FakeLauncher({"tts": [stubborn]}), {}, log=silent, grace_seconds=0.05
-    )
+    launcher = FakeLauncher({"tts": [stubborn]})
+    supervisor = Supervisor(config(tmp_path, "tts"), launcher, {}, log=silent, grace_seconds=0.05)
     agents = asyncio.create_task(supervisor.run_agents())
-    await asyncio.sleep(0)
+    await asyncio.wait_for(launcher.started_events["tts"].wait(), 1)
     await supervisor.shutdown()
-    await agents
+    await asyncio.wait_for(agents, 1)
     assert stubborn.terminated and stubborn.killed
+
+
+async def test_kills_an_agent_that_finishes_launching_after_stop(tmp_path: Path) -> None:
+    """Regression: stop() runs while the role is still inside launcher.start(); it must still be killed."""
+    stubborn = FakeHandle(None, ignores_terminate=True)
+    launcher = GatedLauncher(stubborn)
+    supervisor = Supervisor(config(tmp_path, "tts"), launcher, {}, log=silent, grace_seconds=0.05)
+    agents = asyncio.create_task(supervisor.run_agents())
+    await asyncio.wait_for(launcher.entered.wait(), 1)
+    supervisor.stop()
+    launcher.gate.set()
+    await asyncio.wait_for(supervisor.shutdown(), 1)
+    await asyncio.wait_for(agents, 1)
+    assert stubborn.terminated and stubborn.killed
+
+
+async def test_kills_an_agent_relaunching_after_a_crash(tmp_path: Path) -> None:
+    """Regression: shutdown happens while a crashed role is mid-relaunch (inside its second launcher.start())."""
+    crashed = FakeHandle(1)
+    stubborn = FakeHandle(None, ignores_terminate=True)
+    launcher = RelaunchLauncher(crashed, stubborn)
+
+    def delay(failures: int) -> float:
+        return 0.0
+
+    supervisor = Supervisor(config(tmp_path, "batch"), launcher, {}, log=silent, delay=delay, grace_seconds=0.05)
+    agents = asyncio.create_task(supervisor.run_agents())
+    await asyncio.wait_for(launcher.entered_second.wait(), 1)
+    supervisor.stop()
+    launcher.gate.set()
+    await asyncio.wait_for(supervisor.shutdown(), 1)
+    await asyncio.wait_for(agents, 1)
+    assert stubborn.terminated and stubborn.killed
+    assert [name for name, _, _ in launcher.started] == ["batch", "batch"]
+
+
+async def test_a_launch_failure_backs_off_like_a_crash(tmp_path: Path) -> None:
+    handle = FakeHandle(None)
+    launcher = FlakyLauncher(handle)
+    delays: list[int] = []
+
+    def delay(failures: int) -> float:
+        delays.append(failures)
+        return 0.0
+
+    supervisor = Supervisor(config(tmp_path, "tts"), launcher, {}, log=silent, delay=delay)
+    agents = asyncio.create_task(supervisor.run_agents())
+    await asyncio.wait_for(launcher.succeeded.wait(), 1)
+    await supervisor.shutdown()
+    await asyncio.wait_for(agents, 1)
+    assert [name for name, _, _ in launcher.started] == ["tts"]
+    assert delays == [1]
 
 
 async def test_run_pod_starts_tailscale_then_agents_and_stops_cleanly(tmp_path: Path) -> None:
@@ -164,8 +279,8 @@ async def test_run_pod_starts_tailscale_then_agents_and_stops_cleanly(tmp_path: 
             wait_for_control_plane=ready,
         )
     )
-    for _ in range(20):
-        await asyncio.sleep(0)
+    await asyncio.wait_for(launcher.started_events["batch"].wait(), 1)
+    await asyncio.wait_for(launcher.started_events["tts"].wait(), 1)
     assert order == ["tailscale", "ready"] and len(launcher.started) == 2
     stop.set()
     assert await pod == 0
