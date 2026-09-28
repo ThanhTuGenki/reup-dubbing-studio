@@ -1,4 +1,5 @@
 import asyncio
+import time
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -42,12 +43,38 @@ class Done:
         self.terminated = True
 
 
+class Hangs:
+    """A `ProcessHandle` whose `wait()` never returns on its own, only after `terminate()`/`kill()`."""
+
+    def __init__(self) -> None:
+        self.terminated = False
+        self._done = asyncio.Event()
+
+    async def wait(self) -> int:
+        await self._done.wait()
+        return -15
+
+    def terminate(self) -> None:
+        self.terminated = True
+        self._done.set()
+
+    def kill(self) -> None:
+        self.terminated = True
+        self._done.set()
+
+
 class TailscaleLauncher:
-    def __init__(self, socket_dir: Path, up_code: int = 0, create_socket: bool = True) -> None:
+    def __init__(self, socket_dir: Path, up_code: int = 0, create_socket: bool = True, hang_up: bool = False) -> None:
         self.calls: list[list[str]] = []
         self.key_seen: str | None = None
         self.daemon = Done(0)
-        self._socket_dir, self._up_code, self._create_socket = socket_dir, up_code, create_socket
+        self.up_handle: Hangs | Done | None = None
+        self._socket_dir, self._up_code, self._create_socket, self._hang_up = (
+            socket_dir,
+            up_code,
+            create_socket,
+            hang_up,
+        )
 
     async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
         assert name == "tailscale" and "TS_AUTHKEY" not in env
@@ -60,7 +87,8 @@ class TailscaleLauncher:
         key_file = Path(key_arg.removeprefix("--auth-key=file:"))
         self.key_seen = key_file.read_text()
         assert oct(key_file.stat().st_mode & 0o777) == "0o600"
-        return Done(self._up_code)
+        self.up_handle = Hangs() if self._hang_up else Done(self._up_code)
+        return self.up_handle
 
 
 async def test_tailscale_joins_with_a_key_file_never_on_argv(tmp_path: Path) -> None:
@@ -135,6 +163,19 @@ async def test_gives_up_on_an_unreachable_control_plane(tmp_path: Path) -> None:
     with pytest.raises(PodStartupError) as raised:
         await wait_for_control_plane(config, sleep=no_sleep, clock=lambda: next(ticks, 400.0))
     assert raised.value.code == "CONTROL_PLANE_UNREACHABLE"
+
+
+async def test_an_up_that_never_exits_is_bounded_by_the_startup_budget(tmp_path: Path) -> None:
+    launcher = TailscaleLauncher(tmp_path / "tailscale", hang_up=True)
+    started = time.monotonic()
+    with pytest.raises(PodStartupError) as raised:
+        await bring_up_tailscale(tailnet(tmp_path), launcher, timeout=0.2, poll=0.01)
+    elapsed = time.monotonic() - started
+    assert (raised.value.code, raised.value.exit_code) == ("TAILSCALE_UNAVAILABLE", 3)
+    assert elapsed < 2.0  # well under 2x the 0.2s budget; guards against the "up" call getting its own budget
+    assert launcher.daemon.terminated
+    assert launcher.up_handle is not None and launcher.up_handle.terminated
+    assert not (tmp_path / "tailscale" / "authkey").exists()
 
 
 async def test_cancelling_bring_up_terminates_the_daemon_and_leaves_no_key_file(tmp_path: Path) -> None:

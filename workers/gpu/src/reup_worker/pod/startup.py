@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import os
 import time
 from collections.abc import Awaitable, Callable
@@ -37,12 +38,15 @@ async def bring_up_tailscale(
         env,
     )
     key_file = directory / "authkey"
+    deadline = time.monotonic() + timeout
     try:
-        deadline = time.monotonic() + timeout
         while not socket.exists():
             if time.monotonic() >= deadline:
                 raise PodStartupError("TAILSCALE_UNAVAILABLE", 3)
             await asyncio.sleep(poll)
+        # Budget the whole call at `timeout`, not `timeout` for the socket wait plus another
+        # `timeout` for `tailscale up`: spend only what's left of the deadline on the join.
+        remaining = deadline - time.monotonic()
         descriptor = os.open(key_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(descriptor, "w") as handle:
             handle.write(config.tailscale_auth_key or "")
@@ -54,11 +58,19 @@ async def bring_up_tailscale(
                 "up",
                 f"--auth-key=file:{key_file}",
                 f"--hostname={config.hostname}",
-                f"--timeout={int(timeout)}s",
+                f"--timeout={max(1, math.ceil(remaining))}s",
             ],
             env,
         )
-        if await joined.wait() != 0:
+        try:
+            code = await asyncio.wait_for(joined.wait(), max(remaining, 0.1))
+        except TimeoutError:
+            joined.terminate()
+            raise PodStartupError("TAILSCALE_UNAVAILABLE", 3) from None
+        except BaseException:
+            joined.terminate()
+            raise
+        if code != 0:
             raise PodStartupError("TAILSCALE_UNAVAILABLE", 3)
     except BaseException:
         daemon.terminate()

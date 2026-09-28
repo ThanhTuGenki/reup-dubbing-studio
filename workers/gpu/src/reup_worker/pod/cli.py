@@ -39,6 +39,11 @@ class _SubprocessHandle:
                 self._process.kill()
 
 
+_CHUNK_SIZE = 65536
+_LINE_CAP = 16 * 1024
+_TRUNCATED_SUFFIX = "…[truncated]"
+
+
 class SubprocessLauncher:
     """Starts a child with merged stdout/stderr and relays each line as `[name] line`."""
 
@@ -52,9 +57,51 @@ class SubprocessLauncher:
         return _SubprocessHandle(process, asyncio.ensure_future(self._relay(name, process)))
 
     async def _relay(self, name: str, process: asyncio.subprocess.Process) -> None:
+        """Drain stdout until EOF, one `[name] line` per log call. Never raises: a dead pump would stop draining
+
+        the pipe (blocking the child once its buffer fills) and would re-raise through the shielded `wait()`,
+        which the supervisor does not catch. Lines are read as raw chunks (not `readline`, whose default 64 KiB
+        limit raises `ValueError` on one long, unterminated line) and split on `\\n` ourselves; any single line
+        over `_LINE_CAP` is truncated before logging so one runaway line can't grow memory or the log unbounded.
+        """
         assert process.stdout is not None  # noqa: S101
-        async for raw in process.stdout:
-            self._log(name, raw.decode(errors="replace").rstrip())
+        stream = process.stdout
+        buffer = bytearray()
+        overflowing = False
+        try:
+            while True:
+                chunk = await stream.read(_CHUNK_SIZE)
+                if not chunk:
+                    break
+                start = 0
+                while True:
+                    newline = chunk.find(b"\n", start)
+                    if newline == -1:
+                        if not overflowing:
+                            buffer.extend(chunk[start:])
+                            if len(buffer) > _LINE_CAP:
+                                overflowing = True
+                                del buffer[_LINE_CAP:]
+                        break
+                    if not overflowing:
+                        buffer.extend(chunk[start:newline])
+                    self._emit(name, bytes(buffer), overflowing or len(buffer) > _LINE_CAP)
+                    buffer.clear()
+                    overflowing = False
+                    start = newline + 1
+            if buffer or overflowing:
+                self._emit(name, bytes(buffer), overflowing)
+        except Exception as error:
+            # Defensive: a relay bug must not escape into the shielded `wait()` and starve the supervisor.
+            self._log(name, f"[relay error] {type(error).__name__}: {error}")
+
+    def _emit(self, name: str, data: bytes, truncated: bool) -> None:
+        text = data.decode(errors="replace")
+        if text.endswith("\r"):
+            text = text[:-1]
+        if truncated:
+            text = text[:_LINE_CAP] + _TRUNCATED_SUFFIX
+        self._log(name, text)
 
 
 async def _run(config: PodConfig) -> int:

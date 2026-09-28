@@ -44,3 +44,25 @@ async def test_subprocess_launcher_prefixes_output(capsys: pytest.CaptureFixture
     assert await handle.wait() == 3
     assert await handle.wait() == 3
     assert ("batch", "hello") in lines
+
+
+async def test_an_oversized_line_is_truncated_but_relaying_continues() -> None:
+    lines: list[tuple[str, str]] = []
+    launcher = SubprocessLauncher(lambda source, message: lines.append((source, message)))
+    script = "import sys\nsys.stdout.write('a' * 200000 + '\\n')\nsys.stdout.write('normal line\\n')\nsys.exit(7)\n"
+    handle = await launcher.start("batch", [sys.executable, "-c", script], {})
+    assert await handle.wait() == 7
+    long_entries = [message for source, message in lines if source == "batch" and message.startswith("a")]
+    assert len(long_entries) == 1
+    assert long_entries[0].endswith("…[truncated]")
+    assert len(long_entries[0]) == 16 * 1024 + len("…[truncated]")
+    assert ("batch", "normal line") in lines
+
+
+async def test_a_final_line_without_a_trailing_newline_is_still_relayed() -> None:
+    lines: list[tuple[str, str]] = []
+    launcher = SubprocessLauncher(lambda source, message: lines.append((source, message)))
+    script = "import sys\nsys.stdout.write('partial')\nsys.stdout.flush()\n"
+    handle = await launcher.start("batch", [sys.executable, "-c", script], {})
+    assert await handle.wait() == 0
+    assert ("batch", "partial") in lines
