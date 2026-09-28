@@ -87,7 +87,7 @@ def test_agent_env_is_role_specific_and_secret_free(tmp_path: Path) -> None:
         "HF_HOME": "/hf",
     }
     batch = agent_env(config, ROLES["batch"], base)
-    assert batch["PATH"] == "/usr/bin" and batch["HF_HOME"] == "/hf"
+    assert batch["PATH"] == "/opt/reup-worker/bin:/usr/bin" and batch["HF_HOME"] == "/hf"
     assert "TS_AUTHKEY" not in batch and "REUP_TTS_ENROLLMENT_TOKEN" not in batch
     assert batch["REUP_WORKER_ROLE"] == "BATCH_MEDIA" and batch["REUP_WORKER_EXECUTOR"] == "batch"
     assert json.loads(batch["REUP_WORKER_CAPABILITIES"]) == [
@@ -120,3 +120,31 @@ def test_agent_env_drops_the_token_once_enrolled_and_proxy_in_direct_mode(tmp_pa
     batch = agent_env(config, ROLES["batch"], {"HTTP_PROXY": "http://other:1"})
     assert "REUP_WORKER_ENROLLMENT_TOKEN" not in batch
     assert "HTTP_PROXY" not in batch and "HTTPS_PROXY" not in batch
+
+
+def test_a_direct_url_must_point_at_the_worker_api(tmp_path: Path) -> None:
+    with pytest.raises(PodConfigError) as raised:
+        PodConfig.from_env(
+            env(tmp_path, REUP_CONTROL_PLANE_HOST="", TS_AUTHKEY="", REUP_CONTROL_PLANE_URL="http://cp.test/")
+        )
+    assert raised.value.problems == ["REUP_CONTROL_PLANE_URL must end with /worker/v1"]
+
+
+def test_agent_env_drops_runpod_api_keys_and_puts_the_role_venv_first(tmp_path: Path) -> None:
+    config = PodConfig.from_env(env(tmp_path))
+    base = {
+        "PATH": "/opt/reup-worker/bin:/usr/local/bin:/usr/bin",
+        "VIRTUAL_ENV": "/opt/reup-worker",
+        "RUNPOD_API_KEY": "rp-secret",
+        "RUNPOD_API_TOKEN": "rp-secret-2",
+        "RUNPOD_POD_ID": "pod1",
+    }
+    tts = agent_env(config, ROLES["tts"], base)
+    assert "RUNPOD_API_KEY" not in tts and "RUNPOD_API_TOKEN" not in tts
+    assert tts["RUNPOD_POD_ID"] == "pod1"
+    assert tts["VIRTUAL_ENV"] == "/opt/reup-worker-tts"
+    assert tts["PATH"] == "/opt/reup-worker-tts/bin:/opt/reup-worker/bin:/usr/local/bin:/usr/bin"
+    batch = agent_env(config, ROLES["batch"], base)
+    assert batch["VIRTUAL_ENV"] == "/opt/reup-worker"
+    assert batch["PATH"] == "/opt/reup-worker/bin:/usr/local/bin:/usr/bin"
+    assert agent_env(config, ROLES["tts"], {})["PATH"].startswith("/opt/reup-worker-tts/bin:")

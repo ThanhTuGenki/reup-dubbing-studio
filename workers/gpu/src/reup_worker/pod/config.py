@@ -16,6 +16,7 @@ NO_PROXY = (
 SECRET_ENV = frozenset({"TS_AUTHKEY", "REUP_BATCH_ENROLLMENT_TOKEN", "REUP_TTS_ENROLLMENT_TOKEN"})
 PROXY_ENV = frozenset({"HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "ALL_PROXY"})
 DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
+DEFAULT_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,8 @@ class PodConfig:
         tailscale_host: str | None = None
         if url:
             base = url
+            if not url.endswith("/worker/v1"):
+                problems.append("REUP_CONTROL_PLANE_URL must end with /worker/v1")
         elif host:
             base, tailscale_host = f"https://{host}/worker/v1", host
             if auth_key is None:
@@ -122,9 +125,12 @@ def agent_env(config: PodConfig, spec: RoleSpec, base_env: Mapping[str, str]) ->
     env = {
         key: value
         for key, value in base_env.items()
-        if key not in SECRET_ENV and not key.startswith("REUP_WORKER_") and key.upper() not in PROXY_ENV
+        if key not in SECRET_ENV and not key.startswith(("REUP_WORKER_", "RUNPOD_API")) and key.upper() not in PROXY_ENV
     }
     root = config.state_root / spec.key
+    venv = Path(spec.python).parent.parent
+    venv_bin = str(venv / "bin")
+    inherited_path = [entry for entry in env.get("PATH", DEFAULT_PATH).split(":") if entry and entry != venv_bin]
     env.update(
         {
             "REUP_WORKER_CONTROL_PLANE_URL": config.control_plane_url,
@@ -135,6 +141,8 @@ def agent_env(config: PodConfig, spec: RoleSpec, base_env: Mapping[str, str]) ->
             "REUP_WORKER_CAPABILITIES": json.dumps(list(spec.capabilities)),
             "REUP_WORKER_CREDENTIAL_FILE": str(root / "credential"),
             "REUP_WORKER_WORKSPACE_ROOT": str(root / "work"),
+            "VIRTUAL_ENV": str(venv),
+            "PATH": ":".join([venv_bin, *inherited_path]),
             "PYTHONUNBUFFERED": "1",
             "NO_PROXY": NO_PROXY,
             "no_proxy": NO_PROXY,
