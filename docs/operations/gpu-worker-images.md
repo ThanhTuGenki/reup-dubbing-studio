@@ -66,32 +66,42 @@ kia.
 
    Mỗi lần tạo Worker trả về một enrollment token dùng một lần; giữ lại cả hai
    (`REUP_BATCH_ENROLLMENT_TOKEN`, `REUP_TTS_ENROLLMENT_TOKEN`).
-4. Tạo Tailscale auth key loại **ephemeral, pre-approved**, gắn `tag:gpu`. ACL
-   tailnet chỉ cho `tag:gpu` gọi tới Control Plane qua HTTPS.
+4. Tạo Tailscale auth key loại **ephemeral, pre-approved** và **dùng một lần
+   (không bật reusable)**, gắn `tag:gpu`. Mỗi pod cần một key mới. ACL tailnet
+   chỉ cho `tag:gpu` gọi tới Control Plane qua HTTPS.
 5. Tạo template RunPod:
    - image `ghcr.io/thanhtugenki/gpu-worker-runpod@sha256:<digest>` (immutable
      reference, không dùng tag);
-   - Secure Cloud, GPU 24 GB, container disk ít nhất 60 GB;
+   - Secure Cloud, GPU 24 GB, container disk ít nhất 60 GB; **không cần volume
+     disk** (credential, model cache và state Tailscale nằm trên container disk,
+     pod dùng xong thì bỏ);
+   - để **trống "Container Start Command"**: image đã có entrypoint
+     `reup-pod-supervisor`, mọi tham số thêm vào đều làm supervisor thoát `2`;
    - biến môi trường theo bảng §5.1 của spec: `REUP_CONTROL_PLANE_HOST` (hoặc
      `REUP_CONTROL_PLANE_URL` khi debug/tunnel), `TS_AUTHKEY`,
      `REUP_WORKER_IMAGE_DIGEST` là cùng digest ở bước 1 nhưng chỉ phần
      `sha256:<64 ký tự hex>`, **không gồm repository**,
      `REUP_BATCH_ENROLLMENT_TOKEN`, `REUP_TTS_ENROLLMENT_TOKEN`, và tuỳ chọn
-     `REUP_POD_ROLES` (mặc định `batch,tts`).
+     `REUP_POD_ROLES` (mặc định `batch,tts`). `REUP_CONTROL_PLANE_URL` phải kết
+     thúc bằng `/worker/v1`;
+   - biến tinh chỉnh agent `REUP_WORKER_*` đặt trên template **bị bỏ qua có chủ
+     đích**: supervisor tự đặt các biến này cho từng role.
 6. Tạo pod từ template. Xem Logs có dòng
    `[supervisor] starting agents: batch,tts`, rồi xác nhận hai Worker chuyển
    `ACTIVE` trên UI. Điền `providerInstanceId` bằng RunPod pod ID nếu muốn đối
    chiếu.
 7. Khi xong việc, **terminate** pod — không stop rồi resume, vì credential nằm
    trên container disk và sẽ mất. Muốn dùng lại thì tạo Worker (hoặc token) mới
-   và tạo pod mới từ đầu.
+   và tạo pod mới từ đầu. Đừng dùng việc đổi trạng thái Worker để "tắt" pod: Worker
+   không còn `ACTIVE` thì agent của nó thoát `0`, supervisor khởi động lại agent
+   và pod vẫn tính tiền. Muốn ngừng pod thì terminate nó.
 8. Xử lý lỗi theo mã thoát của `reup-pod-supervisor` và tiền tố log
    `[supervisor]` / `[batch]` / `[tts]` / `[tailscale]`:
 
    | Exit code | Mã log | Nguyên nhân | Xử lý |
    |---|---|---|---|
    | `2` | (tên biến thiếu, không kèm giá trị) | Thiếu biến môi trường bắt buộc | Bổ sung biến còn thiếu trong template rồi tạo pod lại |
-   | `3` | `TAILSCALE_UNAVAILABLE` | `tailscaled`/`tailscale up` không lên tailnet trong 60 giây | Kiểm tra `TS_AUTHKEY` còn hiệu lực (ephemeral hết hạn nhanh), kiểm tra ACL `tag:gpu` |
+   | `3` | `TAILSCALE_UNAVAILABLE` | `tailscaled`/`tailscale up` không lên tailnet trong 60 giây, hoặc `tailscaled` chết giữa chừng (log `tailscaled exited: TAILSCALE_UNAVAILABLE`; supervisor dừng hai agent trước khi thoát) | Kiểm tra `TS_AUTHKEY` còn hiệu lực và chưa bị dùng (key dùng một lần, ephemeral hết hạn nhanh), kiểm tra ACL `tag:gpu`, xem log `[tailscale]` |
    | `4` | `CONTROL_PLANE_UNREACHABLE` | Control Plane không trả `ready` qua proxy Tailscale sau 5 phút | Kiểm tra `REUP_CONTROL_PLANE_HOST`/`_URL`, tình trạng Control Plane, ACL tailnet |
 
    Enrollment bị từ chối (token sai, đã dùng, hết hạn) không làm supervisor

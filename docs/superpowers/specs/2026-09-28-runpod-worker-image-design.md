@@ -82,7 +82,7 @@ foundation (CUDA 12.8 + uv + Python 3.11 + reup_worker, như hiện nay)
 └── runpod           FROM foundation
                      COPY --from=batch           /opt/reup-worker  /opt/reup-demucs
                      COPY --from=runpod-tts-venv /opt/reup-worker-tts
-                     + tailscale, tailscaled (tarball tĩnh khóa phiên bản + sha256)
+                     COPY --from=tailscale       tailscale, tailscaled (image chính thức, khóa digest)
                      USER 10001, ENTRYPOINT ["reup-pod-supervisor"]
 ```
 
@@ -90,8 +90,10 @@ foundation (CUDA 12.8 + uv + Python 3.11 + reup_worker, như hiện nay)
   TTS được build ngay tại `/opt/reup-worker-tts`.
 - Base CUDA/cuDNN là của chính `foundation`, nên **không cần** thủ thuật
   `LD_LIBRARY_PATH=/opt/reup/cuda-lib` như `bootstrap.sh`.
-- Tailscale được tải bằng bản tĩnh `tailscale_<ver>_amd64.tgz` từ
-  `pkgs.tailscale.com`. Phiên bản và sha256 khóa bằng `ARG`, không `curl | sh`.
+- `tailscale` và `tailscaled` được copy từ image chính thức `tailscale/tailscale`,
+  khóa bằng tag kèm digest trong `ARG TAILSCALE_IMAGE`
+  (`tailscale/tailscale:v<ver>@sha256:<digest>`). Không tải tarball, không
+  `curl | sh`.
 - Không đóng model vào image. Model tải về `HF_HOME` và
   `REUP_WORKER_TTS_MODEL_CACHE_ROOT` trên container disk lúc chạy. Cache R2 là
   spec riêng.
@@ -99,17 +101,19 @@ foundation (CUDA 12.8 + uv + Python 3.11 + reup_worker, như hiện nay)
 
 ## 5. `reup-pod-supervisor`
 
-Là module Python `reup_worker.pod_supervisor`, có entry point
-`reup-pod-supervisor`, chạy bằng `/opt/reup-worker/bin/python`. Module thuần, có
-unit test. Không dùng bash, không dùng supervisord.
+Là package Python `reup_worker.pod` gồm `config` (đọc env, build env cho từng
+agent), `supervisor` (giám sát agent, thứ tự khởi động), `startup` (Tailscale, chờ
+Control Plane) và `cli`. Entry point `reup-pod-supervisor` trỏ tới
+`reup_worker.pod.cli:main`, chạy bằng `/opt/reup-worker/bin/python`. Code thuần,
+có unit test. Không dùng bash, không dùng supervisord.
 
 ### 5.1 Biến môi trường (template RunPod)
 
 | Biến | Bắt buộc | Ý nghĩa |
 |---|---|---|
 | `REUP_CONTROL_PLANE_HOST` | Có, nếu không có `REUP_CONTROL_PLANE_URL` | Tên máy trong tailnet, ví dụ `tyziiu.tail54f4f6.ts.net`. URL tính ra là `https://<host>/worker/v1`, đi qua proxy Tailscale. |
-| `REUP_CONTROL_PLANE_URL` | Tuỳ | URL trực tiếp (không Tailscale), dùng cho debug hoặc tunnel. Nếu có thì bỏ qua Tailscale. |
-| `TS_AUTHKEY` | Có khi dùng Tailscale | Auth key loại **ephemeral, pre-approved**. |
+| `REUP_CONTROL_PLANE_URL` | Tuỳ | URL trực tiếp (không Tailscale), dùng cho debug hoặc tunnel. Nếu có thì bỏ qua Tailscale. Phải kết thúc bằng `/worker/v1` (sau khi bỏ `/` cuối), nếu không thì thoát `2`. |
+| `TS_AUTHKEY` | Có khi dùng Tailscale | Auth key loại **ephemeral, pre-approved, dùng một lần** (không reusable). |
 | `REUP_WORKER_IMAGE_DIGEST` | Có | `sha256:…` của chính image `gpu-worker-runpod`. |
 | `REUP_BATCH_ENROLLMENT_TOKEN` | Tuỳ | Token của worker `BATCH_MEDIA`. |
 | `REUP_TTS_ENROLLMENT_TOKEN` | Tuỳ | Token của worker `INTERACTIVE_TTS`. |
@@ -123,10 +127,17 @@ Role được bật mà không có token lẫn credential thì supervisor ghi l�
 1. **Kiểm tra đầu vào.** Thiếu biến bắt buộc thì in tên biến, không in giá trị,
    rồi thoát `2`.
 2. **Tailscale.** Nếu dùng host:
-   - chạy `tailscaled --tun=userspace-networking --state=/var/lib/reup-worker/tailscale/state --socket=/var/lib/reup-worker/tailscale/sock --outbound-http-proxy-listen=127.0.0.1:1055`;
-   - rồi `tailscale up --auth-key=$TS_AUTHKEY --hostname=reup-runpod-<RUNPOD_POD_ID|hostname>`.
+   - xóa socket cũ `<root>/tailscale/tailscaled.sock` nếu còn (container disk
+     giữ nguyên qua lần restart container), rồi chạy
+     `tailscaled --tun=userspace-networking --state=<root>/tailscale/tailscaled.state --socket=<root>/tailscale/tailscaled.sock --outbound-http-proxy-listen=127.0.0.1:1055`
+     (`<root>` là `REUP_POD_STATE_ROOT`, mặc định `/var/lib/reup-worker`);
+   - chờ daemon sẵn sàng: `tailscale --socket=<sock> status --json` thoát `0`
+     (file socket tồn tại chưa đủ);
+   - rồi `tailscale up --auth-key=file:<root>/tailscale/authkey --hostname=reup-runpod-<RUNPOD_POD_ID|hostname>`.
+     Auth key đi qua file mode `0600`, xóa ngay sau đó, không bao giờ nằm trên argv.
 
-   Quá 60 giây mà chưa lên thì thoát khác 0. RunPod sẽ báo pod lỗi.
+   Cả bước (chờ daemon và `up`) chung một ngân sách 60 giây; quá hạn thì thoát `3`.
+   RunPod sẽ báo pod lỗi.
 3. **Chờ Control Plane.** Gọi `GET <base>/v1/health/ready` qua proxy, retry với
    backoff tới 5 phút. Hết thời gian thì thoát khác 0.
 4. **Khởi động agent.** Mỗi role được bật chạy một process
@@ -141,9 +152,18 @@ Role được bật mà không có token lẫn credential thì supervisor ghi l�
      credential, workspace, prompt cache và model cache dưới
      `/var/lib/reup-worker/tts/`.
 
+   - mỗi agent có `VIRTUAL_ENV` là venv của chính role và `<venv>/bin` đứng đầu
+     `PATH`;
+   - không truyền xuống agent: `TS_AUTHKEY`, hai enrollment token của pod,
+     `RUNPOD_API*`, proxy kế thừa và mọi `REUP_WORKER_*` đặt trên template
+     (supervisor tự đặt chúng theo role).
+
    Enrollment token chỉ được truyền ở lần chạy đầu. Khi file credential đã có thì
    bỏ token khỏi env.
-5. **Giám sát.** Agent thoát thì khởi động lại sau 5 giây. Nếu lỗi liên tục, tăng
+5. **Giám sát.** `tailscaled` được theo dõi suốt thời gian chạy: nếu nó thoát
+   trước khi pod nhận lệnh dừng thì proxy không còn, supervisor log
+   `tailscaled exited: TAILSCALE_UNAVAILABLE`, dừng các agent rồi thoát `3`.
+   Agent thoát thì khởi động lại sau 5 giây. Nếu lỗi liên tục, tăng
    dần tối đa 60 giây. Lỗi enrollment (token sai, đã dùng, hết hạn) không làm
    supervisor thoát, vì người vận hành có thể thay token bằng cách tạo pod mới.
    Nó chỉ được log với mã lỗi an toàn.
@@ -174,8 +194,9 @@ Role được bật mà không có token lẫn credential thì supervisor ghi l�
 | Tình huống | Hành vi |
 |---|---|
 | Thiếu biến bắt buộc | Thoát `2`, log tên biến |
-| Tailscale không lên trong 60 s | Thoát khác 0, log `TAILSCALE_UNAVAILABLE` |
-| Control Plane không `ready` sau 5 phút | Thoát khác 0, log `CONTROL_PLANE_UNREACHABLE` |
+| Tailscale không lên trong 60 s | Thoát `3`, log `TAILSCALE_UNAVAILABLE` |
+| `tailscaled` chết giữa chừng | Dừng agent, thoát `3`, log `tailscaled exited: TAILSCALE_UNAVAILABLE` |
+| Control Plane không `ready` sau 5 phút | Thoát `4`, log `CONTROL_PLANE_UNREACHABLE` |
 | Enrollment bị từ chối | Log mã lỗi agent, retry có backoff, không thoát |
 | Agent crash lặp lại | Backoff tối đa 60 s, không thoát |
 | GPU không có hoặc `nvidia-smi` lỗi | Agent tự báo trong heartbeat như hiện nay, supervisor không chặn |
