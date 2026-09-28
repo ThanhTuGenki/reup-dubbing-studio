@@ -2,8 +2,10 @@
 
 ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.8.22@sha256:9874eb7afe5ca16c363fe80b294fe700e460df29a55532bbfea234a0f12eddb1
 ARG CUDA_IMAGE=nvidia/cuda:12.8.1-cudnn-runtime-ubuntu22.04@sha256:17e2934e1fa96152b14f78078bfbafd0f00f391df995dc6c641a720fce1202bb
+ARG TAILSCALE_IMAGE=tailscale/tailscale:v1.102.5@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
 
 FROM ${UV_IMAGE} AS uv
+FROM ${TAILSCALE_IMAGE} AS tailscale
 FROM ${CUDA_IMAGE} AS foundation
 
 ARG TARGETARCH
@@ -84,3 +86,22 @@ ENV REUP_WORKER_ROLE=INTERACTIVE_TTS \
 USER 10001:10001
 WORKDIR /var/lib/reup-worker
 ENTRYPOINT ["reup-gpu-worker"]
+
+FROM foundation AS runpod-tts-venv
+COPY workers/gpu/tts/requirements.lock /tmp/tts.requirements.lock
+RUN uv venv --python 3.11 /opt/reup-worker-tts \
+    && uv pip install --python /opt/reup-worker-tts \
+      --extra-index-url https://download.pytorch.org/whl/cu128 \
+      --requirement /tmp/tts.requirements.lock \
+    && uv pip install --python /opt/reup-worker-tts /opt/source \
+    && rm -rf /root/.cache /tmp/*
+
+FROM foundation AS runpod
+COPY --from=batch /opt/reup-worker /opt/reup-worker
+COPY --from=batch /opt/reup-demucs /opt/reup-demucs
+COPY --from=runpod-tts-venv /opt/reup-worker-tts /opt/reup-worker-tts
+COPY --from=tailscale /usr/local/bin/tailscale /usr/local/bin/tailscaled /usr/local/bin/
+ENV REUP_POD_STATE_ROOT=/var/lib/reup-worker
+USER 10001:10001
+WORKDIR /var/lib/reup-worker
+ENTRYPOINT ["reup-pod-supervisor"]

@@ -12,7 +12,7 @@ DEPENDENCIES = {
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("role", choices=("batch", "interactive-tts"))
+    parser.add_argument("role", choices=("batch", "interactive-tts", "runpod"))
     arguments = parser.parse_args()
     if sys.version_info[:2] != (3, 11):
         raise RuntimeError("Worker image requires Python 3.11")
@@ -20,6 +20,12 @@ def main() -> None:
         raise RuntimeError("Worker image must not run as root")
     if arguments.role == "batch":
         check_batch_environments()
+    elif arguments.role == "runpod":
+        check_batch_environments()
+        check_runpod_tts_environment()
+        for binary in ("tailscale", "tailscaled", "reup-pod-supervisor"):
+            if not shutil.which(binary):
+                raise RuntimeError(f"RunPod image requires {binary}")
     else:
         for package in DEPENDENCIES[arguments.role]:
             importlib.metadata.version(package)
@@ -43,6 +49,15 @@ def check_batch_environments() -> None:
         command = "import importlib.metadata as m;" + ";".join(f"m.version({item!r})" for item in packages)
         command += f";__import__({module!r})"
         subprocess.run([executable, "-c", command], check=True)  # noqa: S603
+
+
+def check_runpod_tts_environment() -> None:
+    import subprocess
+
+    packages = DEPENDENCIES["interactive-tts"]
+    command = "import importlib.metadata as m;" + ";".join(f"m.version({item!r})" for item in packages)
+    command += ";__import__('omnivoice');__import__('reup_worker.main')"
+    subprocess.run(["/opt/reup-worker-tts/bin/python", "-c", command], check=True)  # noqa: S603
 
 
 if __name__ == "__main__":
