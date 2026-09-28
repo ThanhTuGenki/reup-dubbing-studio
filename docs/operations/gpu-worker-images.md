@@ -49,9 +49,9 @@ entrypoint. Chi tiết thiết kế ở
 Không SSH vào pod, không chạy `bootstrap.sh` hay `pull_image.py` như hai image
 kia.
 
-1. Tải artifact `gpu-worker-runpod.digest.txt` của workflow
-   `.github/workflows/gpu-worker-images.yml` chạy thành công, giữ lại
-   `registry@sha256:<digest>`.
+1. Tải artifact `gpu-worker-runpod-supply-chain` của workflow
+   `.github/workflows/gpu-worker-images.yml` chạy thành công, mở file
+   `gpu-worker-runpod.digest.txt` bên trong, giữ lại `registry@sha256:<digest>`.
 2. Duyệt image hai lần bằng `POST /worker-images`, cùng `imageDigest` (từ digest ở
    bước 1) và `contractVersion=2`, khác nhau ở `role` và `capabilities`:
    - `role=BATCH_MEDIA`, capabilities `transcript.asr.v1`,
@@ -74,7 +74,8 @@ kia.
    - Secure Cloud, GPU 24 GB, container disk ít nhất 60 GB;
    - biến môi trường theo bảng §5.1 của spec: `REUP_CONTROL_PLANE_HOST` (hoặc
      `REUP_CONTROL_PLANE_URL` khi debug/tunnel), `TS_AUTHKEY`,
-     `REUP_WORKER_IMAGE_DIGEST` (cùng digest ở bước 1),
+     `REUP_WORKER_IMAGE_DIGEST` là cùng digest ở bước 1 nhưng chỉ phần
+     `sha256:<64 ký tự hex>`, **không gồm repository**,
      `REUP_BATCH_ENROLLMENT_TOKEN`, `REUP_TTS_ENROLLMENT_TOKEN`, và tuỳ chọn
      `REUP_POD_ROLES` (mặc định `batch,tts`).
 6. Tạo pod từ template. Xem Logs có dòng
