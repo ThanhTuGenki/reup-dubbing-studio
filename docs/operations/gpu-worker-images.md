@@ -39,3 +39,60 @@ thương mại đã được xác minh.
 Sau khi pull bằng digest, dùng
 `docs/operations/gpu-worker-acceptance.md` để thu inventory, latency, peak VRAM
 và stability evidence. Image build/smoke thành công không thay thế GPU acceptance.
+
+## RunPod (một pod, hai worker)
+
+Target `runpod` đóng cả hai agent (`BATCH_MEDIA` và `INTERACTIVE_TTS`) vào chung
+một image `ghcr.io/ThanhTuGenki/gpu-worker-runpod`, chạy `reup-pod-supervisor` làm
+entrypoint. Chi tiết thiết kế ở
+[`docs/superpowers/specs/2026-09-28-runpod-worker-image-design.md`](../superpowers/specs/2026-09-28-runpod-worker-image-design.md).
+Không SSH vào pod, không chạy `bootstrap.sh` hay `pull_image.py` như hai image
+kia.
+
+1. Tải artifact `gpu-worker-runpod.digest.txt` của workflow
+   `.github/workflows/gpu-worker-images.yml` chạy thành công, giữ lại
+   `registry@sha256:<digest>`.
+2. Duyệt image hai lần bằng `POST /worker-images`, cùng `imageDigest` (từ digest ở
+   bước 1) và `contractVersion=2`, khác nhau ở `role` và `capabilities`:
+   - `role=BATCH_MEDIA`, capabilities `transcript.asr.v1`,
+     `audio.separate.demucs.v1`, `media.render.ffmpeg.v1`;
+   - `role=INTERACTIVE_TTS`, capability `tts.omnivoice.v1`.
+3. Tạo hai Worker bằng `POST /workers` từ hai approved image trên, cùng đặt
+   `provider=RunPod`:
+   - Worker Batch (`approvedImageId` của image `BATCH_MEDIA`) đặt `hourlyRateCp`
+     bằng đúng giá thuê theo giờ của pod;
+   - Worker TTS (`approvedImageId` của image `INTERACTIVE_TTS`) đặt
+     `hourlyRateCp="0"`, để không đếm trùng chi phí pod.
+
+   Mỗi lần tạo Worker trả về một enrollment token dùng một lần; giữ lại cả hai
+   (`REUP_BATCH_ENROLLMENT_TOKEN`, `REUP_TTS_ENROLLMENT_TOKEN`).
+4. Tạo Tailscale auth key loại **ephemeral, pre-approved**, gắn `tag:gpu`. ACL
+   tailnet chỉ cho `tag:gpu` gọi tới Control Plane qua HTTPS.
+5. Tạo template RunPod:
+   - image `ghcr.io/thanhtugenki/gpu-worker-runpod@sha256:<digest>` (immutable
+     reference, không dùng tag);
+   - Secure Cloud, GPU 24 GB, container disk ít nhất 60 GB;
+   - biến môi trường theo bảng §5.1 của spec: `REUP_CONTROL_PLANE_HOST` (hoặc
+     `REUP_CONTROL_PLANE_URL` khi debug/tunnel), `TS_AUTHKEY`,
+     `REUP_WORKER_IMAGE_DIGEST` (cùng digest ở bước 1),
+     `REUP_BATCH_ENROLLMENT_TOKEN`, `REUP_TTS_ENROLLMENT_TOKEN`, và tuỳ chọn
+     `REUP_POD_ROLES` (mặc định `batch,tts`).
+6. Tạo pod từ template. Xem Logs có dòng
+   `[supervisor] starting agents: batch,tts`, rồi xác nhận hai Worker chuyển
+   `ACTIVE` trên UI. Điền `providerInstanceId` bằng RunPod pod ID nếu muốn đối
+   chiếu.
+7. Khi xong việc, **terminate** pod — không stop rồi resume, vì credential nằm
+   trên container disk và sẽ mất. Muốn dùng lại thì tạo Worker (hoặc token) mới
+   và tạo pod mới từ đầu.
+8. Xử lý lỗi theo mã thoát của `reup-pod-supervisor` và tiền tố log
+   `[supervisor]` / `[batch]` / `[tts]` / `[tailscale]`:
+
+   | Exit code | Mã log | Nguyên nhân | Xử lý |
+   |---|---|---|---|
+   | `2` | (tên biến thiếu, không kèm giá trị) | Thiếu biến môi trường bắt buộc | Bổ sung biến còn thiếu trong template rồi tạo pod lại |
+   | `3` | `TAILSCALE_UNAVAILABLE` | `tailscaled`/`tailscale up` không lên tailnet trong 60 giây | Kiểm tra `TS_AUTHKEY` còn hiệu lực (ephemeral hết hạn nhanh), kiểm tra ACL `tag:gpu` |
+   | `4` | `CONTROL_PLANE_UNREACHABLE` | Control Plane không trả `ready` qua proxy Tailscale sau 5 phút | Kiểm tra `REUP_CONTROL_PLANE_HOST`/`_URL`, tình trạng Control Plane, ACL tailnet |
+
+   Enrollment bị từ chối (token sai, đã dùng, hết hạn) không làm supervisor
+   thoát; nó chỉ log mã lỗi và retry có backoff — tạo Worker hoặc token mới rồi
+   tạo pod mới.

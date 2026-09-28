@@ -1,6 +1,6 @@
 # Image worker cho RunPod (một pod, hai worker)
 
-- **Trạng thái:** `DRAFT`, chờ duyệt.
+- **Trạng thái:** `IMPLEMENTED` (chờ chạy thử trên RunPod).
 - **Ngày:** 2026-09-28.
 - **Liên quan:**
   - [`docs/architecture/application.md`](../../architecture/application.md) §9;
