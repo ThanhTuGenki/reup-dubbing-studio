@@ -6,7 +6,7 @@ import asyncio
 import contextlib
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from typing import Protocol
+from typing import Any, Protocol
 
 from .config import PodConfig, RoleSpec, agent_env
 
@@ -133,6 +133,25 @@ class Supervisor:
             return await handle.wait()
 
 
+async def _run_until_stop_or_daemon_exit(stop: asyncio.Event, daemon: ProcessHandle | None, log: Log) -> int:
+    """Wait for `stop` (exit 0) or, in Tailscale mode, for tailscaled to exit first (exit 3: the proxy is gone)."""
+    stopped = asyncio.ensure_future(stop.wait())
+    waiters: set[asyncio.Future[Any]] = {stopped}
+    if daemon is not None:
+        waiters.add(asyncio.ensure_future(daemon.wait()))
+    try:
+        await asyncio.wait(waiters, return_when=asyncio.FIRST_COMPLETED)
+    finally:
+        for waiter in waiters:
+            waiter.cancel()
+        await asyncio.gather(*waiters, return_exceptions=True)
+    if stopped.done() and not stopped.cancelled():
+        log("supervisor", "stopping")
+        return 0
+    log("supervisor", "tailscaled exited: TAILSCALE_UNAVAILABLE")
+    return 3
+
+
 async def run_pod(
     config: PodConfig,
     *,
@@ -144,7 +163,7 @@ async def run_pod(
     wait_for_control_plane: Callable[[PodConfig], Awaitable[None]],
     supervisor_factory: Callable[..., Supervisor] = Supervisor,
 ) -> int:
-    """Start Tailscale (if used), wait for the Control Plane, run agents until `stop`; return the exit code."""
+    """Start Tailscale (if used), wait for the Control Plane, run agents until `stop` or tailscaled dies (3)."""
     daemon: ProcessHandle | None = None
 
     async def start() -> None:
@@ -171,11 +190,10 @@ async def run_pod(
         log("supervisor", "starting agents: " + ",".join(spec.key for spec in config.roles))
         supervisor = supervisor_factory(config, launcher, base_env, log=log)
         agents = asyncio.ensure_future(supervisor.run_agents())
-        await stop.wait()
-        log("supervisor", "stopping")
+        code = await _run_until_stop_or_daemon_exit(stop, daemon, log)
         await supervisor.shutdown()
         await agents
-        return 0
+        return code
     finally:
         if daemon is not None:
             daemon.terminate()

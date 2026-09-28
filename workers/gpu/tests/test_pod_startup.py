@@ -64,25 +64,40 @@ class Hangs:
 
 
 class TailscaleLauncher:
-    def __init__(self, socket_dir: Path, up_code: int = 0, create_socket: bool = True, hang_up: bool = False) -> None:
+    """Fakes `tailscaled`, `tailscale status` and `tailscale up`.
+
+    `ready_after` is how many `status` probes fail before the daemon answers (`None`: it never answers).
+    """
+
+    def __init__(self, socket_dir: Path, up_code: int = 0, ready_after: int | None = 0, hang_up: bool = False) -> None:
         self.calls: list[list[str]] = []
         self.key_seen: str | None = None
         self.daemon = Done(0)
         self.up_handle: Hangs | Done | None = None
-        self._socket_dir, self._up_code, self._create_socket, self._hang_up = (
+        self.socket_existed_at_launch: bool | None = None
+        self.status_probes = 0
+        self._socket_dir, self._up_code, self._ready_after, self._hang_up = (
             socket_dir,
             up_code,
-            create_socket,
+            ready_after,
             hang_up,
         )
+
+    @property
+    def up_calls(self) -> list[list[str]]:
+        return [argv for argv in self.calls if "up" in argv]
 
     async def start(self, name: str, argv: Sequence[str], env: Mapping[str, str]) -> ProcessHandle:
         assert name == "tailscale" and "TS_AUTHKEY" not in env
         self.calls.append(list(argv))
         if argv[0] == "tailscaled":
-            if self._create_socket:
-                (self._socket_dir / "tailscaled.sock").touch()
+            self.socket_existed_at_launch = (self._socket_dir / "tailscaled.sock").exists()
             return self.daemon
+        if "status" in argv:
+            assert argv[1] == f"--socket={self._socket_dir / 'tailscaled.sock'}" and "--json" in argv
+            self.status_probes += 1
+            ready = self._ready_after is not None and self.status_probes > self._ready_after
+            return Done(0 if ready else 1)
         key_arg = next(arg for arg in argv if arg.startswith("--auth-key="))
         key_file = Path(key_arg.removeprefix("--auth-key=file:"))
         self.key_seen = key_file.read_text()
@@ -94,7 +109,8 @@ class TailscaleLauncher:
 async def test_tailscale_joins_with_a_key_file_never_on_argv(tmp_path: Path) -> None:
     launcher = TailscaleLauncher(tmp_path / "tailscale")
     daemon = await bring_up_tailscale(tailnet(tmp_path), launcher, poll=0.01)
-    daemon_argv, up_argv = launcher.calls
+    daemon_argv, status_argv, up_argv = launcher.calls
+    assert status_argv[0] == "tailscale" and "status" in status_argv
     assert daemon_argv[:2] == ["tailscaled", "--tun=userspace-networking"]
     assert "--outbound-http-proxy-listen=127.0.0.1:1055" in daemon_argv
     assert up_argv[:3] == ["tailscale", f"--socket={tmp_path / 'tailscale' / 'tailscaled.sock'}", "up"]
@@ -114,8 +130,8 @@ async def test_tailscale_failure_stops_the_daemon(tmp_path: Path) -> None:
     assert not (tmp_path / "tailscale" / "authkey").exists()
 
 
-async def test_tailscale_daemon_that_never_opens_its_socket(tmp_path: Path) -> None:
-    launcher = TailscaleLauncher(tmp_path / "tailscale", create_socket=False)
+async def test_tailscale_daemon_that_never_answers(tmp_path: Path) -> None:
+    launcher = TailscaleLauncher(tmp_path / "tailscale", ready_after=None)
     with pytest.raises(PodStartupError):
         await bring_up_tailscale(tailnet(tmp_path), launcher, timeout=0.05, poll=0.01)
     assert launcher.daemon.terminated
@@ -179,7 +195,7 @@ async def test_an_up_that_never_exits_is_bounded_by_the_startup_budget(tmp_path:
 
 
 async def test_cancelling_bring_up_terminates_the_daemon_and_leaves_no_key_file(tmp_path: Path) -> None:
-    launcher = TailscaleLauncher(tmp_path / "tailscale", create_socket=False)
+    launcher = TailscaleLauncher(tmp_path / "tailscale", ready_after=None)
     task = asyncio.ensure_future(bring_up_tailscale(tailnet(tmp_path), launcher, timeout=5.0, poll=0.01))
     await asyncio.sleep(0.03)
     task.cancel()
@@ -187,3 +203,31 @@ async def test_cancelling_bring_up_terminates_the_daemon_and_leaves_no_key_file(
         await task
     assert launcher.daemon.terminated
     assert not (tmp_path / "tailscale" / "authkey").exists()
+
+
+async def test_a_stale_socket_is_removed_and_not_taken_for_readiness(tmp_path: Path) -> None:
+    """Regression: a restarted container keeps the old socket file; `up` must wait for the daemon to answer."""
+    directory = tmp_path / "tailscale"
+    directory.mkdir()
+    (directory / "tailscaled.sock").touch()
+    launcher = TailscaleLauncher(directory, ready_after=None)
+    with pytest.raises(PodStartupError) as raised:
+        await bring_up_tailscale(tailnet(tmp_path), launcher, timeout=0.1, poll=0.01)
+    assert (raised.value.code, raised.value.exit_code) == ("TAILSCALE_UNAVAILABLE", 3)
+    assert launcher.socket_existed_at_launch is False
+    assert launcher.up_calls == []
+    assert launcher.status_probes >= 1
+    assert launcher.daemon.terminated
+
+
+async def test_up_runs_only_once_the_daemon_answers_status(tmp_path: Path) -> None:
+    directory = tmp_path / "tailscale"
+    directory.mkdir()
+    (directory / "tailscaled.sock").touch()
+    launcher = TailscaleLauncher(directory, ready_after=2)
+    daemon = await bring_up_tailscale(tailnet(tmp_path), launcher, poll=0.01)
+    assert daemon is launcher.daemon and not daemon.terminated
+    assert launcher.socket_existed_at_launch is False
+    assert launcher.status_probes == 3
+    assert [argv[0] for argv in launcher.calls] == ["tailscaled", "tailscale", "tailscale", "tailscale", "tailscale"]
+    assert launcher.calls[-1] == launcher.up_calls[0]

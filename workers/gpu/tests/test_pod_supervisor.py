@@ -331,3 +331,45 @@ async def test_run_pod_stops_promptly_during_startup(tmp_path: Path) -> None:
     await asyncio.sleep(0)
     stop.set()
     assert await asyncio.wait_for(pod, 1) == 0
+
+
+async def test_run_pod_exits_3_and_stops_agents_when_tailscaled_dies(tmp_path: Path) -> None:
+    daemon = FakeHandle(None)
+    messages: list[str] = []
+
+    async def tailscale(cfg: PodConfig, launcher: Launcher) -> ProcessHandle:
+        del cfg, launcher
+        return daemon
+
+    async def ready(cfg: PodConfig) -> None:
+        del cfg
+
+    batch, tts = FakeHandle(None), FakeHandle(None)
+    launcher = FakeLauncher({"batch": [batch], "tts": [tts]})
+    tailnet_config = PodConfig.from_env(
+        {
+            "REUP_CONTROL_PLANE_HOST": "cp.ts.net",
+            "TS_AUTHKEY": "k",
+            "REUP_WORKER_IMAGE_DIGEST": DIGEST,
+            "REUP_BATCH_ENROLLMENT_TOKEN": "b",
+            "REUP_TTS_ENROLLMENT_TOKEN": "t",
+            "REUP_POD_STATE_ROOT": str(tmp_path),
+        }
+    )
+    pod = asyncio.create_task(
+        run_pod(
+            tailnet_config,
+            launcher=launcher,
+            base_env={},
+            stop=asyncio.Event(),
+            log=lambda source, message: messages.append(f"[{source}] {message}"),
+            bring_up_tailscale=tailscale,
+            wait_for_control_plane=ready,
+        )
+    )
+    await asyncio.wait_for(launcher.started_events["batch"].wait(), 1)
+    await asyncio.wait_for(launcher.started_events["tts"].wait(), 1)
+    daemon.kill()  # tailscaled dies mid-run
+    assert await asyncio.wait_for(pod, 1) == 3
+    assert batch.terminated and tts.terminated
+    assert "[supervisor] tailscaled exited: TAILSCALE_UNAVAILABLE" in messages
