@@ -46,9 +46,25 @@ jobs:
         include:
           - target: batch
             repository: gpu-worker-batch
+            cache-mode: max
+            extra-cache-from: ""
           - target: interactive-tts
             repository: gpu-worker-interactive-tts
+            cache-mode: max
+            extra-cache-from: ""
+          # runpod repeats the batch layers: reuse batch's cache and keep its own export small.
+          - target: runpod
+            repository: gpu-worker-runpod
+            cache-mode: min
+            extra-cache-from: type=gha,scope=batch
     steps:
+      - name: Free runner disk space
+        if: matrix.target == 'runpod'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL \
+            /usr/local/.ghcup /usr/local/share/boost /usr/share/swift
+          docker system prune -af
+          df -h /
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
@@ -75,10 +91,20 @@ jobs:
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
             CONTRACT_VERSION=2
-          cache-from: type=gha,scope=${{ matrix.target }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.target }}
+          cache-from: |
+            type=gha,scope=${{ matrix.target }}
+            ${{ matrix.extra-cache-from }}
+          cache-to: type=gha,mode=${{ matrix.cache-mode }},scope=${{ matrix.target }}
       - name: Smoke test image without model inference
         run: docker run --rm --entrypoint python local/${{ matrix.repository }}:${{ github.sha }} -m reup_worker.image_smoke ${{ matrix.target }}
+      - name: Validate pod supervisor configuration
+        if: matrix.target == 'runpod'
+        run: >-
+          docker run --rm
+          -e REUP_CONTROL_PLANE_URL=https://control-plane.invalid/worker/v1
+          -e REUP_WORKER_IMAGE_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000
+          -e REUP_BATCH_ENROLLMENT_TOKEN=ci-batch -e REUP_TTS_ENROLLMENT_TOKEN=ci-tts
+          local/${{ matrix.repository }}:${{ github.sha }} --check
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -94,6 +120,7 @@ jobs:
           severity: CRITICAL,HIGH
           exit-code: "0"
           ignore-unfixed: true
+          timeout: 30m
       - name: Block fixed critical vulnerabilities
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -102,6 +129,10 @@ jobs:
           severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
+          timeout: 30m
+      - name: Report runner disk space after scans
+        if: always() && matrix.target == 'runpod'
+        run: df -h /
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -123,7 +154,9 @@ jobs:
             VCS_REF=${{ github.sha }}
             IMAGE_VERSION=0.1.0
             CONTRACT_VERSION=2
-          cache-from: type=gha,scope=${{ matrix.target }}
+          cache-from: |
+            type=gha,scope=${{ matrix.target }}
+            ${{ matrix.extra-cache-from }}
           provenance: mode=max
           sbom: true
       - name: Record immutable digest
